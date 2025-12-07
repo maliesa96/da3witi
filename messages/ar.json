@@ -1,0 +1,145 @@
+{
+  "HomePage": {
+    "badge": "نظام الدعوات الآلي الأول في الخليج",
+    "title": "دعوات فاخرة، {break} تصلهم بلمسة زر.",
+    "description": "منشئ دعوات ذكي للمناسبات الراقية والأفراح. قم برفع قائمة المدعوين، صمم بطاقتك، ودعنا نتولى إرسالها وتتبع الحضور عبر واتساب بشكل آلي بالكامل.",
+    "cta_create": "أنشئ دعوة جديدة",
+    "cta_example": "شاهد مثال",
+    "phone_mockup": {
+      "app_name": "دعـوتـي",
+      "account_type": "حساب تجاري",
+      "today": "اليوم",
+      "wedding_title": "أفراح آل محمد",
+      "special_invite": "دعوة خاصة",
+      "invite_body": "يسرنا دعوتكم لحضور حفل زفاف ابننا محمد، وذلك يوم الجمعة القادم. حضوركم يشرفنا.",
+      "confirm_btn": "تأكيد الحضور",
+      "time": "04:30 م",
+      "type_message": "اكتب رسالة..."
+    },
+    "features": {
+      "guests": {
+        "title": "إدارة المدعوين بسهولة",
+        "desc": "استيراد القوائم من ملفات Excel، وتصنيف الضيوف، ومتابعة الردود لحظة بلحظة."
+      },
+      "qr": {
+        "title": "تذاكر QR ذكية",
+        "desc": "إرسال كود QR خاص لكل ضيف لتسهيل عملية الدخول وتنظيم الاستقبال."
+      },
+      "automation": {
+        "title": "أتمتة الواتساب",
+        "desc": "رسائل تذكير قبل الموعد، خرائط الموقع، ورسائل شكر بعد الحضور، كل ذلك آلياً."
+      }
+    }
+  },
+  "Wizard": {
+    "steps": {
+      "account": "الحساب",
+      "guests": "المدعوين",
+      "details": "التفاصيل",
+      "preview": "المعاينة"
+    },
+    "step1": {
+      "title": "لنبدأ ببريدك الإلكتروني",
+      "desc": "سنرسل لك رابطاً سحرياً للدخول ومتابعة الدعوات.",
+      "email_label": "البريد الإلكتروني",
+      "email_placeholder": "name@example.com",
+      "continue": "متابعة"
+    },
+    "step2": {
+      "title": "قائمة المدعوين",
+      "desc": "أضف الأشخاص الذين تود دعوتهم.",
+      "tab_file": "تحميل ملف (CSV/Excel)",
+      "tab_manual": "إدخال يدوي",
+      "upload_text": "اضغط للرفع أو اسحب الملف هنا",
+      "upload_sub": "Excel, CSV (Max 5MB)",
+      "manual_name": "الاسم",
+      "manual_phone": "رقم الهاتف",
+      "add_guest": "إضافة مدعو جديد",
+      "next": "التالي",
+      "match_columns": "تطابق الأعمدة",
+      "ignore_header": "تجاهل الصف الأول (العناوين)",
+      "column_a": "العمود A",
+      "column_b": "العمود B",
+      "detected_contacts": "تم التعرف على {count} جهة اتصال",
+      "added_contacts": "تمت إضافة {count} مدعوين"
+    },
+    "step3": {
+      "title": "تفاصيل المناسبة",
+      "desc": "تخصيص الخيارات والزمان والمكان.",
+      "image_upload": "صورة الدعوة",
+      "click_upload": "اضغط لرفع صورة الدعوة",
+      "message_label": "نص الرسالة",
+      "date_label": "التاريخ",
+      "time_label": "الوقت",
+      "location_label": "موقع المناسبة",
+      "link_btn": "رابط",
+      "map_btn": "تحديد ع الخريطة",
+      "qr_toggle": "تفعيل كود QR",
+      "qr_desc": "سيتم إرسال كود دخول خاص لكل مدعو",
+      "reminder_toggle": "إرسال تذكير تلقائي",
+      "reminder_desc": "تذكير عبر واتساب قبل المناسبة بـ 24 ساعة",
+      "preview_send": "معاينة وإرسال",
+      "live_preview": "معاينة حية"
+    },
+    "step4": {
+      "title": "معاينة الرسالة",
+      "desc": "هكذا ستظهر الدعوة على هواتف ضيوفك.",
+      "order_summary": "ملخص الطلب",
+      "count_invites": "عدد الدعوات",
+      "service_qr": "خدمة QR Code",
+      "service_reminder": "رسالة تذكير",
+      "total": "الإجمالي",
+      "active": "مفعل",
+      "pay_send": "الدفع والإرسال",
+      "terms": "بالنقر على الزر أعلاه، فإنك توافق على شروط الخدمة وسياسة الخصوصية."
+    }
+  },
+  "Common": {
+    "loading_map": "جاري تحميل الخريطة..."
+  },
+  "Navbar": {
+    "brand": "دعـوتـي",
+    "dashboard": "لوحة التحكم",
+    "start_now": "ابدأ الآن"
+  },
+  "Footer": {
+    "about": "عن المنصة",
+    "pricing": "الأسعار",
+    "contact": "اتصل بنا",
+    "copyright": "© {year} Da3witi. Made for GCC."
+  },
+  "InvitePreview": {
+    "app_name": "دعـوتـي",
+    "contact_info": "اضغط هنا لمعلومات الاتصال",
+    "today": "اليوم",
+    "greeting": "مرحباً {name}،",
+    "date_label": "التاريخ:",
+    "location_label": "الموقع:",
+    "scan_code": "امسح الكود عند الدخول",
+    "confirm_btn": "تأكيد الحضور",
+    "apologize_btn": "الاعتذار",
+    "map_btn": "موقع القاعة",
+    "sticker": "ملصق"
+  },
+  "Dashboard": {
+    "title": "زفاف محمد & سارة",
+    "subtitle": "الجمعة، 20 أكتوبر • قاعة الريتز كارلتون",
+    "export_report": "تصدير التقرير",
+    "send_update": "إرسال تحديث",
+    "invited": "تمت الدعوة",
+    "confirmed": "أكد الحضور",
+    "confirmed_sub": "66% من المدعوين",
+    "declined": "اعتذر",
+    "no_reply": "لم يرد",
+    "guest_list": "قائمة الحضور",
+    "search_placeholder": "بحث...",
+    "col_name": "الاسم",
+    "col_phone": "رقم الهاتف",
+    "col_status": "الحالة",
+    "col_qr": "تسجيل الدخول (QR)",
+    "status_present": "حاضر",
+    "status_declined": "معتذر",
+    "qr_not_arrived": "لم يصل بعد",
+    "qr_checked_in": "تم الدخول 08:30 م"
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "HomePage": {
+    "badge": "The First Automated Invitation System in the Gulf",
+    "title": "Luxury Invitations, {break} Delivered with a Click.",
+    "description": "Smart invitation creator for high-end events and weddings. Upload your guest list, design your card, and let us handle sending it and tracking attendance via WhatsApp completely automatically.",
+    "cta_create": "Create New Invitation",
+    "cta_example": "View Example",
+    "phone_mockup": {
+      "app_name": "Da3witi",
+      "account_type": "Business Account",
+      "today": "Today",
+      "wedding_title": "Al Muhammad Wedding",
+      "special_invite": "Special Invitation",
+      "invite_body": "We are pleased to invite you to attend the wedding ceremony of our son Muhammad, next Friday. Your presence honors us.",
+      "confirm_btn": "Confirm Attendance",
+      "time": "04:30 PM",
+      "type_message": "Type a message..."
+    },
+    "features": {
+      "guests": {
+        "title": "Manage Guests Easily",
+        "desc": "Import lists from Excel files, categorize guests, and track responses moment by moment."
+      },
+      "qr": {
+        "title": "Smart QR Tickets",
+        "desc": "Send a special QR code for each guest to facilitate entry and organize reception."
+      },
+      "automation": {
+        "title": "WhatsApp Automation",
+        "desc": "Reminder messages before the appointment, location maps, and thank you messages after attendance, all automatically."
+      }
+    }
+  },
+  "Wizard": {
+    "steps": {
+      "account": "Account",
+      "guests": "Guests",
+      "details": "Details",
+      "preview": "Preview"
+    },
+    "step1": {
+      "title": "Let's start with your email",
+      "desc": "We will send you a magic link to login and track invitations.",
+      "email_label": "Email Address",
+      "email_placeholder": "name@example.com",
+      "continue": "Continue"
+    },
+    "step2": {
+      "title": "Guest List",
+      "desc": "Add the people you would like to invite.",
+      "tab_file": "Upload File (CSV/Excel)",
+      "tab_manual": "Manual Entry",
+      "upload_text": "Click to upload or drag file here",
+      "upload_sub": "Excel, CSV (Max 5MB)",
+      "manual_name": "Name",
+      "manual_phone": "Phone Number",
+      "add_guest": "Add New Guest",
+      "next": "Next",
+      "match_columns": "Match Columns",
+      "ignore_header": "Ignore First Row (Headers)",
+      "column_a": "Column A",
+      "column_b": "Column B",
+      "detected_contacts": "Detected {count} contacts",
+      "added_contacts": "Added {count} guests"
+    },
+    "step3": {
+      "title": "Event Details",
+      "desc": "Customize options, time and location.",
+      "image_upload": "Invitation Image",
+      "click_upload": "Click to upload invitation image",
+      "message_label": "Message Text",
+      "date_label": "Date",
+      "time_label": "Time",
+      "location_label": "Event Location",
+      "link_btn": "Link",
+      "map_btn": "Select on Map",
+      "qr_toggle": "Enable QR Code",
+      "qr_desc": "A special entry code will be sent to each guest",
+      "reminder_toggle": "Send Auto Reminder",
+      "reminder_desc": "WhatsApp reminder 24 hours before the event",
+      "preview_send": "Preview & Send",
+      "live_preview": "Live Preview"
+    },
+    "step4": {
+      "title": "Message Preview",
+      "desc": "This is how the invitation will appear on your guests' phones.",
+      "order_summary": "Order Summary",
+      "count_invites": "Number of Invites",
+      "service_qr": "QR Code Service",
+      "service_reminder": "Reminder Message",
+      "total": "Total",
+      "active": "Active",
+      "pay_send": "Pay & Send",
+      "terms": "By clicking the button above, you agree to the Terms of Service and Privacy Policy."
+    }
+  },
+  "Common": {
+    "loading_map": "Loading map..."
+  },
+  "Navbar": {
+    "brand": "Da3witi",
+    "dashboard": "Dashboard",
+    "start_now": "Start Now"
+  },
+  "Footer": {
+    "about": "About",
+    "pricing": "Pricing",
+    "contact": "Contact Us",
+    "copyright": "© {year} Da3witi. Made for GCC."
+  },
+  "InvitePreview": {
+    "app_name": "Da3witi",
+    "contact_info": "tap here for contact info",
+    "today": "Today",
+    "greeting": "Hi {name},",
+    "date_label": "Date:",
+    "location_label": "Location:",
+    "scan_code": "Scan code upon entry",
+    "confirm_btn": "Confirm Attendance",
+    "apologize_btn": "Decline",
+    "map_btn": "Location Map",
+    "sticker": "Sticker"
+  },
+  "Dashboard": {
+    "title": "Mohammed & Sarah Wedding",
+    "subtitle": "Friday, Oct 20 • Ritz Carlton Hall",
+    "export_report": "Export Report",
+    "send_update": "Send Update",
+    "invited": "Invited",
+    "confirmed": "Confirmed",
+    "confirmed_sub": "66% of guests",
+    "declined": "Declined",
+    "no_reply": "No Reply",
+    "guest_list": "Guest List",
+    "search_placeholder": "Search...",
+    "col_name": "Name",
+    "col_phone": "Phone Number",
+    "col_status": "Status",
+    "col_qr": "Check-in (QR)",
+    "status_present": "Confirmed",
+    "status_declined": "Declined",
+    "qr_not_arrived": "Not arrived yet",
+    "qr_checked_in": "Checked in 08:30 PM"
+  }
+}
