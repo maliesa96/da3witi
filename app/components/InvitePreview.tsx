@@ -1,6 +1,7 @@
 "use client";
 
 import { QrCode, Check, X, MapPin, ChevronLeft, ChevronRight, Phone, Video, Plus, Mic, Camera, Signal, Wifi, Battery, MailOpen } from "lucide-react";
+import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 
 interface InvitePreviewProps {
@@ -27,8 +28,8 @@ export default function InvitePreview({
   const timeString = now.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
   return (
-    <div className="flex justify-center h-full items-start pt-4">
-      <div className="w-[400px] h-[800px] bg-black rounded-[3.5rem] border-8 border-[#1c1c1e] shadow-2xl overflow-hidden relative ring-1 ring-white/10">
+    <div className="flex justify-center h-full items-start pt-4 w-full">
+      <div className="w-full max-w-[400px] aspect-1/2 bg-black rounded-[2.5rem] sm:rounded-[3.5rem] border-[6px] sm:border-8 border-[#1c1c1e] shadow-2xl overflow-hidden relative ring-1 ring-white/10 mx-auto">
         
         {/* Screen Content - Dark Mode Background */}
         <div className="w-full h-full bg-[#0b141a] whatsapp-bg-dark flex flex-col relative font-sans">
@@ -76,14 +77,16 @@ export default function InvitePreview({
             <div className="bg-[#1f2c34] rounded-tl-none rounded-bl-none p-1 pb-0 shadow-sm max-w-[85%] self-start relative group border-b border-[#101a20]">
               
               {/* Image Header */}
-              <div className="bg-[#2a3942] rounded-lg overflow-hidden relative">
-                <img
+              <div className="bg-[#2a3942] rounded-lg overflow-hidden relative aspect-4/3">
+                <Image
                   src={
                     imageUrl ||
                     "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600"
                   }
-                  className="w-full h-auto object-contain opacity-90"
+                  fill
+                  className="object-cover opacity-90"
                   alt="Invite"
+                  unoptimized
                 />
               </div>
               

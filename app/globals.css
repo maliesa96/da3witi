@@ -2,6 +2,7 @@
 
 @theme {
   --font-sans: var(--font-ibm-arabic), var(--font-inter), sans-serif;
+  --font-cairo: var(--font-cairo), sans-serif;
   
   --color-gold-500: #b49b67;
   --color-gold-600: #967d4d;

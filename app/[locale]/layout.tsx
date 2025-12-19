@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
+import { IBM_Plex_Sans_Arabic, Inter, Cairo } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import "../globals.css";
@@ -8,6 +8,12 @@ const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
   weight: ['100', '200', '300', '400', '500', '600', '700'],
   subsets: ["arabic"],
   variable: "--font-ibm-arabic",
+  display: 'swap',
+});
+
+const cairo = Cairo({
+  subsets: ["arabic"],
+  variable: "--font-cairo",
   display: 'swap',
 });
 
@@ -39,7 +45,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={direction} className="scroll-smooth">
       <body
-        className={`${ibmPlexSansArabic.variable} ${inter.variable} bg-stone-50 text-stone-800 font-sans antialiased selection:bg-stone-200 selection:text-stone-900 transition-colors duration-300 flex flex-col min-h-screen`}
+        className={`${ibmPlexSansArabic.variable} ${inter.variable} ${cairo.variable} bg-stone-50 text-stone-800 font-sans antialiased selection:bg-stone-200 selection:text-stone-900 transition-colors duration-300 flex flex-col min-h-screen`}
       >
         <NextIntlClientProvider messages={messages}>
           <Navbar />

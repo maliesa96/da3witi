@@ -5,6 +5,66 @@
     "description": "Smart invitation creator for high-end events and weddings. Upload your guest list, design your card, and let us handle sending it and tracking attendance via WhatsApp completely automatically.",
     "cta_create": "Create New Invitation",
     "cta_example": "View Example",
+    "stats": {
+      "invites_sent": "1K+ Unique Designs",
+      "happy_guests": "10K+ Happy Guests",
+      "app_rating": "4.8+ App Rating"
+    },
+    "feature_showcase": {
+      "title": "Smart Guest Management",
+      "subtitle": "We turn your events into unforgettable memories",
+      "cta": "View Features"
+    },
+    "why_choose_us": {
+      "title": "Why Hosts {break} Choose Us",
+      "subtitle_header": "We are the top invitation platform",
+      "subtitle_desc": "According to user reviews in 2024",
+      "simple_interface": {
+        "title": "Clear & Simple Interface",
+        "desc": "Create your invitation in just a few clicks. It's that simple."
+      },
+      "free_access": {
+        "title": "Free to Start",
+        "desc": "You can design and preview your invitation without any upfront cost."
+      },
+      "beautiful_designs": {
+        "title": "Beautiful Designs",
+        "desc": "Choose from our curated collection of luxury templates."
+      }
+    },
+    "community": {
+      "title": "Join Our Community",
+      "subtitle": "Become a host today and make your events unforgettable.",
+      "cta_download": "Start Creating",
+      "cta_join": "View Gallery"
+    },
+    "pricing": {
+      "title": "Simple Pricing",
+      "subtitle": "No subscriptions, no hidden fees. Pay once per event.",
+      "standard": {
+        "title": "Standard Invite",
+        "price": "50 KWD",
+        "features": [
+          "Unlimited Guests",
+          "WhatsApp Automation",
+          "RSVP Tracking",
+          "Location Map",
+          "Custom Design"
+        ],
+        "cta": "Get Started"
+      },
+      "plus": {
+        "title": "Plus QR Code",
+        "price": "+10 KWD",
+        "desc": "Add check-in capabilities",
+        "features": [
+          "Unique QR for each guest",
+          "Scanner App for gatekeepers",
+          "Real-time attendance stats",
+          "Entry validation"
+        ]
+      }
+    },
     "phone_mockup": {
       "app_name": "Da3witi",
       "account_type": "Business Account",

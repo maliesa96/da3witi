@@ -13,7 +13,7 @@ export function Navbar() {
   const langLabel = locale === 'ar' ? 'English' : 'العربية';
 
   return (
-    <nav className="fixed w-full z-50 top-0 transition-all duration-300 border-b border-stone-200/50 glass-panel">
+    <nav className="fixed w-full z-50 top-0 transition-all duration-300 border-b border-stone-200/50 bg-[#FDFCF8]">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
           <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white">
