@@ -1,6 +1,6 @@
 "use client";
 
-import { Link } from "../../navigation";
+import { Link } from "@/navigation";
 import {
   Sparkles,
   ArrowRight,
@@ -149,8 +149,8 @@ export default function Home() {
             >
               {isArabic ? (
                 <>
-                  <span className="font-[family-name:var(--font-cairo)] font-black">خطط</span> لمناسبتك<br/>
-                  <span className="font-[family-name:var(--font-cairo)] font-light text-stone-600">بكل سهولة</span>
+                  <span className="font-cairo font-black">خطط</span> لمناسبتك<br/>
+                  <span className="font-cairo font-light text-stone-600">بكل سهولة</span>
                 </>
               ) : (
                 <>
@@ -207,7 +207,7 @@ export default function Home() {
              >
                 <InvitePreview 
                   date={t('phone_mockup.time') + ", " + t('phone_mockup.today')}
-                  location="Ritz Carlton"
+                  locationName="Ritz Carlton"
                   message={t('phone_mockup.invite_body')}
                   imageUrl="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600"
                 />
@@ -217,7 +217,7 @@ export default function Home() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 1.2, duration: 0.5 }}
-                  className="absolute -right-8 top-20 bg-white p-4 rounded-2xl shadow-xl shadow-purple-900/5 hidden md:block z-[60]"
+                  className="absolute -right-8 top-20 bg-white p-4 rounded-2xl shadow-xl shadow-purple-900/5 hidden md:block z-60"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
@@ -234,7 +234,7 @@ export default function Home() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 1.5, duration: 0.5 }}
-                  className="absolute -left-8 bottom-32 bg-white p-4 rounded-2xl shadow-xl shadow-purple-900/5 hidden md:block z-[60]"
+                  className="absolute -left-8 bottom-32 bg-white p-4 rounded-2xl shadow-xl shadow-purple-900/5 hidden md:block z-60"
                 >
                    <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
@@ -315,7 +315,7 @@ export default function Home() {
                 >
                   <InvitePreview 
                     date={t('phone_mockup.time') + ", " + t('phone_mockup.today')}
-                    location="Ritz Carlton"
+                    locationName="Ritz Carlton"
                     message={t('phone_mockup.invite_body')}
                     imageUrl="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=600"
                     showQr={false}
@@ -329,7 +329,7 @@ export default function Home() {
                 >
                    <InvitePreview 
                     date={t('phone_mockup.time') + ", " + t('phone_mockup.today')}
-                    location="Ritz Carlton"
+                    locationName="Ritz Carlton"
                     message={t('phone_mockup.invite_body')}
                     imageUrl="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600"
                     showQr={false}
@@ -346,7 +346,7 @@ export default function Home() {
                 >
                    <InvitePreview 
                     date={t('phone_mockup.time') + ", " + t('phone_mockup.today')}
-                    location="Ritz Carlton"
+                    locationName="Ritz Carlton"
                     message={t('phone_mockup.invite_body')}
                     imageUrl="https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=600"
                   />
@@ -477,9 +477,9 @@ export default function Home() {
                  whileHover={{ y: -5 }}
                  className="md:col-span-3 bg-[#1C1917] text-white rounded-[3rem] p-10 shadow-2xl shadow-stone-900/20 relative overflow-hidden flex flex-col group"
                >
-                  {/* Subtle noise/gradient texture */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50 pointer-events-none"></div>
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px] -z-10"></div>
+                 {/* Subtle noise/gradient texture */}
+                 <div className="absolute inset-0 bg-linear-to-br from-white/5 to-transparent opacity-50 pointer-events-none"></div>
+                 <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px] -z-10"></div>
                   
                   <div className="mb-8 relative z-10">
                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-800 border border-stone-700 text-stone-300 text-[10px] font-bold uppercase tracking-wider mb-4">

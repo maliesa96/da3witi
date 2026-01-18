@@ -1,7 +1,7 @@
 {
   "HomePage": {
     "badge": "نظام الدعوات الآلي الأول في الخليج",
-    "title": "خطط لمناسبتك، {break} بلمسة زر.",
+    "title": "خطط لمناسبتك،  بلمسة زر.",
     "description": "منشئ دعوات ذكي للمناسبات الراقية والأفراح. قم برفع قائمة المدعوين، صمم بطاقتك، ودعنا نتولى إرسالها وتتبع الحضور عبر واتساب بشكل آلي بالكامل.",
     "cta_create": "أنشئ دعوة جديدة",
     "cta_example": "شاهد مثال",
@@ -16,7 +16,7 @@
       "cta": "شاهد المميزات"
     },
     "why_choose_us": {
-      "title": "لماذا يختارنا {break} المضيفون",
+      "title": "لماذا يختارنا  المضيفون",
       "subtitle_header": "نحن منصة الدعوات الأولى",
       "subtitle_desc": "وفقاً لتقييمات المستخدمين في ٢٠٢٤",
       "simple_interface": {
@@ -93,19 +93,11 @@
   },
   "Wizard": {
     "steps": {
-      "account": "الحساب",
       "guests": "المدعوين",
       "details": "التفاصيل",
       "preview": "المعاينة"
     },
     "step1": {
-      "title": "لنبدأ ببريدك الإلكتروني",
-      "desc": "سنرسل لك رابطاً سحرياً للدخول ومتابعة الدعوات.",
-      "email_label": "البريد الإلكتروني",
-      "email_placeholder": "name@example.com",
-      "continue": "متابعة"
-    },
-    "step2": {
       "title": "قائمة المدعوين",
       "desc": "أضف الأشخاص الذين تود دعوتهم.",
       "tab_file": "تحميل ملف (CSV/Excel)",
@@ -116,14 +108,24 @@
       "manual_phone": "رقم الهاتف",
       "add_guest": "إضافة مدعو جديد",
       "next": "التالي",
+      "back": "السابق",
       "match_columns": "تطابق الأعمدة",
       "ignore_header": "تجاهل الصف الأول (العناوين)",
       "column_a": "العمود A",
       "column_b": "العمود B",
       "detected_contacts": "تم التعرف على {count} جهة اتصال",
-      "added_contacts": "تمت إضافة {count} مدعوين"
+      "added_contacts": "تمت إضافة {count} مدعوين",
+      "select_name_col": "عمود الاسم",
+      "select_phone_col": "عمود الهاتف",
+      "start_row": "البدء من الصف",
+      "change_file": "تغيير الملف",
+      "rows_detected": "تم العثور على {count} صف",
+      "column": "عمود",
+      "confirm_selection": "تأكيد الاختيار",
+      "more_rows": "... و {count} صفوف أخرى",
+      "select_both_warning": "يرجى اختيار عمود الاسم وعمود الهاتف للمتابعة."
     },
-    "step3": {
+    "step2": {
       "title": "تفاصيل المناسبة",
       "desc": "تخصيص الخيارات والزمان والمكان.",
       "image_upload": "صورة الدعوة",
@@ -131,23 +133,31 @@
       "message_label": "نص الرسالة",
       "date_label": "التاريخ",
       "time_label": "الوقت",
-      "location_label": "موقع المناسبة",
+      "location_name_label": "اسم الموقع",
+      "location_name_placeholder": "مثال: قاعة الريتز كارلتون",
+      "location_label": "رابط الموقع / الإحداثيات",
       "link_btn": "رابط",
-      "map_btn": "تحديد ع الخريطة",
+      "map_btn": "تحديد على الخريطة",
       "qr_toggle": "تفعيل كود QR",
       "qr_desc": "سيتم إرسال كود دخول خاص لكل مدعو",
       "reminder_toggle": "إرسال تذكير تلقائي",
       "reminder_desc": "تذكير عبر واتساب قبل المناسبة بـ 24 ساعة",
+      "schedule_toggle": "جدولة الإرسال",
+      "schedule_desc": "اختر تاريخاً ووقتاً محدداً لإرسال الدعوات",
+      "scheduled_date": "تاريخ الإرسال",
+      "scheduled_time": "وقت الإرسال",
       "preview_send": "معاينة وإرسال",
-      "live_preview": "معاينة حية"
+      "live_preview": "معاينة مباشرة",
+      "media_required": "يرجى رفع صورة أو مستند الدعوة للمتابعة."
     },
-    "step4": {
+    "step3": {
       "title": "معاينة الرسالة",
       "desc": "هكذا ستظهر الدعوة على هواتف ضيوفك.",
       "order_summary": "ملخص الطلب",
       "count_invites": "عدد الدعوات",
       "service_qr": "خدمة QR Code",
       "service_reminder": "رسالة تذكير",
+      "service_scheduled": "الإرسال المجدول",
       "total": "الإجمالي",
       "active": "مفعل",
       "pay_send": "الدفع والإرسال",
@@ -178,12 +188,13 @@
     "scan_code": "امسح الكود عند الدخول",
     "confirm_btn": "تأكيد الحضور",
     "apologize_btn": "الاعتذار",
-    "map_btn": "موقع القاعة",
+    "map_btn": "الموقع",
     "sticker": "ملصق"
   },
   "Dashboard": {
     "title": "زفاف محمد & سارة",
     "subtitle": "الجمعة، 20 أكتوبر • قاعة الريتز كارلتون",
+    "my_events": "مناسباتي",
     "export_report": "تصدير التقرير",
     "send_update": "إرسال تحديث",
     "invited": "تمت الدعوة",
@@ -197,9 +208,44 @@
     "col_phone": "رقم الهاتف",
     "col_status": "الحالة",
     "col_qr": "تسجيل الدخول (QR)",
+    "status_delivered": "تم التسليم",
+    "status_failed": "لم يتم التسليم",
     "status_present": "حاضر",
     "status_declined": "معتذر",
+    "status_no_reply": "جاري الإرسال...",
     "qr_not_arrived": "لم يصل بعد",
-    "qr_checked_in": "تم الدخول 08:30 م"
+    "qr_checked_in": "تم الدخول",
+    "no_guests": "لم تتم إضافة ضيوف بعد",
+    "add_guest": "إضافة ضيف",
+    "add_guest_title": "إضافة ضيف جديد",
+    "guest_name": "اسم الضيف",
+    "guest_name_placeholder": "الاسم الثلاثي",
+    "guest_phone": "رقم الهاتف",
+    "cancel": "إلغاء",
+    "confirm_add": "إضافة وإرسال الدعوة",
+    "scan_qr": "مسح كود QR",
+    "scan_success": "تم تسجيل الدخول بنجاح!",
+    "scan_already_checked_in": "تم تسجيل الدخول مسبقاً",
+    "scan_error_not_found": "المدعو غير موجود",
+    "scan_error_wrong_event": "هذا الكود لمناسبة أخرى",
+    "scan_error_generic": "فشل في معالجة الطلب",
+    "scan_instruction": "ضع كود QR داخل الإطار للمسح",
+    "processing": "جاري المعالجة...",
+    "back_to_dashboard": "العودة للوحة التحكم"
+  },
+  "Auth": {
+    "login": "تسجيل الدخول",
+    "signup": "إنشاء حساب",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "dont_have_account": "ليس لديك حساب؟",
+    "already_have_account": "لديك حساب بالفعل؟",
+    "sign_out": "تسجيل الخروج",
+    "error_login": "خطأ في تسجيل الدخول",
+    "error_signup": "خطأ في إنشاء الحساب",
+    "magic_link_desc": "أدخل بريدك الإلكتروني لتلقي رابط سحري لتسجيل الدخول.",
+    "send_magic_link": "إرسال رابط الدخول السحري",
+    "check_email": "تحقق من بريدك الإلكتروني للحصول على رابط الدخول!",
+    "error_magic_link": "حدث خطأ أثناء إرسال الرابط. يرجى المحاولة مرة أخرى."
   }
 }

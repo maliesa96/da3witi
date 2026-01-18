@@ -1,6 +1,6 @@
 import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link } from "../../navigation";
+import { Link } from "@/navigation";
 
 export function Footer() {
   const t = useTranslations('Footer');

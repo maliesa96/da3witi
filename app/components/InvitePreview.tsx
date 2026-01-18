@@ -7,17 +7,25 @@ import { useLocale, useTranslations } from "next-intl";
 interface InvitePreviewProps {
   title?: string;
   date: string;
-  location: string;
+  locationName: string;
+  location?: string;
   message: string;
   imageUrl?: string;
+  mediaType?: 'image' | 'document';
+  mediaFilename?: string;
+  mediaSize?: number;
   showQr?: boolean;
 }
 
 export default function InvitePreview({
   date,
+  locationName,
   location,
   message,
   imageUrl,
+  mediaType = 'image',
+  mediaFilename,
+  mediaSize,
   showQr = true,
 }: InvitePreviewProps) {
   const t = useTranslations('InvitePreview');
@@ -26,6 +34,14 @@ export default function InvitePreview({
   // Get current time for the timestamp
   const now = new Date();
   const timeString = now.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
 
   return (
     <div className="flex justify-center h-full items-start pt-4 w-full">
@@ -76,19 +92,39 @@ export default function InvitePreview({
             {/* Message Bubble (Incoming) - Dark Mode */}
             <div className="bg-[#1f2c34] rounded-tl-none rounded-bl-none p-1 pb-0 shadow-sm max-w-[85%] self-start relative group border-b border-[#101a20]">
               
-              {/* Image Header */}
-              <div className="bg-[#2a3942] rounded-lg overflow-hidden relative aspect-4/3">
-                <Image
-                  src={
-                    imageUrl ||
-                    "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600"
-                  }
-                  fill
-                  className="object-cover opacity-90"
-                  alt="Invite"
-                  unoptimized
-                />
-              </div>
+              {/* Media Header */}
+              {mediaType === 'document' ? (
+                <div className="rounded-lg overflow-hidden mb-1">
+                  <div className="flex items-center gap-2 bg-[#161f25] p-1.5 rounded-md">
+                    <svg width="20" height="24" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                      <path d="M4 0C1.79086 0 0 1.79086 0 4V44C0 46.2091 1.79086 48 4 48H36C38.2091 48 40 46.2091 40 44V12L28 0H4Z" fill="#E53935"/>
+                      <path d="M28 0V12H40L28 0Z" fill="white" fillOpacity="0.3"/>
+                      <text x="20" y="35" textAnchor="middle" fill="white" style={{ fontSize: '11px', fontWeight: '900', fontFamily: 'system-ui, -apple-system, sans-serif' }}>PDF</text>
+                    </svg>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-medium text-[#e9edef] truncate mb-1">
+                        {mediaFilename || 'Invitation.pdf'}
+                      </p>
+                      <p className="text-[8px] text-[#8696a0] leading-tight mb-0.5">
+                        {mediaSize ? formatFileSize(mediaSize) : '1.2 MB'} • PDF
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-[#2a3942] rounded-lg overflow-hidden relative aspect-4/3 mb-1">
+                  <Image
+                    src={
+                      imageUrl ||
+                      "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600"
+                    }
+                    fill
+                    className="object-cover opacity-90"
+                    alt="Invite"
+                    unoptimized
+                  />
+                </div>
+              )}
               
               {/* Body */}
               <div className="px-3 pt-1 pb-5 text-start" dir="auto">
@@ -99,7 +135,7 @@ export default function InvitePreview({
                   <br />
                   📅 <strong>{t('date_label')}</strong> {date || (locale === 'ar' ? "الجمعة، 20 أكتوبر" : "Friday, Oct 20")}
                   <br />
-                  📍 <strong>{t('location_label')}</strong> {location || (locale === 'ar' ? "قاعة الريتز كارلتون" : "Ritz Carlton Hall")}
+                  📍 <strong>{t('location_label')}</strong> {locationName || (locale === 'ar' ? "قاعة الريتز كارلتون" : "Ritz Carlton Hall")}
                 </p>
 
                 {/* QR Code */}
@@ -129,10 +165,15 @@ export default function InvitePreview({
                     <X size={16} />
                     <span>{t('apologize_btn')}</span>
                 </button>
-                <button className="w-full bg-[#1f2c34] rounded-t-none rounded-b-xl py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2">
+                <a 
+                  href={location ? (location.startsWith('http') ? location : `https://www.google.com/maps?q=${location}`) : '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-[#1f2c34] rounded-t-none rounded-b-xl py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2"
+                >
                     <MapPin size={16} />
                     <span>{t('map_btn')}</span>
-                </button>
+                </a>
             </div>
 
           </div>

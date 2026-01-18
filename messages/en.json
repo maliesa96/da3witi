@@ -1,7 +1,7 @@
 {
   "HomePage": {
     "badge": "The First Automated Invitation System in the Gulf",
-    "title": "Luxury Invitations, {break} Delivered with a Click.",
+    "title": "Luxury Invitations,  Delivered with a Click.",
     "description": "Smart invitation creator for high-end events and weddings. Upload your guest list, design your card, and let us handle sending it and tracking attendance via WhatsApp completely automatically.",
     "cta_create": "Create New Invitation",
     "cta_example": "View Example",
@@ -16,7 +16,7 @@
       "cta": "View Features"
     },
     "why_choose_us": {
-      "title": "Why Hosts {break} Choose Us",
+      "title": "Why Hosts  Choose Us",
       "subtitle_header": "We are the top invitation platform",
       "subtitle_desc": "According to user reviews in 2024",
       "simple_interface": {
@@ -93,19 +93,11 @@
   },
   "Wizard": {
     "steps": {
-      "account": "Account",
       "guests": "Guests",
       "details": "Details",
       "preview": "Preview"
     },
     "step1": {
-      "title": "Let's start with your email",
-      "desc": "We will send you a magic link to login and track invitations.",
-      "email_label": "Email Address",
-      "email_placeholder": "name@example.com",
-      "continue": "Continue"
-    },
-    "step2": {
       "title": "Guest List",
       "desc": "Add the people you would like to invite.",
       "tab_file": "Upload File (CSV/Excel)",
@@ -116,14 +108,24 @@
       "manual_phone": "Phone Number",
       "add_guest": "Add New Guest",
       "next": "Next",
+      "back": "Back",
       "match_columns": "Match Columns",
       "ignore_header": "Ignore First Row (Headers)",
       "column_a": "Column A",
       "column_b": "Column B",
       "detected_contacts": "Detected {count} contacts",
-      "added_contacts": "Added {count} guests"
+      "added_contacts": "Added {count} guests",
+      "select_name_col": "Name Column",
+      "select_phone_col": "Phone Column",
+      "start_row": "Start Row",
+      "change_file": "Change File",
+      "rows_detected": "{count} rows detected",
+      "column": "Column",
+      "confirm_selection": "Confirm Selection",
+      "more_rows": "... and {count} more rows",
+      "select_both_warning": "Please select both Name and Phone columns to continue."
     },
-    "step3": {
+    "step2": {
       "title": "Event Details",
       "desc": "Customize options, time and location.",
       "image_upload": "Invitation Image",
@@ -131,23 +133,31 @@
       "message_label": "Message Text",
       "date_label": "Date",
       "time_label": "Time",
-      "location_label": "Event Location",
+      "location_name_label": "Location Name",
+      "location_name_placeholder": "e.g. Ritz Carlton Hall",
+      "location_label": "Location Link / Coordinates",
       "link_btn": "Link",
       "map_btn": "Select on Map",
       "qr_toggle": "Enable QR Code",
       "qr_desc": "A special entry code will be sent to each guest",
       "reminder_toggle": "Send Auto Reminder",
       "reminder_desc": "WhatsApp reminder 24 hours before the event",
+      "schedule_toggle": "Schedule Send",
+      "schedule_desc": "Choose a specific date and time to send the invitations",
+      "scheduled_date": "Scheduled Date",
+      "scheduled_time": "Scheduled Time",
       "preview_send": "Preview & Send",
-      "live_preview": "Live Preview"
+      "live_preview": "Live Preview",
+      "media_required": "Please upload an invitation image or document to continue."
     },
-    "step4": {
+    "step3": {
       "title": "Message Preview",
       "desc": "This is how the invitation will appear on your guests' phones.",
       "order_summary": "Order Summary",
       "count_invites": "Number of Invites",
       "service_qr": "QR Code Service",
       "service_reminder": "Reminder Message",
+      "service_scheduled": "Scheduled Send",
       "total": "Total",
       "active": "Active",
       "pay_send": "Pay & Send",
@@ -178,12 +188,13 @@
     "scan_code": "Scan code upon entry",
     "confirm_btn": "Confirm Attendance",
     "apologize_btn": "Decline",
-    "map_btn": "Location Map",
+    "map_btn": "View Location",
     "sticker": "Sticker"
   },
   "Dashboard": {
     "title": "Mohammed & Sarah Wedding",
     "subtitle": "Friday, Oct 20 • Ritz Carlton Hall",
+    "my_events": "My Events",
     "export_report": "Export Report",
     "send_update": "Send Update",
     "invited": "Invited",
@@ -197,9 +208,44 @@
     "col_phone": "Phone Number",
     "col_status": "Status",
     "col_qr": "Check-in (QR)",
+    "status_delivered": "Delivered",
+    "status_failed": "Not Delivered",
     "status_present": "Confirmed",
     "status_declined": "Declined",
+    "status_no_reply": "Sending...",
     "qr_not_arrived": "Not arrived yet",
-    "qr_checked_in": "Checked in 08:30 PM"
+    "qr_checked_in": "Checked in",
+    "no_guests": "No guests added yet",
+    "add_guest": "Add Guest",
+    "add_guest_title": "Add New Guest",
+    "guest_name": "Guest Name",
+    "guest_name_placeholder": "Full Name",
+    "guest_phone": "Phone Number",
+    "cancel": "Cancel",
+    "confirm_add": "Add & Send Invite",
+    "scan_qr": "Scan QR Codes",
+    "scan_success": "Check-in successful!",
+    "scan_already_checked_in": "Already checked in",
+    "scan_error_not_found": "Guest not found",
+    "scan_error_wrong_event": "Guest belongs to another event",
+    "scan_error_generic": "Failed to process check-in",
+    "scan_instruction": "Place the QR code within the frame to scan",
+    "processing": "Processing...",
+    "back_to_dashboard": "Back to Dashboard"
+  },
+  "Auth": {
+    "login": "Login",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "dont_have_account": "Don't have an account?",
+    "already_have_account": "Already have an account?",
+    "sign_out": "Sign Out",
+    "error_login": "Error logging in",
+    "error_signup": "Error signing up",
+    "magic_link_desc": "Enter your email to receive a magic link to sign in.",
+    "send_magic_link": "Send Magic Link",
+    "check_email": "Check your email for the magic link!",
+    "error_magic_link": "Error sending magic link. Please try again."
   }
 }
