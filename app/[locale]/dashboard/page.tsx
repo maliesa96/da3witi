@@ -7,6 +7,7 @@ import { sendInviteTemplate, type MediaType } from "@/lib/whatsapp";
 import { revalidatePath } from "next/cache";
 import AddGuestForm from "@/app/components/AddGuestForm";
 import { Link } from "@/navigation";
+import { Prisma } from "@prisma/client";
 
 export default async function Dashboard({ 
   params,
@@ -41,7 +42,7 @@ export default async function Dashboard({
   
   // Get the selected event or default to the first one
   const currentEvent = eventId 
-    ? events.find(e => e.id === eventId) || events[0]
+    ? events.find((e: Prisma.EventGetPayload<{ include: { guests: true } }>) => e.id === eventId) || events[0]
     : events[0];
   
   const guests = currentEvent?.guests || [];

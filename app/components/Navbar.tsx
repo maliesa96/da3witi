@@ -42,6 +42,9 @@ export function Navbar() {
           </div>
           <span className="text-lg md:text-xl font-semibold tracking-tight text-stone-900 truncate">
             {t('brand')}
+            <span className="text-[10px] md:text-sm font-medium text-stone-600 ml-2 rtl:mr-2 rtl:ml-0 uppercase tracking-tight">
+              by Dune Technologies
+            </span>
           </span>
         </Link>
 

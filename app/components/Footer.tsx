@@ -15,6 +15,9 @@ export function Footer() {
           </div>
           <span className="text-lg font-semibold tracking-tight text-stone-900">
             Da3witi
+            <span className="text-[10px] md:text-sm font-medium text-stone-600 ml-2 rtl:mr-2 rtl:ml-0 uppercase tracking-tight">
+              by Dune Technologies
+            </span>
           </span>
         </div>
         <div className="flex gap-6 text-sm text-stone-500 font-medium">
