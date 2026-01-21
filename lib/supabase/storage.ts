@@ -40,13 +40,12 @@ export function validateFileType(file: File): { valid: boolean; error?: string }
     };
   }
 
-  // WhatsApp has file size limits: 5MB for images, 100MB for documents
-  const maxSize = file.type === 'application/pdf' ? 100 * 1024 * 1024 : 5 * 1024 * 1024;
+  // Max file size limit: 5MB for all types
+  const maxSize = 5 * 1024 * 1024;
   if (file.size > maxSize) {
-    const maxSizeMB = maxSize / (1024 * 1024);
     return {
       valid: false,
-      error: `File too large. Maximum size: ${maxSizeMB}MB`
+      error: `File too large. Maximum size: 5MB`
     };
   }
 

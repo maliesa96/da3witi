@@ -9,6 +9,7 @@ import {
   CreditCard,
   Plus,
   Trash2,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import InvitePreview from "../../components/InvitePreview";
@@ -18,6 +19,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { createEventAndSendInvites } from "./actions";
 import { useRouter } from "@/navigation";
 import { uploadEventMedia, validateFileType, type MediaType } from "@/lib/supabase/storage";
+import { formatGoogleMapsLink } from "@/lib/maps";
 
 const MapPicker = dynamic(() => import("../../components/MapPicker"), {
   ssr: false,
@@ -40,13 +42,14 @@ export default function Wizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [mapMode, setMapMode] = useState<"link" | "map">("link");
   const [details, setDetails] = useState({
     date: "",
     time: "",
     location: "",
     locationName: "",
-    message: "يسرنا دعوتكم لحضور حفل زفاف ابننا محمد، وذلك يوم الجمعة القادم. حضوركم يشرفنا.",
+    message: "",
     qrEnabled: true,
     reminderEnabled: true,
     isScheduled: false,
@@ -127,6 +130,30 @@ export default function Wizard() {
     }
   };
 
+  const validateStep2 = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!details.imageUrl) newErrors.imageUrl = t('errors.required');
+    if (!details.message.trim()) newErrors.message = t('errors.required');
+    if (!details.date) newErrors.date = t('errors.required');
+    if (!details.time) newErrors.time = t('errors.required');
+    if (!details.locationName.trim()) newErrors.locationName = t('errors.required');
+    const googleMapsRegex = /^https:\/\/maps\.google\.com\/\?q=-?\d+\.\d+,-?\d+\.\d+/;
+    if (!details.location.trim()) {
+      newErrors.location = t('errors.required');
+    } else if (!googleMapsRegex.test(details.location)) {
+      newErrors.location = t('errors.invalid_map_link');
+    }
+    
+    if (details.isScheduled) {
+      if (!details.scheduledDate) newErrors.scheduledDate = t('errors.required');
+      if (!details.scheduledTime) newErrors.scheduledTime = t('errors.required');
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handlePayAndSend = async () => {
     setIsSubmitting(true);
     try {
@@ -185,135 +212,17 @@ export default function Wizard() {
               }`}
             >
               {i === 1
-                ? t('steps.guests')
-                : i === 2
                 ? t('steps.details')
+                : i === 2
+                ? t('steps.guests')
                 : t('steps.preview')}
             </span>
           </div>
         ))}
       </div>
 
-      {/* STEP 1: INVITE LIST */}
+      {/* STEP 1: OPTIONS */}
       {step === 1 && (
-        <div className="animate-slide-up">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold text-stone-900 tracking-tight">
-              {t('step1.title')}
-            </h2>
-            <p className="text-stone-500 text-sm mt-2 font-light">
-              {t('step1.desc')}
-            </p>
-          </div>
-
-          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm max-w-4xl mx-auto">
-            <div className="flex border-b border-stone-100">
-              <button
-                onClick={() => setInviteMode("file")}
-                className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                  inviteMode === "file"
-                    ? "text-stone-900 border-b-2 border-stone-900 bg-stone-50"
-                    : "text-stone-400 hover:text-stone-600"
-                }`}
-              >
-                {t('step1.tab_file')}
-              </button>
-              <button
-                onClick={() => setInviteMode("manual")}
-                className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                  inviteMode === "manual"
-                    ? "text-stone-900 border-b-2 border-stone-900 bg-stone-50"
-                    : "text-stone-400 hover:text-stone-600"
-                }`}
-              >
-                {t('step1.tab_manual')}
-              </button>
-            </div>
-
-            <div className="p-8">
-              {inviteMode === "file" ? (
-                <ContactImport 
-                  onContactsLoaded={handleContactsLoaded}
-                  data={importData}
-                  setData={setImportData}
-                  nameCol={importNameCol}
-                  setNameCol={setImportNameCol}
-                  phoneCol={importPhoneCol}
-                  setPhoneCol={setImportPhoneCol}
-                  startRow={importStartRow}
-                  setStartRow={setImportStartRow}
-                  fileName={importFileName}
-                  setFileName={setImportFileName}
-                />
-              ) : (
-                <div className="animate-fade-in">
-                  <div className="space-y-4">
-                    {invites.map((invite, index) => (
-                      <div key={index} className="flex gap-4 items-start">
-                        <div className="flex-1">
-                          <label className="block text-xs font-medium text-stone-700 mb-1.5">
-                            {t('step1.manual_name')}
-                          </label>
-                          <input
-                            type="text"
-                            value={invite.name}
-                            onChange={(e) => updateManualInvite(index, "name", e.target.value)}
-                            placeholder={t('step1.manual_name')}
-                            className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <label className="block text-xs font-medium text-stone-700 mb-1.5">
-                            {t('step1.manual_phone')}
-                          </label>
-                          <input
-                            type="tel"
-                            value={invite.phone}
-                            onChange={(e) => updateManualInvite(index, "phone", e.target.value)}
-                            placeholder="05xxxxxxxx"
-                            className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm dir-ltr text-right"
-                          />
-                        </div>
-                        {invites.length > 1 && (
-                          <button
-                            onClick={() => removeManualInvite(index)}
-                            className="mt-7 p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <button
-                    onClick={addManualInvite}
-                    className="mt-6 w-full py-3 border-2 border-dashed border-stone-200 rounded-xl text-stone-500 hover:text-stone-700 hover:border-stone-300 hover:bg-stone-50 transition-all flex items-center justify-center gap-2 text-sm font-medium"
-                  >
-                    <Plus size={18} />
-                    <span>{t('step1.add_guest')}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="bg-stone-50 px-6 py-4 border-t border-stone-100 flex justify-between items-center">
-              <span className="text-xs text-stone-500">
-                {t('step1.added_contacts', {count: invites.filter(i => i.name || i.phone).length})}
-              </span>
-              <button
-                onClick={() => setStep(2)}
-                className="bg-stone-900 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-all flex items-center gap-2"
-              >
-                <span>{t('step1.next')}</span>
-                <ArrowRight size={16} className="rtl:rotate-180" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 2: OPTIONS */}
-      {step === 2 && (
         <div className="animate-slide-up">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-semibold text-stone-900 tracking-tight">
@@ -386,10 +295,10 @@ export default function Wizard() {
                       {isUploading ? 'Uploading...' : t('step2.click_upload')}
                     </p>
                     <p className="text-[10px] text-stone-500 mt-1">
-                      JPG, PNG, PDF (Images: 5MB, PDF: 100MB)
+                      JPG, PNG, PDF (Max: 5MB)
                     </p>
-                    {uploadError && (
-                      <p className="text-[10px] text-red-500 mt-2">{uploadError}</p>
+                    {(uploadError || errors.imageUrl) && (
+                      <p className="text-[10px] text-red-500 mt-2">{uploadError || errors.imageUrl}</p>
                     )}
                   </label>
                 )}
@@ -397,56 +306,98 @@ export default function Wizard() {
 
               <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-stone-700 mb-1.5">
-                    {t('step2.message_label')}
+                  <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
+                    <span>{t('step2.message_label')} <span className="text-red-500">*</span></span>
+                    {errors.message && <span className="text-red-500 text-[10px]">{errors.message}</span>}
                   </label>
                   <textarea
                     rows={4}
                     value={details.message}
-                    onChange={(e) => setDetails({ ...details, message: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 text-sm focus:bg-white focus:border-stone-400 outline-none transition-all resize-none"
+                    placeholder={t('step2.default_message')}
+                    onChange={(e) => {
+                      setDetails({ ...details, message: e.target.value });
+                      if (errors.message) setErrors(prev => {
+                        const next = { ...prev };
+                        delete next.message;
+                        return next;
+                      });
+                    }}
+                    className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm focus:bg-white focus:border-stone-400 outline-none transition-all resize-none ${
+                      errors.message ? 'border-red-300' : 'border-stone-200'
+                    }`}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-stone-700 mb-1.5">
-                      {t('step2.date_label')}
+                    <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
+                      <span>{t('step2.date_label')} <span className="text-red-500">*</span></span>
+                      {errors.date && <span className="text-red-500 text-[10px]">{errors.date}</span>}
                     </label>
                     <input
                       type="date"
                       value={details.date}
-                      onChange={(e) => setDetails({ ...details, date: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 text-sm outline-none text-stone-600"
+                      onChange={(e) => {
+                        setDetails({ ...details, date: e.target.value });
+                        if (errors.date) setErrors(prev => {
+                          const next = { ...prev };
+                          delete next.date;
+                          return next;
+                        });
+                      }}
+                      className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 ${
+                        errors.date ? 'border-red-300' : 'border-stone-200'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-stone-700 mb-1.5">
-                      {t('step2.time_label')}
+                    <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
+                      <span>{t('step2.time_label')} <span className="text-red-500">*</span></span>
+                      {errors.time && <span className="text-red-500 text-[10px]">{errors.time}</span>}
                     </label>
                     <input
                       type="time"
                       value={details.time}
-                      onChange={(e) => setDetails({ ...details, time: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 text-sm outline-none text-stone-600"
+                      onChange={(e) => {
+                        setDetails({ ...details, time: e.target.value });
+                        if (errors.time) setErrors(prev => {
+                          const next = { ...prev };
+                          delete next.time;
+                          return next;
+                        });
+                      }}
+                      className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 ${
+                        errors.time ? 'border-red-300' : 'border-stone-200'
+                      }`}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-stone-700 mb-1.5">
-                    {t('step2.location_name_label')}
+                  <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
+                    <span>{t('step2.location_name_label')} <span className="text-red-500">*</span></span>
+                    {errors.locationName && <span className="text-red-500 text-[10px]">{errors.locationName}</span>}
                   </label>
                   <input
                     type="text"
                     value={details.locationName}
-                    onChange={(e) => setDetails({ ...details, locationName: e.target.value })}
+                    onChange={(e) => {
+                      setDetails({ ...details, locationName: e.target.value });
+                      if (errors.locationName) setErrors(prev => {
+                        const next = { ...prev };
+                        delete next.locationName;
+                        return next;
+                      });
+                    }}
                     placeholder={t('step2.location_name_placeholder')}
-                    className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 text-sm outline-none focus:bg-white focus:border-stone-400 transition-all"
+                    className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none focus:bg-white focus:border-stone-400 transition-all ${
+                      errors.locationName ? 'border-red-300' : 'border-stone-200'
+                    }`}
                   />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-medium text-stone-700">
-                      {t('step2.location_label')}
+                    <label className="text-xs font-medium text-stone-700 flex">
+                      {t('step2.location_label')} <span className="text-red-500 ml-1">*</span>
+                      {errors.location && <span className="text-red-500 text-[10px] ml-2 font-normal">{errors.location}</span>}
                     </label>
                     <div className="flex bg-stone-100 rounded-md p-0.5">
                       <button
@@ -480,16 +431,33 @@ export default function Wizard() {
                       <input
                         type="url"
                         value={details.location}
-                        onChange={(e) => setDetails({ ...details, location: e.target.value })}
+                        onChange={(e) => {
+                          const formattedValue = formatGoogleMapsLink(e.target.value);
+                          setDetails({ ...details, location: formattedValue });
+                          if (errors.location) setErrors(prev => {
+                            const next = { ...prev };
+                            delete next.location;
+                            return next;
+                          });
+                        }}
                         placeholder="https://maps.google.com/..."
-                        className="w-full pr-9 pl-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 text-sm outline-none focus:bg-white focus:border-stone-400 transition-all dir-ltr"
+                        className={`w-full pr-9 pl-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none focus:bg-white focus:border-stone-400 transition-all dir-ltr ${
+                          errors.location ? 'border-red-300' : 'border-stone-200'
+                        }`}
                       />
                     </div>
                   ) : (
-                    <div className="relative h-64 bg-stone-100 rounded-lg border border-stone-200 overflow-hidden group">
+                    <div className={`relative h-64 bg-stone-100 rounded-lg border overflow-hidden group ${
+                      errors.location ? 'border-red-300' : 'border-stone-200'
+                    }`}>
                       <MapPicker
                         onLocationSelect={(lat: number, lng: number) => {
-                          setDetails({ ...details, location: `${lat}, ${lng}` });
+                          setDetails({ ...details, location: `https://maps.google.com/?q=${lat},${lng}` });
+                          if (errors.location) setErrors(prev => {
+                            const next = { ...prev };
+                            delete next.location;
+                            return next;
+                          });
                         }}
                       />
                     </div>
@@ -515,7 +483,7 @@ export default function Wizard() {
                       onChange={(e) => setDetails({ ...details, qrEnabled: e.target.checked })}
                       className="sr-only peer custom-checkbox"
                     />
-                    <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
+                    <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
                   </label>
                 </div>
                 <hr className="border-stone-100" />
@@ -536,7 +504,7 @@ export default function Wizard() {
                       onChange={(e) => setDetails({ ...details, reminderEnabled: e.target.checked })}
                       className="sr-only peer custom-checkbox"
                     />
-                    <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
+                    <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
                   </label>
                 </div>
                 <hr className="border-stone-100" />
@@ -558,32 +526,52 @@ export default function Wizard() {
                         onChange={(e) => setDetails({ ...details, isScheduled: e.target.checked })}
                         className="sr-only peer custom-checkbox"
                       />
-                      <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
+                      <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
                     </label>
                   </div>
 
                   {details.isScheduled && (
                     <div className="grid grid-cols-2 gap-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                       <div>
-                        <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1.5">
-                          {t('step2.scheduled_date')}
+                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1.5 flex justify-between">
+                          <span>{t('step2.scheduled_date')} <span className="text-red-500">*</span></span>
+                          {errors.scheduledDate && <span className="text-red-500 text-[10px] normal-case">{errors.scheduledDate}</span>}
                         </label>
                         <input
                           type="date"
                           value={details.scheduledDate}
-                          onChange={(e) => setDetails({ ...details, scheduledDate: e.target.value })}
-                          className="w-full px-4 py-2 rounded-lg bg-stone-50 border border-stone-200 text-sm outline-none text-stone-600 focus:bg-white focus:border-stone-400 transition-all"
+                          onChange={(e) => {
+                            setDetails({ ...details, scheduledDate: e.target.value });
+                            if (errors.scheduledDate) setErrors(prev => {
+                              const next = { ...prev };
+                              delete next.scheduledDate;
+                              return next;
+                            });
+                          }}
+                          className={`w-full px-4 py-2 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 focus:bg-white focus:border-stone-400 transition-all ${
+                            errors.scheduledDate ? 'border-red-300' : 'border-stone-200'
+                          }`}
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1.5">
-                          {t('step2.scheduled_time')}
+                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1.5 flex justify-between">
+                          <span>{t('step2.scheduled_time')} <span className="text-red-500">*</span></span>
+                          {errors.scheduledTime && <span className="text-red-500 text-[10px] normal-case">{errors.scheduledTime}</span>}
                         </label>
                         <input
                           type="time"
                           value={details.scheduledTime}
-                          onChange={(e) => setDetails({ ...details, scheduledTime: e.target.value })}
-                          className="w-full px-4 py-2 rounded-lg bg-stone-50 border border-stone-200 text-sm outline-none text-stone-600 focus:bg-white focus:border-stone-400 transition-all"
+                          onChange={(e) => {
+                            setDetails({ ...details, scheduledTime: e.target.value });
+                            if (errors.scheduledTime) setErrors(prev => {
+                              const next = { ...prev };
+                              delete next.scheduledTime;
+                              return next;
+                            });
+                          }}
+                          className={`w-full px-4 py-2 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 focus:bg-white focus:border-stone-400 transition-all ${
+                            errors.scheduledTime ? 'border-red-300' : 'border-stone-200'
+                          }`}
                         />
                       </div>
                     </div>
@@ -591,30 +579,16 @@ export default function Wizard() {
                 </div>
               </div>
 
-              <div className="flex justify-between pt-4">
-                <button
-                  onClick={() => setStep(1)}
-                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all flex items-center gap-2"
-                >
-                  <ArrowLeft size={16} className="rtl:rotate-180" />
-                  <span>{t('step1.back')}</span>
-                </button>
+              <div className="flex justify-end pt-4">
                 <button
                   onClick={() => {
-                    if (!details.imageUrl) {
-                      setUploadError(t('step2.media_required'));
-                      return;
+                    if (validateStep2()) {
+                      setStep(2);
                     }
-                    setStep(3);
                   }}
-                  disabled={!details.imageUrl}
-                  className={`px-8 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center gap-2 ${
-                    details.imageUrl 
-                      ? 'bg-stone-900 text-white hover:bg-stone-800' 
-                      : 'bg-stone-300 text-stone-500 cursor-not-allowed'
-                  }`}
+                  className="bg-stone-900 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-stone-800 transition-all shadow-sm flex items-center gap-2"
                 >
-                  <span>{t('step2.preview_send')}</span>
+                  <span>{t('step1.next')}</span>
                   <ArrowRight size={16} className="rtl:rotate-180" />
                 </button>
               </div>
@@ -625,6 +599,7 @@ export default function Wizard() {
                <div className="scale-90 xl:scale-100 origin-top flex justify-center">
                  <InvitePreview 
                     date={details.date}
+                    time={details.time}
                     locationName={details.locationName}
                     location={details.location}
                     message={details.message}
@@ -638,6 +613,183 @@ export default function Wizard() {
                <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-4 text-center">
                   {t('step2.live_preview')}
                </h4>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 2: INVITE LIST */}
+      {step === 2 && (
+        <div className="animate-slide-up">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold text-stone-900 tracking-tight">
+              {t('step1.title')}
+            </h2>
+            <p className="text-stone-500 text-sm mt-2 font-light">
+              {t('step1.desc')}
+            </p>
+          </div>
+
+          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm max-w-4xl mx-auto">
+            <div className="flex border-b border-stone-100">
+              <button
+                onClick={() => setInviteMode("file")}
+                className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                  inviteMode === "file"
+                    ? "text-stone-900 border-b-2 border-stone-900 bg-stone-50"
+                    : "text-stone-400 hover:text-stone-600"
+                }`}
+              >
+                {t('step1.tab_file')}
+              </button>
+              <button
+                onClick={() => setInviteMode("manual")}
+                className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                  inviteMode === "manual"
+                    ? "text-stone-900 border-b-2 border-stone-900 bg-stone-50"
+                    : "text-stone-400 hover:text-stone-600"
+                }`}
+              >
+                {t('step1.tab_manual')}
+              </button>
+            </div>
+
+            <div className="p-8">
+              {inviteMode === "file" ? (
+                <>
+                  {/* Excel Sheet Mockup */}
+                  <div className="mb-8 bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-stone-50 px-4 py-2 border-b border-stone-200 flex items-center gap-2" dir="ltr">
+                      <div className="flex gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                      </div>
+                      <div className="ml-4 text-[10px] font-medium text-stone-500 bg-white px-3 py-0.5 rounded border border-stone-200 flex items-center gap-1.5">
+                        <FileSpreadsheet size={12} className="text-green-600" />
+                        guests.xlsx
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto" dir="ltr">
+                      <table className="w-full text-sm text-left">
+                        <thead>
+                          <tr className="bg-stone-50 border-b border-stone-200">
+                            <th className="px-4 py-2 w-12 text-center text-xs font-medium text-stone-400 border-r border-stone-200">#</th>
+                            <th className="px-4 py-2 font-medium text-stone-600 border-r border-stone-200 w-1/2">A</th>
+                            <th className="px-4 py-2 font-medium text-stone-600 w-1/2">B</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100">
+                          <tr className="bg-stone-50/50">
+                            <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">1</td>
+                            <td className="px-4 py-2 font-medium text-stone-900 border-r border-stone-200 bg-blue-50/30 text-right">{t('step1.manual_name')}</td>
+                            <td className="px-4 py-2 font-medium text-stone-900 bg-green-50/30 text-right">{t('step1.manual_phone')}</td>
+                          </tr>
+                          <tr>
+                            <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">2</td>
+                            <td className="px-4 py-2 text-stone-600 border-r border-stone-200 text-right">{locale === 'ar' ? 'محمد السالم' : 'Mohammed Al-Salem'}</td>
+                            <td className="px-4 py-2 text-stone-600 font-mono text-xs text-right" dir="ltr">+966512992124</td>
+                          </tr>
+                          <tr>
+                            <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">3</td>
+                            <td className="px-4 py-2 text-stone-600 border-r border-stone-200 text-right">{locale === 'ar' ? 'عبدالله الدوسري' : 'Abdullah Al-Dosari'}</td>
+                            <td className="px-4 py-2 text-stone-600 font-mono text-xs text-right" dir="ltr">+96599828842</td>
+                          </tr>
+                          <tr>
+                            <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">4</td>
+                            <td className="px-4 py-2 text-stone-400 italic border-r border-stone-200 text-right">...</td>
+                            <td className="px-4 py-2 text-stone-400 italic text-right">...</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <ContactImport 
+                    onContactsLoaded={handleContactsLoaded}
+                    data={importData}
+                    setData={setImportData}
+                    nameCol={importNameCol}
+                    setNameCol={setImportNameCol}
+                    phoneCol={importPhoneCol}
+                    setPhoneCol={setImportPhoneCol}
+                    startRow={importStartRow}
+                    setStartRow={setImportStartRow}
+                    fileName={importFileName}
+                    setFileName={setImportFileName}
+                  />
+                </>
+              ) : (
+                <div className="animate-fade-in">
+                  <div className="space-y-4">
+                    {invites.map((invite, index) => (
+                      <div key={index} className="flex gap-4 items-start">
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                            {t('step1.manual_name')}
+                          </label>
+                          <input
+                            type="text"
+                            value={invite.name}
+                            onChange={(e) => updateManualInvite(index, "name", e.target.value)}
+                            placeholder={t('step1.manual_name')}
+                            className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                            {t('step1.manual_phone')}
+                          </label>
+                          <input
+                            type="tel"
+                            value={invite.phone}
+                            onChange={(e) => updateManualInvite(index, "phone", e.target.value)}
+                            placeholder="05xxxxxxxx"
+                            className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm dir-ltr text-right"
+                          />
+                        </div>
+                        {invites.length > 1 && (
+                          <button
+                            onClick={() => removeManualInvite(index)}
+                            className="mt-7 p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <button
+                    onClick={addManualInvite}
+                    className="mt-6 w-full py-3 border-2 border-dashed border-stone-200 rounded-xl text-stone-500 hover:text-stone-700 hover:border-stone-300 hover:bg-stone-50 transition-all flex items-center justify-center gap-2 text-sm font-medium"
+                  >
+                    <Plus size={18} />
+                    <span>{t('step1.add_guest')}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="bg-stone-50 px-6 py-4 border-t border-stone-100 flex justify-between items-center">
+              <span className="text-xs text-stone-500">
+                {t('step1.added_contacts', {count: invites.filter(i => i.name || i.phone).length})}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setStep(1)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all flex items-center gap-2"
+                >
+                  <ArrowLeft size={16} className="rtl:rotate-180" />
+                  <span>{t('step1.back')}</span>
+                </button>
+                <button
+                  onClick={() => setStep(3)}
+                  className="bg-stone-900 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-all flex items-center gap-2"
+                >
+                  <span>{t('step1.next')}</span>
+                  <ArrowRight size={16} className="rtl:rotate-180" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -659,6 +811,7 @@ export default function Wizard() {
             {/* Phone Preview */}
             <InvitePreview
               date={details.date}
+              time={details.time}
               locationName={details.locationName}
               location={details.location}
               message={details.message}

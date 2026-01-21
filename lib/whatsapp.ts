@@ -191,14 +191,16 @@ export async function sendWhatsAppImage(to: string, imageUrl: string, caption?: 
 }
 
 /**
- * Template name mapping based on locale and QR requirement
+ * Template name mapping based on locale, media type, and QR requirement
  */
-function getInviteTemplateName(locale: string, qrEnabled: boolean): string {
-  if (locale === 'ar') {
-    return qrEnabled ? 'invite_doc_qr_ar' : 'invite_doc_ar';
-  }
-  return qrEnabled ? 'invite_doc_qr_en' : 'invite_doc_en';
+export function getInviteTemplateName(locale: string, qrEnabled: boolean, mediaType?: MediaType): string {
+  const typePrefix = mediaType === 'image' ? 'invite_img' : 'invite_doc';
+  const qrSuffix = qrEnabled ? '_qr' : '';
+  const langSuffix = locale === 'ar' ? '_ar' : '_en';
+  
+  return `${typePrefix}${qrSuffix}${langSuffix}`;
 }
+
 
 interface SendInviteTemplateParams {
   to: string;
@@ -246,7 +248,7 @@ export async function sendInviteTemplate({
   mediaType,
   mediaFilename
 }: SendInviteTemplateParams): Promise<SendTemplateResult> {
-  const templateName = getInviteTemplateName(locale, qrEnabled);
+  const templateName = getInviteTemplateName(locale, qrEnabled, mediaType);
   
   const components: TemplateComponent[] = [];
 

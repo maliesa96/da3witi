@@ -71,7 +71,7 @@
       "today": "Today",
       "wedding_title": "Al Muhammad Wedding",
       "special_invite": "Special Invitation",
-      "invite_body": "We are pleased to invite you to attend the wedding ceremony of our son Muhammad, next Friday. Your presence honors us.",
+      "invite_body": "We are pleased to invite you to attend the wedding ceremony of our son Muhammad, next Friday. We look forward to seeing you there.",
       "confirm_btn": "Confirm Attendance",
       "time": "04:30 PM",
       "type_message": "Type a message..."
@@ -96,6 +96,10 @@
       "guests": "Guests",
       "details": "Details",
       "preview": "Preview"
+    },
+    "errors": {
+      "required": "This field is required",
+      "invalid_map_link": "Please provide a valid Google Maps link or coordinates"
     },
     "step1": {
       "title": "Guest List",
@@ -134,8 +138,9 @@
       "date_label": "Date",
       "time_label": "Time",
       "location_name_label": "Location Name",
-      "location_name_placeholder": "e.g. Ritz Carlton Hall",
-      "location_label": "Location Link / Coordinates",
+    "location_name_placeholder": "e.g. Ritz Carlton Hall",
+    "default_message": "We are pleased to invite you to attend the wedding ceremony of our son Muhammad, next Friday. We look forward to seeing you there.",
+    "location_label": "Location Link / Coordinates",
       "link_btn": "Link",
       "map_btn": "Select on Map",
       "qr_toggle": "Enable QR Code",
@@ -147,9 +152,9 @@
       "scheduled_date": "Scheduled Date",
       "scheduled_time": "Scheduled Time",
       "preview_send": "Preview & Send",
-      "live_preview": "Live Preview",
-      "media_required": "Please upload an invitation image or document to continue."
-    },
+    "live_preview": "Live Preview",
+    "media_required": "Please upload an invitation image or document to continue."
+  },
     "step3": {
       "title": "Message Preview",
       "desc": "This is how the invitation will appear on your guests' phones.",
@@ -176,7 +181,8 @@
     "about": "About",
     "pricing": "Pricing",
     "contact": "Contact Us",
-    "copyright": "© {year} Da3witi by Dune Technologies. Made for GCC."
+    "address": "Al Qibla, Kuwait",
+    "copyright": "© {year} Dune Technical Services Company for Computer Technology WLL."
   },
   "InvitePreview": {
     "app_name": "Da3witi",
@@ -189,7 +195,8 @@
     "confirm_btn": "Confirm Attendance",
     "apologize_btn": "Decline",
     "map_btn": "View Location",
-    "sticker": "Sticker"
+    "sticker": "Sticker",
+    "default_message_preview": "We are pleased to invite you to attend the wedding ceremony of our son Muhammad, next Friday. We look forward to seeing you there."
   },
   "Dashboard": {
     "title": "Mohammed & Sarah Wedding",

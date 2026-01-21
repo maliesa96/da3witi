@@ -1,12 +1,15 @@
 "use client";
 
-import { QrCode, Check, X, MapPin, ChevronLeft, ChevronRight, Phone, Video, Plus, Mic, Camera, Signal, Wifi, Battery, MailOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Phone, Video, Plus, Mic, Camera, Signal, Wifi, Battery, MailOpen, Reply, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
+import { TEMPLATES } from "@/lib/templates/templates";
+import { getInviteTemplateName } from "@/lib/whatsapp";
 
 interface InvitePreviewProps {
   title?: string;
   date: string;
+  time?: string;
   locationName: string;
   location?: string;
   message: string;
@@ -19,6 +22,7 @@ interface InvitePreviewProps {
 
 export default function InvitePreview({
   date,
+  time,
   locationName,
   location,
   message,
@@ -34,6 +38,26 @@ export default function InvitePreview({
   // Get current time for the timestamp
   const now = new Date();
   const timeString = now.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+  const templateName = getInviteTemplateName(locale, showQr, mediaType) as keyof typeof TEMPLATES;
+  const templateFn = TEMPLATES[templateName];
+  
+  const renderedMessage = templateFn ? templateFn({
+    invitee: locale === 'ar' ? 'عبدالله' : 'Abdullah',
+    greeting_text: message || t('default_message_preview'),
+    date: date || (locale === 'ar' ? "الجمعة، 20 أكتوبر" : "Friday, Oct 20"),
+    time: time || timeString, // Use the selected time if available, otherwise current time
+    location_name: locationName || (locale === 'ar' ? "قاعة الريتز كارلتون" : "Ritz Carlton Hall"),
+    event_name: t('app_name'),
+    rsvp_date: date || (locale === 'ar' ? "الخميس، 19 أكتوبر" : "Thursday, Oct 19"),
+  }) : message;
+
+  const thankYouMsg = locale === 'ar' 
+    ? `شكراً لتأكيد حضوركم! نترقب رؤيتكم في المناسبة.`
+    : `Thank you for confirming your attendance! We look forward to seeing you at the event.`;
+    
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=sample-qr`;
+  const qrCaption = locale === 'ar' ? "رمز الدخول الخاص بك" : "Your Entry QR Code";
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return '0 B';
@@ -129,24 +153,8 @@ export default function InvitePreview({
               {/* Body */}
               <div className="px-3 pt-1 pb-5 text-start" dir="auto">
                 <p className="text-[14px] text-[#e9edef] leading-relaxed whitespace-pre-wrap font-sans">
-                  <span className="font-bold block mb-1 text-white">{t('greeting', {name: locale === 'ar' ? 'عبدالله' : 'Abdullah'})}</span>
-                  {message}
-                  <br />
-                  <br />
-                  📅 <strong>{t('date_label')}</strong> {date || (locale === 'ar' ? "الجمعة، 20 أكتوبر" : "Friday, Oct 20")}
-                  <br />
-                  📍 <strong>{t('location_label')}</strong> {locationName || (locale === 'ar' ? "قاعة الريتز كارلتون" : "Ritz Carlton Hall")}
+                  {renderedMessage}
                 </p>
-
-                {/* QR Code */}
-                {showQr && (
-                  <div className="mt-4 flex flex-col items-center border-t border-dashed border-white/10 pt-3">
-                    <div className="border-2 border-dashed border-[#8696a0] rounded p-2 bg-white/5">
-                      <QrCode size={64} className="text-white" />
-                    </div>
-                    <p className="text-[10px] text-[#8696a0] mt-1">{t('scan_code')}</p>
-                  </div>
-                )}
               </div>
               
               {/* Timestamp */}
@@ -156,13 +164,13 @@ export default function InvitePreview({
             </div>
             
             {/* Interactive Buttons (Vertical Stack) - Dark Mode */}
-            <div className="max-w-[85%]">
+            <div className="max-w-[85%] mb-4">
                 <button className="w-full bg-[#1f2c34] rounded-t-none rounded-b-none py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2 border-b border-[#101a20]">
-                    <Check size={16} />
+                    <Reply size={16} className="rtl:order-last" />
                     <span>{t('confirm_btn')}</span>
                 </button>
                 <button className="w-full bg-[#1f2c34] rounded-none py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2 border-b border-[#101a20]">
-                    <X size={16} />
+                    <Reply size={16} className="rtl:order-last" />
                     <span>{t('apologize_btn')}</span>
                 </button>
                 <a 
@@ -171,9 +179,62 @@ export default function InvitePreview({
                   rel="noopener noreferrer"
                   className="w-full bg-[#1f2c34] rounded-t-none rounded-b-xl py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2"
                 >
-                    <MapPin size={16} />
+                    <ExternalLink size={16} className="rtl:order-last" />
                     <span>{t('map_btn')}</span>
                 </a>
+            </div>
+
+            {/* User Response Bubble (Outgoing) */}
+            <div className="flex flex-col items-end mb-4">
+              <div className="bg-[#005c4b] rounded-[8px] rounded-tr-none rtl:rounded-tl-none rtl:rounded-tr-[8px] p-[6px_7px_8px_9px] shadow-sm max-w-[85%] relative flex items-end gap-2 transition-all mr-2 rtl:mr-0 rtl:ml-2">
+                  <p className="text-[14.2px] text-[#e9edef] leading-[1.3] font-sans">
+                    {t('confirm_btn')}
+                  </p>
+                  <div className="flex items-center gap-[4px] shrink-0 mb-[-2px]">
+                    <span className="text-[11px] text-white/50 font-sans tracking-tight">{timeString}</span>
+                    <span className="text-[#53bdeb]">
+                      <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor">
+                        <path d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.366.366 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z" />
+                      </svg>
+                    </span>
+                  </div>
+                  
+                {/* Outgoing Tail - Using logical positioning for RTL support */}
+                <div className="absolute -top-px right-[-5px] text-[#005c4b] rtl:hidden">
+                    <svg viewBox="0 0 8 13" height="13" width="8" preserveAspectRatio="xMidYMid slice" fill="currentColor">
+                        <path d="M5.188 1H0v11.193l6.467-8.625C7.526 2.156 6.958 1 5.188 1z"></path>
+                    </svg>
+                </div>
+                <div className="absolute -top-px left-[-8px] text-[#005c4b] hidden rtl:block scale-x-[-1] translate-x-px">
+                    <svg viewBox="0 0 8 13" height="13" width="8" preserveAspectRatio="xMidYMid slice" fill="currentColor">
+                        <path d="M5.188 1H0v11.193l6.467-8.625C7.526 2.156 6.958 1 5.188 1z"></path>
+                    </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Business Thank You Bubble (Incoming) */}
+            <div className="bg-[#1f2c34] rounded-tl-none rounded-bl-none p-1 pb-0 shadow-sm max-w-[85%] self-start relative mb-4">
+              {showQr && (
+                <div className="bg-[#2a3942] rounded-lg overflow-hidden relative aspect-square mb-1">
+                  <Image
+                    src={qrUrl}
+                    fill
+                    className="object-cover p-4 bg-white"
+                    alt="QR Code"
+                    unoptimized
+                  />
+                </div>
+              )}
+              <div className="px-3 pt-1 pb-5 text-start" dir="auto">
+                <p className="text-[14px] text-[#e9edef] leading-relaxed font-sans">
+                  {thankYouMsg}
+                  {showQr && <span className="block mt-2 font-semibold">{qrCaption}</span>}
+                </p>
+              </div>
+              <div className="absolute bottom-1 right-2 flex items-center gap-1">
+                  <span className="text-[10px] text-[#8696a0]">{timeString}</span>
+              </div>
             </div>
 
           </div>

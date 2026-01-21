@@ -97,6 +97,10 @@
       "details": "التفاصيل",
       "preview": "المعاينة"
     },
+    "errors": {
+      "required": "هذا الحقل مطلوب",
+      "invalid_map_link": "يرجى تزويد رابط جوجل ماب صحيح أو إحداثيات صحيحة"
+    },
     "step1": {
       "title": "قائمة المدعوين",
       "desc": "أضف الأشخاص الذين تود دعوتهم.",
@@ -134,8 +138,9 @@
       "date_label": "التاريخ",
       "time_label": "الوقت",
       "location_name_label": "اسم الموقع",
-      "location_name_placeholder": "مثال: قاعة الريتز كارلتون",
-      "location_label": "رابط الموقع / الإحداثيات",
+    "location_name_placeholder": "مثال: قاعة الريتز كارلتون",
+    "default_message": "يسرنا دعوتكم لحضور حفل زفاف ابننا محمد، وذلك يوم الجمعة القادم. حضوركم يشرفنا.",
+    "location_label": "رابط الموقع / الإحداثيات",
       "link_btn": "رابط",
       "map_btn": "تحديد على الخريطة",
       "qr_toggle": "تفعيل كود QR",
@@ -147,9 +152,9 @@
       "scheduled_date": "تاريخ الإرسال",
       "scheduled_time": "وقت الإرسال",
       "preview_send": "معاينة وإرسال",
-      "live_preview": "معاينة مباشرة",
-      "media_required": "يرجى رفع صورة أو مستند الدعوة للمتابعة."
-    },
+    "live_preview": "معاينة مباشرة",
+    "media_required": "يرجى رفع صورة أو مستند الدعوة للمتابعة."
+  },
     "step3": {
       "title": "معاينة الرسالة",
       "desc": "هكذا ستظهر الدعوة على هواتف ضيوفك.",
@@ -176,7 +181,8 @@
     "about": "عن المنصة",
     "pricing": "الأسعار",
     "contact": "اتصل بنا",
-    "copyright": "© {year} Da3witi by Dune Technologies. صنع في الخليج."
+    "address": "القبلة، الكويت",
+    "copyright": "© {year} Dune Technical Services Company for Computer Technology WLL."
   },
   "InvitePreview": {
     "app_name": "دعـوتـي",
@@ -189,7 +195,8 @@
     "confirm_btn": "تأكيد الحضور",
     "apologize_btn": "الاعتذار",
     "map_btn": "الموقع",
-    "sticker": "ملصق"
+    "sticker": "ملصق",
+    "default_message_preview": "يسرنا دعوتكم لحضور حفل زفاف ابننا محمد، وذلك يوم الجمعة القادم. حضوركم يشرفنا."
   },
   "Dashboard": {
     "title": "زفاف محمد & سارة",

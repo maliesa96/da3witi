@@ -24,7 +24,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Da3witi by Dune Technologies",
+  title: "Da3witi - دعـوتـي",
   description: "نظام الدعوات الآلي الأول في الخليج",
 };
 

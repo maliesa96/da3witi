@@ -7,32 +7,36 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-stone-200 bg-white py-12 mt-auto">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-stone-900 rounded flex items-center justify-center text-white">
-            <Mail size={14} />
-          </div>
-          <span className="text-lg font-semibold tracking-tight text-stone-900">
-            Da3witi
-            <span className="text-[10px] md:text-sm font-medium text-stone-600 ml-2 rtl:mr-2 rtl:ml-0 uppercase tracking-tight">
-              by Dune Technologies
+    <footer className="border-t border-stone-200 bg-white py-8 mt-auto">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-stone-900 rounded flex items-center justify-center text-white">
+              <Mail size={14} />
+            </div>
+            <span className="text-lg font-semibold tracking-tight text-stone-900">
+              Da3witi
             </span>
-          </span>
+          </div>
+          <div className="flex gap-6 text-sm text-stone-500 font-medium">
+            <Link href="#" className="hover:text-stone-900">
+              {t('about')}
+            </Link>
+            <Link href="#" className="hover:text-stone-900">
+              {t('pricing')}
+            </Link>
+            <Link href="#" className="hover:text-stone-900">
+              {t('contact')}
+            </Link>
+          </div>
         </div>
-        <div className="flex gap-6 text-sm text-stone-500 font-medium">
-          <Link href="#" className="hover:text-stone-900">
-            {t('about')}
-          </Link>
-          <Link href="#" className="hover:text-stone-900">
-            {t('pricing')}
-          </Link>
-          <Link href="#" className="hover:text-stone-900">
-            {t('contact')}
-          </Link>
-        </div>
-        <div className="text-xs text-stone-400">
-          {t('copyright', { year: currentYear })}
+        
+        <div className="border-t border-stone-100 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-stone-400">
+          <div className="flex flex-wrap justify-center md:justify-start items-center gap-x-2 gap-y-1 text-center md:text-start">
+            <span>{t('copyright', { year: currentYear })}</span>
+            <span className="hidden md:inline text-stone-200">•</span>
+            <span>{t('address')}</span>
+          </div>
         </div>
       </div>
     </footer>
