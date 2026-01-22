@@ -2,10 +2,10 @@
 
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
-import { sendInviteTemplate, type MediaType } from '@/lib/whatsapp';
+import { type MediaType } from '@/lib/whatsapp';
 import { revalidatePath } from 'next/cache';
 
-export async function createEventAndSendInvites(formData: {
+export async function createEvent(formData: {
   title: string;
   date: string;
   time: string;
@@ -58,51 +58,6 @@ export async function createEventAndSendInvites(formData: {
       guests: true
     }
   });
-
-  // 2. Trigger WhatsApp messages (if not scheduled)
-  if (!formData.isScheduled) {
-    // In a real production app, you might want to offload this to a background job/queue
-    // to avoid timeout issues if you have many guests.
-    const sendResults = await Promise.all(
-      event.guests.map(async (guest) => {
-        const result = await sendInviteTemplate({
-          to: guest.phone,
-          locale: formData.locale,
-          qrEnabled: formData.qrEnabled,
-          invitee: guest.name,
-          greetingText: formData.message,
-          date: formData.date || 'TBD',
-          time: formData.time || 'TBD',
-          locationName: formData.locationName || 'See invitation',
-          location: formData.location,
-          mediaUrl: formData.imageUrl,
-          mediaType: formData.mediaType,
-          mediaFilename: formData.mediaFilename
-        });
-
-        // Update guest with WhatsApp message ID for status tracking
-        if (result.success && result.messageId) {
-          await prisma.guest.update({
-            where: { id: guest.id },
-            data: { 
-              whatsappMessageId: result.messageId,
-              status: 'delivered'
-            }
-          });
-        } else {
-          // Mark as failed if sending failed
-          await prisma.guest.update({
-            where: { id: guest.id },
-            data: { status: 'failed' }
-          });
-        }
-
-        return result;
-      })
-    );
-    
-    console.log('WhatsApp send results:', sendResults);
-  }
 
   revalidatePath('/dashboard');
   return { success: true, eventId: event.id };

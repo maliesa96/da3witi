@@ -7,11 +7,14 @@ const connectionString = process.env.DATABASE_URL!
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
 function createPrismaClient() {
-  const pool = new Pool({ connectionString })
+  const pool = new Pool({
+    connectionString,
+    connectionTimeoutMillis: 10000, // 10 seconds to acquire connection
+    statement_timeout: 10000,       // 10 seconds for query execution
+  })
   const adapter = new PrismaPg(pool)
   return new PrismaClient({
     adapter,
-    log: ['query'],
   })
 }
 

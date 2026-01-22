@@ -1,23 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowRight,
   UploadCloud,
   ArrowLeft,
   MapPin,
-  CreditCard,
   Plus,
   Trash2,
   FileSpreadsheet,
+  Info,
 } from "lucide-react";
 
 import InvitePreview from "../../components/InvitePreview";
 import ContactImport from "../../components/ContactImport";
 import dynamic from "next/dynamic";
 import { useTranslations, useLocale } from "next-intl";
-import { createEventAndSendInvites } from "./actions";
-import { useRouter } from "@/navigation";
 import { uploadEventMedia, validateFileType, type MediaType } from "@/lib/supabase/storage";
 import { formatGoogleMapsLink } from "@/lib/maps";
 
@@ -37,7 +35,6 @@ const MapPicker = dynamic(() => import("../../components/MapPicker"), {
 export default function Wizard() {
   const t = useTranslations('Wizard');
   const locale = useLocale() as 'en' | 'ar';
-  const router = useRouter();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -45,11 +42,13 @@ export default function Wizard() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [mapMode, setMapMode] = useState<"link" | "map">("link");
   const [details, setDetails] = useState({
+    eventName: "",
     date: "",
     time: "",
     location: "",
     locationName: "",
     message: "",
+    messageLocale: locale as 'en' | 'ar',
     qrEnabled: true,
     reminderEnabled: true,
     isScheduled: false,
@@ -63,6 +62,11 @@ export default function Wizard() {
   
   const [inviteMode, setInviteMode] = useState<"file" | "manual">("file");
   const [invites, setInvites] = useState([{ name: "", phone: "" }]);
+
+  // Sync messageLocale with page locale when it changes
+  useEffect(() => {
+    setDetails(prev => ({ ...prev, messageLocale: locale }));
+  }, [locale]);
 
   // State for ContactImport to persist across tab switches
   const [importData, setImportData] = useState<(string | number | null)[][]>([]);
@@ -154,11 +158,12 @@ export default function Wizard() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePayAndSend = async () => {
+  const handleCreateEvent = async () => {
     setIsSubmitting(true);
     try {
-      const result = await createEventAndSendInvites({
-        title: "Event", // Default or extract from message
+      const { createEvent } = await import('./actions');
+      const result = await createEvent({
+        title: details.eventName || "Event",
         date: details.date,
         time: details.time,
         location: details.location,
@@ -172,19 +177,22 @@ export default function Wizard() {
         mediaType: details.mediaType,
         mediaFilename: details.mediaFilename,
         guests: invites.filter(i => i.name && i.phone),
-        locale
+        locale: details.messageLocale
       });
 
       if (result.success) {
-        router.push('/dashboard');
+        // Redirect to dashboard with the new event
+        window.location.href = `/${details.messageLocale}/dashboard?eventId=${result.eventId}`;
+      } else {
+        throw new Error('Failed to create event');
       }
     } catch (error) {
-      console.error('Submission failed:', error);
-      alert('Failed to send invitations. Please try again.');
-    } finally {
+      console.error('Event creation failed:', error);
+      alert('Failed to create event. Please try again.');
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="max-w-7xl mx-auto px-6 pb-24">
@@ -215,7 +223,7 @@ export default function Wizard() {
                 ? t('steps.details')
                 : i === 2
                 ? t('steps.guests')
-                : t('steps.preview')}
+                : t('steps.create')}
             </span>
           </div>
         ))}
@@ -305,6 +313,38 @@ export default function Wizard() {
               </div>
 
               <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm space-y-4">
+                {/* Message Language */}
+                <div>
+                  <label className="text-xs font-medium text-stone-700 mb-1.5 block">
+                    {locale === 'ar' ? 'لغة الرسالة' : 'Message Language'}
+                  </label>
+                  <div className="flex gap-1 bg-stone-100 rounded-lg p-0.5 w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setDetails(prev => ({ ...prev, messageLocale: 'en' }))}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                        details.messageLocale === 'en'
+                          ? 'bg-white text-stone-900 shadow-sm'
+                          : 'text-stone-600 hover:text-stone-900'
+                      }`}
+                    >
+                      English
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDetails(prev => ({ ...prev, messageLocale: 'ar' }))}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                        details.messageLocale === 'ar'
+                          ? 'bg-white text-stone-900 shadow-sm'
+                          : 'text-stone-600 hover:text-stone-900'
+                      }`}
+                    >
+                      العربية
+                    </button>
+                  </div>
+                </div>
+
+                {/* Message Text */}
                 <div>
                   <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
                     <span>{t('step2.message_label')} <span className="text-red-500">*</span></span>
@@ -326,6 +366,31 @@ export default function Wizard() {
                       errors.message ? 'border-red-300' : 'border-stone-200'
                     }`}
                   />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
+                    <span>{t('step2.event_name_label')}</span>
+                    {errors.eventName && <span className="text-red-500 text-[10px]">{errors.eventName}</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={details.eventName}
+                    onChange={(e) => {
+                      setDetails({ ...details, eventName: e.target.value });
+                      if (errors.eventName) setErrors(prev => {
+                        const next = { ...prev };
+                        delete next.eventName;
+                        return next;
+                      });
+                    }}
+                    placeholder={t('step2.event_name_placeholder')}
+                    className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none focus:bg-white focus:border-stone-400 transition-all ${
+                      errors.eventName ? 'border-red-300' : 'border-stone-200'
+                    }`}
+                  />
+                  <p className="text-[10px] text-stone-500 mt-1.5">
+                    {t('step2.event_name_hint')}
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -608,6 +673,7 @@ export default function Wizard() {
                     mediaFilename={details.mediaFilename}
                     mediaSize={details.mediaSize}
                     showQr={details.qrEnabled}
+                    locale={details.messageLocale}
                  />
                </div>
                <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-4 text-center">
@@ -628,6 +694,30 @@ export default function Wizard() {
             <p className="text-stone-500 text-sm mt-2 font-light">
               {t('step1.desc')}
             </p>
+
+            {/* Make it obvious this step is optional */}
+            <div className="mt-5 max-w-2xl mx-auto">
+              <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-start">
+                <div className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                  <Info size={16} />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-stone-900">
+                    {t('step1.optional_title')}
+                  </div>
+                  <div className="text-xs text-stone-600 mt-0.5">
+                    {t('step1.optional_note')}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  className="shrink-0 rounded-lg bg-stone-900 px-3 py-2 text-xs font-medium text-white hover:bg-stone-800 transition-colors"
+                >
+                  {t('step1.skip_cta')}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm max-w-4xl mx-auto">
@@ -657,8 +747,22 @@ export default function Wizard() {
             <div className="p-8">
               {inviteMode === "file" ? (
                 <>
+                  <ContactImport 
+                    onContactsLoaded={handleContactsLoaded}
+                    data={importData}
+                    setData={setImportData}
+                    nameCol={importNameCol}
+                    setNameCol={setImportNameCol}
+                    phoneCol={importPhoneCol}
+                    setPhoneCol={setImportPhoneCol}
+                    startRow={importStartRow}
+                    setStartRow={setImportStartRow}
+                    fileName={importFileName}
+                    setFileName={setImportFileName}
+                  />
+
                   {/* Excel Sheet Mockup */}
-                  <div className="mb-8 bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
+                  <div className="mt-8 bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
                     <div className="bg-stone-50 px-4 py-2 border-b border-stone-200 flex items-center gap-2" dir="ltr">
                       <div className="flex gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
@@ -704,20 +808,6 @@ export default function Wizard() {
                       </table>
                     </div>
                   </div>
-
-                  <ContactImport 
-                    onContactsLoaded={handleContactsLoaded}
-                    data={importData}
-                    setData={setImportData}
-                    nameCol={importNameCol}
-                    setNameCol={setImportNameCol}
-                    phoneCol={importPhoneCol}
-                    setPhoneCol={setImportPhoneCol}
-                    startRow={importStartRow}
-                    setStartRow={setImportStartRow}
-                    fileName={importFileName}
-                    setFileName={setImportFileName}
-                  />
                 </>
               ) : (
                 <div className="animate-fade-in">
@@ -744,7 +834,7 @@ export default function Wizard() {
                             type="tel"
                             value={invite.phone}
                             onChange={(e) => updateManualInvite(index, "phone", e.target.value)}
-                            placeholder="05xxxxxxxx"
+                            placeholder="+96512345678"
                             className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm dir-ltr text-right"
                           />
                         </div>
@@ -795,7 +885,7 @@ export default function Wizard() {
         </div>
       )}
 
-      {/* STEP 3: PREVIEW & PAY */}
+      {/* STEP 3: PREVIEW & CREATE */}
       {step === 3 && (
         <div className="animate-slide-up">
           <div className="text-center mb-8">
@@ -805,6 +895,23 @@ export default function Wizard() {
             <p className="text-stone-500 text-sm mt-2 font-light">
               {t('step3.desc')}
             </p>
+
+            {/* Make it obvious invites are not sent yet */}
+            <div className="mt-5 max-w-2xl mx-auto">
+              <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-start">
+                <div className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                  <Info size={16} />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-stone-900">
+                    {t('step3.free_create_title')}
+                  </div>
+                  <div className="text-xs text-stone-600 mt-0.5">
+                    {t('step3.free_create_note')}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12 items-start">
@@ -820,12 +927,13 @@ export default function Wizard() {
               mediaFilename={details.mediaFilename}
               mediaSize={details.mediaSize}
               showQr={details.qrEnabled}
+              locale={details.messageLocale}
             />
 
-            {/* Checkout Box */}
+            {/* Summary Box */}
             <div className="bg-white p-8 rounded-2xl border border-stone-200 shadow-lg mt-8 lg:mt-0">
               <h3 className="text-lg font-semibold text-stone-900 mb-6">
-                {t('step3.order_summary')}
+                {t('step3.event_summary')}
               </h3>
 
               <div className="space-y-4 mb-8 border-b border-stone-100 pb-8">
@@ -836,13 +944,13 @@ export default function Wizard() {
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-stone-600">{t('step3.service_qr')}</span>
                   <span className={details.qrEnabled ? "font-medium text-stone-900" : "text-stone-400"}>
-                    {details.qrEnabled ? t('step3.active') : "-"}
+                    {details.qrEnabled ? t('step3.enabled') : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-stone-600">{t('step3.service_reminder')}</span>
                   <span className={details.reminderEnabled ? "font-medium text-stone-900" : "text-stone-400"}>
-                    {details.reminderEnabled ? t('step3.active') : "-"}
+                    {details.reminderEnabled ? t('step3.enabled') : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
@@ -855,22 +963,18 @@ export default function Wizard() {
                     ) : "-"}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-lg font-semibold pt-2">
-                  <span className="text-stone-900">{t('step3.total')}</span>
-                  <span className="text-stone-900">84.00 ر.س</span>
-                </div>
               </div>
 
               <div className="flex flex-col gap-3">
                 <button 
-                  onClick={handlePayAndSend}
+                  onClick={handleCreateEvent}
                   disabled={isSubmitting}
                   className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium text-sm hover:bg-stone-800 hover:shadow-lg transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span>{isSubmitting ? 'Sending...' : t('step3.pay_send')}</span>
-                  <CreditCard
+                  <span>{isSubmitting ? t('step3.creating') : t('step3.create_event')}</span>
+                  <ArrowRight
                     size={16}
-                    className="group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1"
+                    className="group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1 rtl:rotate-180"
                   />
                 </button>
                 <button 
@@ -881,8 +985,8 @@ export default function Wizard() {
                 </button>
               </div>
 
-              <p className="text-[10px] text-stone-400 text-center mt-4">
-                {t('step3.terms')}
+              <p className="text-[10px] text-stone-500 text-center mt-4">
+                {t('step3.pay_later_note')}
               </p>
             </div>
           </div>

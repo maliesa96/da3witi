@@ -11,11 +11,13 @@ interface Contact {
   phone: string;
 }
 
+type Cell = string | number | null;
+
 interface ContactImportProps {
   onContactsLoaded: (contacts: Contact[]) => void;
   // State lifted to parent to persist across tab switches
-  data: any[][];
-  setData: (data: any[][]) => void;
+  data: Cell[][];
+  setData: (data: Cell[][]) => void;
   nameCol: number | null;
   setNameCol: (col: number | null) => void;
   phoneCol: number | null;
@@ -36,10 +38,10 @@ export default function ContactImport({
 }: ContactImportProps) {
   const t = useTranslations("Wizard.step1");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragDepthRef = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleSelectedFile = (file: File) => {
     setFileName(file.name);
     
     const reader = new FileReader();
@@ -48,12 +50,12 @@ export default function ContactImport({
       if (!bstr) return;
       const extension = file.name.split('.').pop()?.toLowerCase();
       
-      let parsedData: any[][] = [];
+      let parsedData: Cell[][] = [];
 
       if (extension === 'csv') {
         Papa.parse(file, {
           complete: (results) => {
-            parsedData = results.data as any[][];
+            parsedData = results.data as Cell[][];
             processData(parsedData);
           },
           header: false,
@@ -64,8 +66,12 @@ export default function ContactImport({
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        parsedData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+        parsedData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as Cell[][];
         processData(parsedData);
+      } else {
+        // Unsupported extension
+        alert(t('upload_sub'));
+        reset();
       }
     };
 
@@ -76,14 +82,51 @@ export default function ContactImport({
     }
   };
 
-  const processData = (parsedData: any[][]) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleSelectedFile(file);
+  };
+
+  const onDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current += 1;
+    setIsDragging(true);
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    setIsDragging(true);
+  };
+
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDragging(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current = 0;
+    setIsDragging(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    handleSelectedFile(file);
+  };
+
+  const processData = (parsedData: Cell[][]) => {
     setData(parsedData);
     if (parsedData.length > 0) {
       deduceColumns(parsedData);
     }
   };
 
-  const deduceColumns = (rows: any[][]) => {
+  const deduceColumns = (rows: Cell[][]) => {
     // 1. Try to find headers in first 5 rows
     const nameKeywords = ["name", "full name", "guest", "اسم", "الاسم", "المدعو", "الضيف"];
     const phoneKeywords = ["phone", "number", "mobile", "whatsapp", "رقم", "جوال", "هاتف", "واتساب", "تلفون"];
@@ -190,7 +233,15 @@ export default function ContactImport({
     return (
       <div 
         onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-stone-200 rounded-xl p-12 text-center hover:bg-stone-50 transition-all cursor-pointer group bg-white"
+        onDragEnter={onDragEnter}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        className={`border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer group bg-white ${
+          isDragging
+            ? "border-stone-900 bg-stone-50 ring-4 ring-stone-900/5"
+            : "border-stone-200 hover:bg-stone-50"
+        }`}
       >
         <input 
           type="file" 

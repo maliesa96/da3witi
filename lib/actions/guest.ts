@@ -1,7 +1,6 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
 
 export async function checkInGuest(data: { guestIdentifier: string, eventId: string }) {
   const { guestIdentifier, eventId } = data;
@@ -54,7 +53,6 @@ export async function checkInGuest(data: { guestIdentifier: string, eventId: str
     }
   });
 
-  revalidatePath('/dashboard');
   return { 
     success: true, 
     guestName: guest.name, 

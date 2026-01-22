@@ -1,6 +1,6 @@
 "use client";
 
-import { MailOpen, Globe, ArrowLeft, LogOut, User } from "lucide-react";
+import { MailOpen, Globe, ArrowRight, LogOut, User } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/navigation";
 import { useEffect, useState } from "react";
@@ -86,12 +86,12 @@ export function Navbar() {
 
           <Link
             href="/wizard"
-            className="bg-stone-900 text-white text-xs md:text-sm font-medium px-3 md:px-4 py-2 rounded-lg hover:bg-stone-800 transition-all shadow-sm flex items-center gap-2 group shrink-0"
+            className="bg-stone-900 text-white text-xs md:text-sm font-semibold px-4 md:px-6 py-2.5 rounded-full hover:bg-stone-800 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 group shrink-0"
           >
             <span>{t('start_now')}</span>
-            <ArrowLeft
-              size={14}
-              className="group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1 md:block hidden"
+            <ArrowRight
+              size={16}
+              className="group-hover:translate-x-1 transition-transform rtl:-scale-x-100 rtl:group-hover:-translate-x-1 md:block hidden"
             />
           </Link>
         </div>

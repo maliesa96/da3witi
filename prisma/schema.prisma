@@ -29,6 +29,8 @@ model Event {
   imageUrl         String?  @map("image_url")
   mediaType        String?  @map("media_type")
   mediaFilename    String?  @map("media_filename")
+  stripePaymentId  String?  @unique @map("stripe_payment_id")
+  paidAt           DateTime? @map("paid_at") @db.Timestamptz(6)
   guests           Guest[]
 
   @@map("events")

@@ -9,6 +9,13 @@ export async function middleware(request: NextRequest) {
   // Update Supabase session
   const supabaseResponse = await updateSession(request);
 
+  // If Supabase decided to redirect (e.g. unauthenticated access), honor it.
+  // The previous implementation always returned the i18n response which
+  // effectively disabled auth redirects.
+  if (supabaseResponse.status >= 300 && supabaseResponse.status < 400) {
+    return supabaseResponse;
+  }
+
   // Run i18n middleware
   const response = i18nMiddleware(request);
 

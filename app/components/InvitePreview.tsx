@@ -2,9 +2,10 @@
 
 import { ChevronLeft, ChevronRight, Phone, Video, Plus, Mic, Camera, Signal, Wifi, Battery, MailOpen, Reply, ExternalLink } from "lucide-react";
 import Image from "next/image";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTranslations, NextIntlClientProvider } from "next-intl";
 import { TEMPLATES } from "@/lib/templates/templates";
 import { getInviteTemplateName } from "@/lib/whatsapp";
+import React, { useEffect, useState } from "react";
 
 interface InvitePreviewProps {
   title?: string;
@@ -18,9 +19,10 @@ interface InvitePreviewProps {
   mediaFilename?: string;
   mediaSize?: number;
   showQr?: boolean;
+  locale?: 'en' | 'ar'; // Optional: override locale for user-specific preferences
 }
 
-export default function InvitePreview({
+function InvitePreviewContent({
   date,
   time,
   locationName,
@@ -31,9 +33,11 @@ export default function InvitePreview({
   mediaFilename,
   mediaSize,
   showQr = true,
+  locale: customLocale,
 }: InvitePreviewProps) {
   const t = useTranslations('InvitePreview');
-  const locale = useLocale();
+  const siteLocale = useLocale();
+  const locale = customLocale || siteLocale;
   
   // Get current time for the timestamp
   const now = new Date();
@@ -43,21 +47,19 @@ export default function InvitePreview({
   const templateFn = TEMPLATES[templateName];
   
   const renderedMessage = templateFn ? templateFn({
-    invitee: locale === 'ar' ? 'عبدالله' : 'Abdullah',
+    invitee: t('default_invitee'),
     greeting_text: message || t('default_message_preview'),
-    date: date || (locale === 'ar' ? "الجمعة، 20 أكتوبر" : "Friday, Oct 20"),
+    date: date || t('default_date'),
     time: time || timeString, // Use the selected time if available, otherwise current time
-    location_name: locationName || (locale === 'ar' ? "قاعة الريتز كارلتون" : "Ritz Carlton Hall"),
+    location_name: locationName || t('default_location_name'),
     event_name: t('app_name'),
-    rsvp_date: date || (locale === 'ar' ? "الخميس، 19 أكتوبر" : "Thursday, Oct 19"),
+    rsvp_date: date || t('default_rsvp_date'),
   }) : message;
 
-  const thankYouMsg = locale === 'ar' 
-    ? `شكراً لتأكيد حضوركم! نترقب رؤيتكم في المناسبة.`
-    : `Thank you for confirming your attendance! We look forward to seeing you at the event.`;
+  const thankYouMsg = t('thank_you_message');
     
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=sample-qr`;
-  const qrCaption = locale === 'ar' ? "رمز الدخول الخاص بك" : "Your Entry QR Code";
+  const qrCaption = t('qr_caption');
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return '0 B';
@@ -259,4 +261,35 @@ export default function InvitePreview({
       </div>
     </div>
   );
+}
+
+type Messages = Record<string, Record<string, string | Record<string, string>>>;
+
+export default function InvitePreview(props: InvitePreviewProps) {
+  const [customMessages, setCustomMessages] = useState<Messages | null>(null);
+  
+  useEffect(() => {
+    // Only load custom messages if a custom locale is provided
+    if (props.locale) {
+      import(`@/messages/${props.locale}.json`).then(m => {
+        setCustomMessages(m.default);
+      });
+    }
+  }, [props.locale]);
+
+  // If a custom locale is provided, wrap with NextIntlClientProvider
+  if (props.locale) {
+    if (!customMessages) {
+      return null; // or a loading state
+    }
+
+    return (
+      <NextIntlClientProvider locale={props.locale} messages={customMessages}>
+        <InvitePreviewContent {...props} />
+      </NextIntlClientProvider>
+    );
+  }
+
+  // Default: use site locale from context
+  return <InvitePreviewContent {...props} />;
 }

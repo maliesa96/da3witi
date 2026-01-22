@@ -21,19 +21,36 @@ export async function GET(request: Request) {
 }
 
 /**
- * Map WhatsApp status to our internal status values
+ * Get the priority level of a status (higher = more advanced in the flow)
+ * This prevents status downgrades from out-of-order webhooks
  */
-function mapWhatsAppStatus(waStatus: string): string {
-  switch (waStatus) {
-    case 'sent':
-    case 'delivered':
-    case 'read':
-      return 'delivered';
-    case 'failed':
-      return 'failed';
-    default:
-      return waStatus;
+function getStatusPriority(status: string): number {
+  switch (status) {
+    case 'pending': return 0;
+    case 'sent': return 1;
+    case 'delivered': return 2;
+    case 'read': return 3;
+    case 'confirmed': return 10;
+    case 'declined': return 10;
+    case 'failed': return -1; // Failed can happen at any point
+    default: return 0;
   }
+}
+
+/**
+ * Get the list of statuses that can be upgraded to the new status
+ */
+function getUpgradeableStatuses(newStatus: string): string[] {
+  const newPriority = getStatusPriority(newStatus);
+  
+  // Failed status can override sent/delivered/read but not confirmed/declined
+  if (newStatus === 'failed') {
+    return ['pending', 'sent', 'delivered', 'read'];
+  }
+  
+  // For normal progression, only upgrade from lower priority statuses
+  const allStatuses = ['pending', 'sent', 'delivered', 'read', 'confirmed', 'declined', 'failed'];
+  return allStatuses.filter(s => getStatusPriority(s) < newPriority);
 }
 
 /**
@@ -71,25 +88,25 @@ export async function POST(request: Request) {
               }
               
               // Update the guest status in database
-              const mappedStatus = mapWhatsAppStatus(messageStatus);
+              const upgradeableStatuses = getUpgradeableStatuses(messageStatus);
               
               try {
-                // Only update status if the current status isn't confirmed/declined
-                // and avoid overwriting a more advanced status if possible
+                // Only update if current status can be upgraded to the new status
+                // This prevents out-of-order webhooks from downgrading status
                 const updateResult = await prisma.guest.updateMany({
                   where: { 
                     whatsappMessageId: id,
                     status: {
-                      notIn: ['confirmed', 'declined']
+                      in: upgradeableStatuses
                     }
                   },
-                  data: { status: mappedStatus }
+                  data: { status: messageStatus }
                 });
                 
                 if (updateResult.count > 0) {
-                  console.log(`Updated ${updateResult.count} guest(s) to status: ${mappedStatus}`);
+                  console.log(`Updated ${updateResult.count} guest(s) to status: ${messageStatus}`);
                 } else {
-                  console.log(`No guest found with whatsappMessageId: ${id}`);
+                  console.log(`No guest updated for messageId ${id} (status may already be more advanced)`);
                 }
               } catch (dbError) {
                 console.error('Database update error:', dbError);
