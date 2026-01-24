@@ -1,9 +1,13 @@
+"use client";
+
 import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { Link } from "@/navigation";
 
 export function Footer() {
   const t = useTranslations('Footer');
+  const locale = useLocale();
   const currentYear = new Date().getFullYear();
 
   return (
@@ -14,18 +18,30 @@ export function Footer() {
             <div className="w-6 h-6 bg-stone-900 rounded flex items-center justify-center text-white">
               <Mail size={14} />
             </div>
-            <span className="text-lg font-semibold tracking-tight text-stone-900">
+            <span className="text-lg font-display font-semibold tracking-tight text-stone-900">
               Da3witi
             </span>
           </div>
           <div className="flex gap-6 text-sm text-stone-500 font-medium">
-            <Link href="#" className="hover:text-stone-900">
+            <Link
+              href="/#about"
+              locale={locale}
+              className="hover:text-stone-900 cursor-pointer"
+            >
               {t('about')}
             </Link>
-            <Link href="#" className="hover:text-stone-900">
+            <Link
+              href="/#pricing"
+              locale={locale}
+              className="hover:text-stone-900 cursor-pointer"
+            >
               {t('pricing')}
             </Link>
-            <Link href="#" className="hover:text-stone-900">
+            <Link
+              href="/#contact"
+              locale={locale}
+              className="hover:text-stone-900 cursor-pointer"
+            >
               {t('contact')}
             </Link>
           </div>

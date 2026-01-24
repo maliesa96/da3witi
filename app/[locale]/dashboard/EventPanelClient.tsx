@@ -394,7 +394,7 @@ export default function EventPanelClient({
                 )}
               </div>
               <div className="flex items-center gap-4 flex-wrap">
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-stone-900">
+                <h1 className="text-3xl md:text-4xl font-display font-bold tracking-tight text-stone-900">
                   {event.title}
                 </h1>
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-stone-900 rounded-full">

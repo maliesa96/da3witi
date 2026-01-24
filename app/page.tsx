@@ -34,12 +34,20 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
               <Link
                 href="/wizard"
-                className="bg-stone-900 text-stone-50 px-8 py-3.5 rounded-xl font-medium shadow-lg shadow-stone-900/10 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                className="bg-stone-900 text-stone-50 px-8 py-3.5 rounded-xl font-medium shadow-lg shadow-stone-900/10 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>أنشئ دعوة جديدة</span>
                 <Sparkles size={18} />
               </Link>
-              <button className="bg-white border border-stone-200 text-stone-700 px-8 py-3.5 rounded-xl font-medium hover:bg-stone-50 transition-all flex items-center justify-center gap-2">
+              <button 
+                onClick={() => {
+                  const phonePreview = document.querySelector('[class*="w-[300px]"]');
+                  if (phonePreview) {
+                    phonePreview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
+                className="bg-white border border-stone-200 text-stone-700 px-8 py-3.5 rounded-xl font-medium hover:bg-stone-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
                 <span>شاهد مثال</span>
                 <PlayCircle size={18} />
               </button>
@@ -101,7 +109,10 @@ export default function Home() {
                         القادم. حضوركم يشرفنا.
                       </p>
                       <div className="mt-2 pt-2 border-t border-dashed border-stone-200 flex justify-between items-center">
-                        <button className="text-[#007bfc] text-[11px] font-medium">
+                        <button 
+                          onClick={(e) => e.preventDefault()}
+                          className="text-[#007bfc] text-[11px] font-medium cursor-pointer"
+                        >
                           تأكيد الحضور
                         </button>
                         <span className="text-[9px] text-stone-400">

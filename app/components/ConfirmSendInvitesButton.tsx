@@ -108,7 +108,7 @@ export default function ConfirmSendInvitesButton({
           className={`w-full px-6 py-3 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2 ${
             pendingToSend === 0
               ? "bg-stone-200 text-stone-400 cursor-not-allowed border border-stone-200"
-              : "bg-stone-900 text-white hover:bg-stone-800 transform hover:-translate-y-0.5"
+              : "bg-stone-900 text-white hover:bg-stone-800 transform hover:-translate-y-0.5 cursor-pointer"
           }`}
         >
           {pendingToSend > 0 ? (

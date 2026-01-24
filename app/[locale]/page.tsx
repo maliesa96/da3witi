@@ -4,6 +4,7 @@ import { Link } from "@/navigation";
 import {
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   Smartphone,
   Palette,
   Zap,
@@ -14,7 +15,9 @@ import {
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import InvitePreview from "../components/InvitePreview";
-import { motion, useScroll, useTransform, useSpring } from "framer-motion";
+import LiveDashboardDemo from "../components/LiveDashboardDemo";
+import StorySlider from "../components/StorySlider";
+import { motion } from "framer-motion";
 import { useRef } from "react";
 
 export default function Home() {
@@ -22,21 +25,8 @@ export default function Home() {
   const locale = useLocale();
   const isArabic = locale === 'ar';
   
-  // Parallax ref for Feature Showcase
   const containerRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"]
-  });
-
-  const y1 = useTransform(scrollYProgress, [0, 1], [100, -100]);
-  const y2 = useTransform(scrollYProgress, [0, 1], [50, -50]);
   
-  // Spring config for smooth parallax
-  const springConfig = { stiffness: 100, damping: 30, restDelta: 0.001 };
-  const y1Spring = useSpring(y1, springConfig);
-  const y2Spring = useSpring(y2, springConfig);
-
   return (
     <div className="min-h-screen bg-[#FDFCF8] text-stone-900 font-sans selection:bg-purple-100 selection:text-purple-900 overflow-x-hidden">
       
@@ -127,10 +117,10 @@ export default function Home() {
           </svg>
         </motion.div>
 
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           
           {/* Left Content */}
-          <div className="space-y-8 z-10 relative">
+          <div className="space-y-8 z-10 relative min-w-0">
              <motion.div 
                initial={{ opacity: 0, y: 20 }}
                animate={{ opacity: 1, y: 0 }}
@@ -145,19 +135,19 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-              className="text-6xl sm:text-7xl lg:text-8xl font-bold tracking-tighter leading-[0.9] text-stone-900"
+              className="text-[clamp(2.25rem,10vw,3.25rem)] sm:text-6xl md:text-6xl lg:text-7xl xl:text-8xl font-display font-bold tracking-tighter leading-[0.9] text-stone-900"
             >
-              {isArabic ? (
-                <>
-                  <span className="font-cairo font-black">خطط</span> لمناسبتك<br/>
-                  <span className="font-cairo font-light text-stone-600">بكل سهولة</span>
-                </>
-              ) : (
-                <>
-                  PLAN YOUR <br/>
-                  <span className="font-serif italic font-light text-stone-800">EVENT</span>
-                </>
-              )}
+              {t.rich('hero.heading', {
+                br: () => <br />,
+                strong: (chunks) => <span className="font-display font-black">{chunks}</span>,
+                muted: (chunks) => (
+                  <span className={`font-display font-light text-stone-600 ${isArabic ? "block mt-2" : ""}`}>
+                    {chunks}
+                  </span>
+                ),
+                nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>,
+                serif: (chunks) => <span className="font-serif italic font-light text-stone-800">{chunks}</span>,
+              })}
             </motion.h1>
             
             <motion.p 
@@ -177,20 +167,16 @@ export default function Home() {
             >
               <Link
                 href="/wizard"
-                className="bg-stone-900 text-white px-10 py-4 rounded-full font-medium shadow-xl shadow-stone-900/20 hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-lg"
+                className="bg-stone-900 text-white px-10 py-4 rounded-full font-medium shadow-xl shadow-stone-900/20 hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-lg cursor-pointer"
               >
                 <span>{t('cta_create')}</span>
-                <ArrowRight size={20} />
+                {isArabic ? <ArrowLeft size={20} /> : <ArrowRight size={20} />}
               </Link>
-              <button className="bg-white border border-stone-200 text-stone-700 px-10 py-4 rounded-full font-medium hover:bg-stone-50 transition-all flex items-center justify-center gap-2 text-lg">
-                <span>{t('cta_example')}</span>
-                <Sparkles size={20} />
-              </button>
             </motion.div>
           </div>
 
           {/* Right Content - Phone Showcase */}
-          <div className="relative flex justify-center lg:justify-end perspective-1000 mt-12 lg:mt-0">
+          <div className="relative flex justify-center lg:justify-end perspective-1000 mt-12 lg:mt-0 min-w-0">
              {/* Abstract Background Shapes */}
              <motion.div 
                animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.6, 0.4] }}
@@ -203,13 +189,13 @@ export default function Home() {
                initial={{ opacity: 0, rotate: -15, scale: 0.8, y: 50 }}
                animate={{ opacity: 1, rotate: -6, scale: 1, y: 0 }}
                transition={{ duration: 1, delay: 0.5, type: "spring", stiffness: 50 }}
-               className="relative transform hover:rotate-0 transition-transform duration-700 ease-out z-20 scale-90 lg:scale-100"
+               className="relative transform hover:rotate-0 transition-transform duration-700 ease-out z-20 scale-90 lg:scale-90 xl:scale-100"
              >
                 <InvitePreview 
                   date={t('phone_mockup.time') + ", " + t('phone_mockup.today')}
-                  locationName="Ritz Carlton"
+                  locationName={t('phone_mockup.location_name')}
                   message={t('phone_mockup.invite_body')}
-                  imageUrl="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600"
+                  imageUrl="/images/sample_invite.jpeg"
                 />
                 
                 {/* Floating Elements/Cards around phone */}
@@ -217,7 +203,7 @@ export default function Home() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 1.2, duration: 0.5 }}
-                  className="absolute -right-8 top-20 bg-white p-4 rounded-2xl shadow-xl shadow-purple-900/5 hidden md:block z-60"
+                  className="absolute -right-8 top-20 bg-white p-4 rounded-2xl shadow-xl shadow-purple-900/5 hidden xl:block z-60"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
@@ -234,7 +220,7 @@ export default function Home() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 1.5, duration: 0.5 }}
-                  className="absolute -left-8 bottom-32 bg-white p-4 rounded-2xl shadow-xl shadow-purple-900/5 hidden md:block z-60"
+                  className="absolute -left-8 bottom-32 bg-white p-4 rounded-2xl shadow-xl shadow-purple-900/5 hidden xl:block z-60"
                 >
                    <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
@@ -269,7 +255,7 @@ export default function Home() {
               { val: t('stats.app_rating').split(' ')[0], label: t('stats.app_rating').split(' ').slice(1).join(' ') }
             ].map((stat, idx) => (
               <motion.div key={idx} className="space-y-1">
-                 <h3 className="text-6xl lg:text-7xl font-bold text-stone-900 tracking-tighter">{stat.val}</h3>
+                 <h3 className="text-6xl lg:text-7xl font-display font-bold text-stone-900 tracking-tighter">{stat.val}</h3>
                  <p className="text-stone-500 text-lg uppercase tracking-widest font-light">{stat.label}</p>
               </motion.div>
             ))}
@@ -286,70 +272,49 @@ export default function Home() {
                transition={{ duration: 0.8 }}
                className="flex-1 space-y-8 relative z-10 text-center md:text-start"
              >
-               <h2 className="text-5xl md:text-7xl font-bold tracking-tighter text-stone-900 leading-[0.9] uppercase">
+               <h2 className="text-5xl md:text-7xl font-display font-bold tracking-tighter text-stone-900 leading-[0.9] uppercase">
                  {t('feature_showcase.title')}
                </h2>
                <p className="text-2xl text-stone-500 font-light italic font-serif">
                  {t('feature_showcase.subtitle')}
                </p>
-               <motion.button 
+               <motion.a
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
-                 className="px-8 py-4 rounded-full border-2 border-stone-900 text-stone-900 font-medium hover:bg-stone-900 hover:text-white transition-colors text-lg"
+                 href="#how-it-works"
+                 className="px-8 py-4 rounded-full border-2 border-stone-900 text-stone-900 font-medium hover:bg-stone-900 hover:text-white transition-colors text-lg cursor-pointer"
                >
                  {t('feature_showcase.cta')}
-               </motion.button>
+               </motion.a>
              </motion.div>
 
-             {/* Right Content - Staggered Phones */}
+             {/* Right Content - Live Dashboard Demo */}
              <div className="flex-1 relative w-full h-[500px] flex items-center justify-center md:justify-end perspective-1000">
                 {/* Abstract Line Background */}
                 <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] -z-10 opacity-50" viewBox="0 0 100 100" preserveAspectRatio="none">
                    <path d="M0 50 Q 25 80 50 50 T 100 50" stroke="#F3E8FF" strokeWidth="20" fill="none" />
                 </svg>
 
-                {/* Phone 1 (Back) */}
                 <motion.div 
-                  style={{ y: y1Spring }}
-                  className="absolute top-0 right-[20%] w-[260px] transform scale-90 -rotate-6 opacity-60 blur-[1px]"
-                >
-                  <InvitePreview 
-                    date={t('phone_mockup.time') + ", " + t('phone_mockup.today')}
-                    locationName="Ritz Carlton"
-                    message={t('phone_mockup.invite_body')}
-                    imageUrl="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=600"
-                    showQr={false}
-                  />
-                </motion.div>
-
-                {/* Phone 2 (Middle) */}
-                <motion.div 
-                  style={{ y: y2Spring }}
-                  className="absolute top-4 right-[10%] w-[260px] transform scale-95 -rotate-3 opacity-80 z-10"
-                >
-                   <InvitePreview 
-                    date={t('phone_mockup.time') + ", " + t('phone_mockup.today')}
-                    locationName="Ritz Carlton"
-                    message={t('phone_mockup.invite_body')}
-                    imageUrl="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600"
-                    showQr={false}
-                  />
-                </motion.div>
-
-                {/* Phone 3 (Front) */}
-                <motion.div 
-                  initial={{ y: 100, opacity: 0 }}
-                  whileInView={{ y: 0, opacity: 1 }}
+                  initial={{ y: 50, opacity: 0, rotateY: -5 }}
+                  whileInView={{ y: 0, opacity: 1, rotateY: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                  className="relative w-[280px] z-20 shadow-2xl rounded-[3rem]"
+                  transition={{ duration: 0.8 }}
+                  className="relative w-full max-w-md z-20 transform hover:scale-[1.02] transition-transform duration-500"
                 >
-                   <InvitePreview 
-                    date={t('phone_mockup.time') + ", " + t('phone_mockup.today')}
-                    locationName="Ritz Carlton"
-                    message={t('phone_mockup.invite_body')}
-                    imageUrl="https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=600"
-                  />
+                   <LiveDashboardDemo />
+                   
+                   {/* Decorative floating elements */}
+                   <motion.div
+                      animate={{ y: [0, -10, 0] }}
+                      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                      className="absolute -right-4 -top-6 bg-white p-3 rounded-2xl shadow-lg hidden md:block border border-stone-100"
+                   >
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">Live Updates</span>
+                      </div>
+                   </motion.div>
                 </motion.div>
              </div>
           </div>
@@ -357,8 +322,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How it Works - Story Slider */}
+      <section id="how-it-works" className="py-24 px-6 max-w-7xl mx-auto">
+         <motion.div 
+           initial={{ opacity: 0, y: 30 }}
+           whileInView={{ opacity: 1, y: 0 }}
+           viewport={{ once: true }}
+           transition={{ duration: 0.8 }}
+           className="text-center mb-16"
+         >
+            <h2 className="text-5xl md:text-7xl font-display font-bold tracking-tighter text-stone-900 uppercase leading-[0.9] mb-4">
+              {isArabic ? "كيف يعمل؟" : "How It Works"}
+            </h2>
+            <p className="text-xl text-stone-500 font-medium">
+               {t('how_it_works.subtitle')}
+            </p>
+         </motion.div>
+         
+         <StorySlider />
+      </section>
+
       {/* Why Choose Us - Features */}
-      <section className="py-24 px-6 max-w-7xl mx-auto">
+      <section id="about" className="py-24 px-6 max-w-7xl mx-auto">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -366,7 +351,7 @@ export default function Home() {
           transition={{ duration: 0.8 }}
           className="flex flex-col lg:flex-row justify-between items-start mb-20 gap-12"
         >
-          <h2 className="text-5xl md:text-7xl font-bold tracking-tighter text-stone-900 uppercase leading-[0.9] max-w-3xl">
+          <h2 className="text-5xl md:text-7xl font-display font-bold tracking-tighter text-stone-900 uppercase leading-[0.9] max-w-3xl">
              {t.rich('why_choose_us.title', {break: () => <br/>})}
           </h2>
           
@@ -394,7 +379,7 @@ export default function Home() {
                  <Smartphone size={28} strokeWidth={1.5} />
               </div>
               <div className="space-y-4">
-                 <h3 className="text-3xl font-bold uppercase leading-[0.95] tracking-tight text-stone-900">{t('why_choose_us.simple_interface.title')}</h3>
+                 <h3 className="text-3xl font-display font-bold uppercase leading-[0.95] tracking-tight text-stone-900">{t('why_choose_us.simple_interface.title')}</h3>
                  <p className="text-stone-700 font-medium leading-relaxed">{t('why_choose_us.simple_interface.desc')}</p>
               </div>
            </motion.div>
@@ -417,7 +402,7 @@ export default function Home() {
                  <Zap size={28} strokeWidth={1.5} />
               </div>
               <div className="space-y-4 relative z-10">
-                 <h3 className="text-3xl font-bold uppercase leading-[0.95] tracking-tight text-stone-900">{t('why_choose_us.free_access.title')}</h3>
+                 <h3 className="text-3xl font-display font-bold uppercase leading-[0.95] tracking-tight text-stone-900">{t('why_choose_us.free_access.title')}</h3>
                  <p className="text-stone-700 font-medium leading-relaxed">{t('why_choose_us.free_access.desc')}</p>
               </div>
            </motion.div>
@@ -435,7 +420,7 @@ export default function Home() {
                  <Palette size={28} strokeWidth={1.5} />
               </div>
               <div className="space-y-4">
-                 <h3 className="text-3xl font-bold uppercase leading-[0.95] tracking-tight text-stone-900">{t('why_choose_us.beautiful_designs.title')}</h3>
+                 <h3 className="text-3xl font-display font-bold uppercase leading-[0.95] tracking-tight text-stone-900">{t('why_choose_us.beautiful_designs.title')}</h3>
                  <p className="text-stone-700 font-medium leading-relaxed">{t('why_choose_us.beautiful_designs.desc')}</p>
               </div>
            </motion.div>
@@ -443,7 +428,7 @@ export default function Home() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-24 px-6 relative overflow-hidden">
+      <section id="pricing" className="py-24 px-6 relative overflow-hidden">
          {/* Abstract background blobs for Pricing */}
          <motion.div 
            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
@@ -463,7 +448,7 @@ export default function Home() {
               viewport={{ once: true }}
               className="text-center mb-16 space-y-4"
             >
-               <h2 className="text-5xl font-bold tracking-tighter text-stone-900 uppercase">{t('pricing.title')}</h2>
+               <h2 className="text-5xl font-display font-bold tracking-tighter text-stone-900 uppercase">{t('pricing.title')}</h2>
                <p className="text-xl text-stone-500 max-w-xl mx-auto">{t('pricing.subtitle')}</p>
             </motion.div>
 
@@ -486,7 +471,7 @@ export default function Home() {
                         <Sparkles size={12} className="text-amber-400" />
                         Most Popular
                      </div>
-                     <h3 className="text-3xl font-bold uppercase tracking-tight mb-2">{t('pricing.standard.title')}</h3>
+                     <h3 className="text-3xl font-display font-bold uppercase tracking-tight mb-2">{t('pricing.standard.title')}</h3>
                      <div className="flex items-baseline gap-1">
                         <span className="text-6xl font-black tracking-tighter text-white">{t('pricing.standard.price')}</span>
                      </div>
@@ -539,7 +524,7 @@ export default function Home() {
                      <div className="inline-block bg-amber-100 px-3 py-1 rounded-full text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-4 border border-amber-200">
                        Add-on
                      </div>
-                     <h3 className="text-2xl font-bold uppercase tracking-tight text-stone-900">{t('pricing.plus.title')}</h3>
+                     <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-stone-900">{t('pricing.plus.title')}</h3>
                      <div className="text-4xl font-black text-stone-900 tracking-tighter mt-2">{t('pricing.plus.price')}</div>
                      <p className="text-sm text-stone-500 font-medium mt-3 leading-relaxed">{t('pricing.plus.desc')}</p>
                   </div>
@@ -567,7 +552,7 @@ export default function Home() {
       </section>
 
       {/* Community / Final CTA */}
-      <section className="py-24 px-6">
+      <section id="contact" className="py-24 px-6">
          <motion.div 
            initial={{ scale: 0.9, opacity: 0 }}
            whileInView={{ scale: 1, opacity: 1 }}
@@ -588,7 +573,7 @@ export default function Home() {
                 whileInView={{ y: 0, opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.2, duration: 0.6 }}
-                className="text-4xl md:text-7xl font-bold text-white tracking-tighter"
+                className="text-4xl md:text-7xl font-display font-bold text-white tracking-tighter"
               >
                 {t('community.title')}
               </motion.h2>
@@ -603,12 +588,9 @@ export default function Home() {
               </motion.p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-                 <Link href="/wizard" className="bg-white text-stone-900 px-10 py-4 rounded-full font-bold text-lg hover:bg-stone-100 transition-colors">
+                 <Link href="/wizard" className="bg-white text-stone-900 px-10 py-4 rounded-full font-bold text-lg hover:bg-stone-100 transition-colors cursor-pointer">
                     {t('community.cta_download')}
                  </Link>
-                 <button className="px-10 py-4 rounded-full font-bold text-lg text-white border border-stone-700 hover:bg-stone-800 transition-colors">
-                    {t('community.cta_join')}
-                 </button>
               </div>
             </div>
          </motion.div>

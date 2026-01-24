@@ -3,6 +3,8 @@
 @theme {
   --font-sans: var(--font-ibm-arabic), var(--font-inter), sans-serif;
   --font-cairo: var(--font-cairo), sans-serif;
+  --font-display: var(--font-alexandria), var(--font-bricolage), sans-serif;
+  --font-serif: var(--font-instrument), serif;
   
   --color-gold-500: #b49b67;
   --color-gold-600: #967d4d;

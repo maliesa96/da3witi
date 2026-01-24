@@ -40,7 +40,7 @@ export function Navbar() {
           <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white shrink-0">
             <MailOpen size={18} />
           </div>
-          <span className="text-lg md:text-xl font-semibold tracking-tight text-stone-900 truncate">
+          <span className="text-lg md:text-xl font-display font-semibold tracking-tight text-stone-900 truncate">
             {t('brand')}
           </span>
         </Link>
@@ -49,7 +49,7 @@ export function Navbar() {
           <Link
             href={pathname}
             locale={otherLocale}
-            className="text-[10px] md:text-xs font-medium text-stone-500 hover:text-stone-900 transition-colors flex items-center gap-1"
+            className="text-[10px] md:text-xs font-medium text-stone-500 hover:text-stone-900 transition-colors flex items-center gap-1 cursor-pointer"
           >
             <Globe size={14} />
             <span className="hidden sm:inline">{langLabel}</span>
@@ -60,14 +60,14 @@ export function Navbar() {
             <>
               <Link
                 href="/dashboard"
-                className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all"
+                className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
               >
                 {t('dashboard')}
               </Link>
               <form action={signOut} className="hidden sm:block">
                 <button
                   type="submit"
-                  className="text-sm font-medium text-stone-600 hover:text-red-600 px-3 py-1.5 rounded-md hover:bg-red-50 transition-all flex items-center gap-2"
+                  className="text-sm font-medium text-stone-600 hover:text-red-600 px-3 py-1.5 rounded-md hover:bg-red-50 transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <LogOut size={16} />
                   <span className="hidden md:inline">{authT('sign_out')}</span>
@@ -77,7 +77,7 @@ export function Navbar() {
           ) : (
             <Link
               href="/login"
-              className="text-sm font-medium text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all flex items-center gap-2"
+              className="text-sm font-medium text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all flex items-center gap-2 cursor-pointer"
             >
               <User size={16} />
               <span className="hidden sm:inline">{authT('login')}</span>
@@ -86,7 +86,7 @@ export function Navbar() {
 
           <Link
             href="/wizard"
-            className="bg-stone-900 text-white text-xs md:text-sm font-semibold px-4 md:px-6 py-2.5 rounded-full hover:bg-stone-800 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 group shrink-0"
+            className="bg-stone-900 text-white text-xs md:text-sm font-semibold px-4 md:px-6 py-2.5 rounded-full hover:bg-stone-800 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 group shrink-0 cursor-pointer"
           >
             <span>{t('start_now')}</span>
             <ArrowRight

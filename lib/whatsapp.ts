@@ -204,7 +204,7 @@ export function getInviteTemplateName(locale: string, qrEnabled: boolean, mediaT
   const langSuffix = locale === 'ar' ? '_ar' : '_en';
   
   const templateName = `${typePrefix}${qrSuffix}${guestsSuffix}${langSuffix}`;
-  return TEMPLATE_OVERRIDES[templateName] ?? templateName;
+  return templateName;
 }
 
 
@@ -349,9 +349,12 @@ export async function sendInviteTemplate({
     });
   }
 
+  // account for overrides for names in WABA that dont match the naming pattern
+  const template = TEMPLATE_OVERRIDES[templateName] ?? templateName;
+
   return sendWhatsAppTemplate({
     to,
-    templateName,
+    templateName: template,
     languageCode: locale,
     components
   });

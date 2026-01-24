@@ -60,7 +60,7 @@ export default async function Dashboard({
         {/* Sidebar: Event List */}
         <aside className="lg:col-span-1 space-y-4">
           <div className="flex items-center justify-between mb-2 lg:mb-4">
-            <h2 className="text-sm font-bold text-stone-400 uppercase tracking-wider">
+            <h2 className="text-sm font-display font-bold text-stone-400 uppercase tracking-wider">
               {t('my_events') || 'My Events'}
             </h2>
             <Link 

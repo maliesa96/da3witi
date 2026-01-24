@@ -47,12 +47,16 @@ function InvitePreviewContent({
 
   const templateName = getInviteTemplateName(locale, showQr, mediaType, guestsEnabled) as keyof typeof TEMPLATES;
   const templateFn = TEMPLATES[templateName];
+
+  if (!templateFn) {
+    return null;
+  }
   
   const renderedMessage = templateFn ? templateFn({
     invitee: t('default_invitee'),
     greeting_text: message || t('default_message_preview'),
     date: date || t('default_date'),
-    time: time || timeString, // Use the selected time if available, otherwise current time
+    time: time || timeString,
     location_name: locationName || t('default_location_name'),
     event_name: t('app_name'),
     rsvp_date: date || t('default_rsvp_date'),
@@ -70,6 +74,20 @@ function InvitePreviewContent({
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const handleConfirmClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+  };
+
+  const handleApologizeClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+  };
+
+  const handleMapClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!location) {
+      e.preventDefault();
+    }
   };
 
   return (
@@ -96,7 +114,7 @@ function InvitePreviewContent({
                 <ChevronLeft size={26} strokeWidth={2.5} className="-ml-1 block rtl:hidden" />
              </div>
              
-             <div className="flex-1 flex items-center gap-2 ml-2 mr-2 cursor-pointer">
+             <div className="flex-1 flex items-center gap-2 ml-2 mr-2">
                  <div className="w-9 h-9 flex items-center justify-center rounded-full bg-stone-700 shrink-0 overflow-hidden border border-white/10">
                     <MailOpen size={20} className="text-white" /> 
                  </div>
@@ -119,7 +137,8 @@ function InvitePreviewContent({
             </div>
             
             {/* Message Bubble (Incoming) - Dark Mode */}
-            <div className="bg-[#1f2c34] rounded-tl-none rounded-bl-none p-1 pb-0 shadow-sm max-w-[85%] self-start relative group border-b border-[#101a20]">
+            <div className="self-start" dir="ltr">
+              <div className="bg-[#1f2c34] rounded-tl-none rounded-bl-none p-1 pb-0 shadow-sm max-w-[85%] relative group border-b border-[#101a20]">
               
               {/* Media Header */}
               {mediaType === 'document' ? (
@@ -144,8 +163,7 @@ function InvitePreviewContent({
                 <div className="bg-[#2a3942] rounded-lg overflow-hidden relative aspect-4/3 mb-1">
                   <Image
                     src={
-                      imageUrl ||
-                      "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600"
+                      imageUrl || "/images/sample_invite.jpeg"
                     }
                     fill
                     className="object-cover opacity-90"
@@ -166,15 +184,23 @@ function InvitePreviewContent({
               <div className="absolute bottom-1 right-2 flex items-center gap-1">
                   <span className="text-[10px] text-[#8696a0]">{timeString}</span>
               </div>
+              </div>
             </div>
             
             {/* Interactive Buttons (Vertical Stack) - Dark Mode */}
-            <div className="max-w-[85%] mb-4">
-                <button className="w-full bg-[#1f2c34] rounded-t-none rounded-b-none py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2 border-b border-[#101a20]">
+            <div className="self-start" dir="ltr">
+              <div className="max-w-[85%] mb-4">
+                <button 
+                  onClick={handleConfirmClick}
+                  className="w-full bg-[#1f2c34] rounded-t-none rounded-b-none py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2 border-b border-[#101a20] cursor-pointer"
+                >
                     <Reply size={16} className="rtl:order-last" />
                     <span>{t('confirm_btn')}</span>
                 </button>
-                <button className="w-full bg-[#1f2c34] rounded-none py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2 border-b border-[#101a20]">
+                <button 
+                  onClick={handleApologizeClick}
+                  className="w-full bg-[#1f2c34] rounded-none py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2 border-b border-[#101a20] cursor-pointer"
+                >
                     <Reply size={16} className="rtl:order-last" />
                     <span>{t('apologize_btn')}</span>
                 </button>
@@ -182,16 +208,18 @@ function InvitePreviewContent({
                   href={location ? (location.startsWith('http') ? location : `https://www.google.com/maps?q=${location}`) : '#'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full bg-[#1f2c34] rounded-t-none rounded-b-xl py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2"
+                  onClick={handleMapClick}
+                  className="w-full bg-[#1f2c34] rounded-t-none rounded-b-xl py-2.5 px-4 text-[#53bdeb] text-sm font-medium shadow-sm active:bg-[#2a3942] transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                     <ExternalLink size={16} className="rtl:order-last" />
                     <span>{t('map_btn')}</span>
                 </a>
+              </div>
             </div>
 
             {/* User Response Bubble (Outgoing) */}
-            <div className="flex flex-col items-end mb-4">
-              <div className="bg-[#005c4b] rounded-[8px] rounded-tr-none rtl:rounded-tl-none rtl:rounded-tr-[8px] p-[6px_7px_8px_9px] shadow-sm max-w-[85%] relative flex items-end gap-2 transition-all mr-2 rtl:mr-0 rtl:ml-2">
+            <div className="flex flex-col items-end mb-4" dir="ltr">
+              <div className="bg-[#005c4b] rounded-[8px] rounded-tr-none p-[6px_7px_8px_9px] shadow-sm max-w-[85%] relative flex items-end gap-2 transition-all mr-2">
                   <p className="text-[14.2px] text-[#e9edef] leading-[1.3] font-sans">
                     {t('confirm_btn')}
                   </p>
@@ -204,13 +232,8 @@ function InvitePreviewContent({
                     </span>
                   </div>
                   
-                {/* Outgoing Tail - Using logical positioning for RTL support */}
-                <div className="absolute -top-px right-[-5px] text-[#005c4b] rtl:hidden">
-                    <svg viewBox="0 0 8 13" height="13" width="8" preserveAspectRatio="xMidYMid slice" fill="currentColor">
-                        <path d="M5.188 1H0v11.193l6.467-8.625C7.526 2.156 6.958 1 5.188 1z"></path>
-                    </svg>
-                </div>
-                <div className="absolute -top-px left-[-8px] text-[#005c4b] hidden rtl:block scale-x-[-1] translate-x-px">
+                {/* Outgoing Tail - Always on the right */}
+                <div className="absolute -top-px right-[-5px] text-[#005c4b]">
                     <svg viewBox="0 0 8 13" height="13" width="8" preserveAspectRatio="xMidYMid slice" fill="currentColor">
                         <path d="M5.188 1H0v11.193l6.467-8.625C7.526 2.156 6.958 1 5.188 1z"></path>
                     </svg>
@@ -219,7 +242,8 @@ function InvitePreviewContent({
             </div>
 
             {/* Business Thank You Bubble (Incoming) */}
-            <div className="bg-[#1f2c34] rounded-tl-none rounded-bl-none p-1 pb-0 shadow-sm max-w-[85%] self-start relative mb-4">
+            <div className="self-start" dir="ltr">
+              <div className="bg-[#1f2c34] rounded-tl-none rounded-bl-none p-1 pb-0 shadow-sm max-w-[85%] relative mb-4">
               {showQr && (
                 <div className="bg-[#2a3942] rounded-lg overflow-hidden relative aspect-square mb-1">
                   <Image
@@ -239,6 +263,7 @@ function InvitePreviewContent({
               </div>
               <div className="absolute bottom-1 right-2 flex items-center gap-1">
                   <span className="text-[10px] text-[#8696a0]">{timeString}</span>
+              </div>
               </div>
             </div>
 

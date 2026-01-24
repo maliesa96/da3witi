@@ -242,7 +242,7 @@ export default function Wizard() {
       {step === 1 && (
         <div className="animate-slide-up">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold text-stone-900 tracking-tight">
+            <h2 className="text-2xl font-display font-semibold text-stone-900 tracking-tight">
               {t('step2.title')}
             </h2>
             <p className="text-stone-500 text-sm mt-2 font-light">
@@ -809,7 +809,7 @@ export default function Wizard() {
       {step === 2 && (
         <div className="animate-slide-up">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold text-stone-900 tracking-tight">
+            <h2 className="text-2xl font-display font-semibold text-stone-900 tracking-tight">
               {t('step1.title')}
             </h2>
             <p className="text-stone-500 text-sm mt-2 font-light">
@@ -1032,7 +1032,7 @@ export default function Wizard() {
       {step === 3 && (
         <div className="animate-slide-up">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold text-stone-900 tracking-tight">
+            <h2 className="text-2xl font-display font-semibold text-stone-900 tracking-tight">
               {t('step3.title')}
             </h2>
             <p className="text-stone-500 text-sm mt-2 font-light">
@@ -1076,7 +1076,7 @@ export default function Wizard() {
 
             {/* Summary Box */}
             <div className="bg-white p-8 rounded-2xl border border-stone-200 shadow-lg mt-8 lg:mt-0">
-              <h3 className="text-lg font-semibold text-stone-900 mb-6">
+              <h3 className="text-lg font-display font-semibold text-stone-900 mb-6">
                 {t('step3.event_summary')}
               </h3>
 

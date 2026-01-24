@@ -1,10 +1,16 @@
 {
   "HomePage": {
     "badge": "The First Automated Invitation System in the Gulf",
-    "title": "Luxury Invitations,  Delivered with a Click.",
-    "description": "Smart invitation creator for high-end events and weddings. Upload your guest list, design your card, and let us handle sending it and tracking attendance via WhatsApp completely automatically.",
+    "title": "Luxury Invitations, sent in minutes.",
+    "hero": {
+      "heading": "<nowrap>SEND BEAUTIFUL</nowrap><br></br><serif><nowrap>WHATSAPP INVITES</nowrap></serif>"
+    },
+    "description": "Send beautiful WhatsApp invitations in minutes. Add your event details, upload your guest list and card, then we handle the sending and RSVP tracking automatically.",
     "cta_create": "Create New Invitation",
     "cta_example": "View Example",
+    "how_it_works": {
+      "subtitle": "Add details, upload guests + card, then send — we’ll track replies."
+    },
     "stats": {
       "invites_sent": "1K+ Unique Designs",
       "happy_guests": "10K+ Happy Guests",
@@ -12,8 +18,8 @@
     },
     "feature_showcase": {
       "title": "Smart Guest Management",
-      "subtitle": "We turn your events into unforgettable memories",
-      "cta": "View Features"
+      "subtitle": "Automated sending + real-time RSVP tracking.",
+      "cta": "Learn More"
     },
     "why_choose_us": {
       "title": "Why Hosts  Choose Us",
@@ -34,7 +40,7 @@
     },
     "community": {
       "title": "Join Our Community",
-      "subtitle": "Become a host today and make your events unforgettable.",
+      "subtitle": "Create an invite in minutes, send via WhatsApp, and track replies automatically.",
       "cta_download": "Start Creating",
       "cta_join": "View Gallery"
     },
@@ -74,7 +80,8 @@
       "invite_body": "We are pleased to invite you to attend the wedding ceremony of our son Muhammad, next Friday. We look forward to seeing you there.",
       "confirm_btn": "Confirm Attendance",
       "time": "04:30 PM",
-      "type_message": "Type a message..."
+      "type_message": "Type a message...",
+      "location_name": "Ritz Carlton"
     },
     "features": {
       "guests": {
