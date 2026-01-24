@@ -10,11 +10,12 @@ export async function signInWithMagicLink(formData: FormData) {
   const email = formData.get('email') as string
   const locale = formData.get('locale') as string || 'en'
   const next = formData.get('next') as string || `/${locale}/dashboard`
+  const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/auth/callback?next=${next}`
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/auth/callback?next=${next}`,
+      emailRedirectTo: redirectUrl
     },
   })
 

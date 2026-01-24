@@ -43,7 +43,7 @@ export default function MagicLinkSubmitButton({ formAction, className, children 
             <path
               className="opacity-75"
               fill="currentColor"
-              d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
         ) : null}
