@@ -3,7 +3,7 @@
 import { MailOpen, Globe, ArrowRight, LogOut, User } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { signOut } from "@/app/[locale]/login/actions";
@@ -14,7 +14,9 @@ export function Navbar() {
   const locale = useLocale();
   const pathname = usePathname();
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const supabase = createClient();
+  
+  // Memoize the supabase client so it's stable across renders
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     const getUser = async () => {
