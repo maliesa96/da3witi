@@ -21,6 +21,7 @@ export type GuestRowData = {
   id: string;
   name: string;
   phone: string;
+  inviteCount?: number;
   status: string;
   checkedIn: boolean;
   whatsappMessageId: string | null;
@@ -62,7 +63,7 @@ function StatusPill({
                   : status === "delivered"
                     ? "bg-teal-500"
                     : status === "sent"
-                      ? "bg-sky-500"
+                      ? "bg-violet-500"
                       : status === "failed"
                         ? "bg-red-500"
                         : status === "pending"
@@ -204,10 +205,12 @@ function DeleteButton({
 function EmptyState({
   t,
   eventId,
+  guestsEnabled,
   onGuestsAdded,
 }: {
   t: (key: string, values?: Record<string, string | number | Date>) => string;
   eventId: string;
+  guestsEnabled?: boolean;
   onGuestsAdded?: (guests: GuestRowData[]) => void;
 }) {
   return (
@@ -223,7 +226,7 @@ function EmptyState({
           "Start by adding guests to your event list. You can add them manually to get started."}
       </p>
       <div className="w-full max-w-[200px] mx-auto flex justify-center">
-        <AddGuestForm eventId={eventId} onGuestsAdded={onGuestsAdded} />
+        <AddGuestForm eventId={eventId} guestsEnabled={guestsEnabled} onGuestsAdded={onGuestsAdded} />
       </div>
     </div>
   );
@@ -366,6 +369,7 @@ function PaginationControls({
 export function GuestListClient({
   guests,
   eventId,
+  guestsEnabled = false,
   onGuestDeleted,
   onGuestsAdded,
   pagination,
@@ -375,6 +379,7 @@ export function GuestListClient({
 }: {
   guests: GuestRowData[];
   eventId: string;
+  guestsEnabled?: boolean;
   onGuestDeleted: (guestId: string) => void;
   onGuestsAdded?: (guests: GuestRowData[]) => void;
   pagination?: PaginationInfo;
@@ -412,6 +417,11 @@ export function GuestListClient({
                   <div>
                     <div className="font-medium text-stone-900">{guest.name}</div>
                     <div className="text-xs text-stone-500 dir-ltr">{guest.phone}</div>
+                    {guestsEnabled && guest.inviteCount && (
+                      <div className="text-xs text-stone-500 mt-0.5">
+                        {guest.inviteCount} {guest.inviteCount === 1 ? t("invite_count_singular") : t("invite_count_plural")}
+                      </div>
+                    )}
                   </div>
                   {statusBadge}
                 </div>
@@ -448,7 +458,7 @@ export function GuestListClient({
           isSearching ? (
             <NoResultsState t={t} searchQuery={searchQuery} />
           ) : (
-            <EmptyState t={t} eventId={eventId} onGuestsAdded={onGuestsAdded} />
+            <EmptyState t={t} eventId={eventId} guestsEnabled={guestsEnabled} onGuestsAdded={onGuestsAdded} />
           )
         )}
       </div>
@@ -460,6 +470,7 @@ export function GuestListClient({
             <tr>
               <th className="px-6 py-3 text-start">{t("col_name")}</th>
               <th className="px-6 py-3 text-start">{t("col_phone")}</th>
+              {guestsEnabled && <th className="px-6 py-3 text-start">{t("col_invite_count")}</th>}
               <th className="px-6 py-3 text-start">{t("col_status")}</th>
               <th className="px-6 py-3 text-start">{t("col_qr")}</th>
               <th className="px-6 py-3 text-start"></th>
@@ -488,6 +499,11 @@ export function GuestListClient({
                     <td className="px-6 py-4 dir-ltr text-start text-stone-500 font-mono">
                       {guest.phone}
                     </td>
+                    {guestsEnabled && (
+                      <td className="px-6 py-4 text-stone-700">
+                        {guest.inviteCount || 1}
+                      </td>
+                    )}
                     <td className="px-6 py-4">{statusBadge}</td>
                     <td className="px-6 py-4">
                       {guest.status === "declined" ? (
@@ -523,11 +539,11 @@ export function GuestListClient({
 
             {guests.length === 0 && showEmpty && (
               <tr>
-                <td colSpan={5}>
+                <td colSpan={guestsEnabled ? 6 : 5}>
                   {isSearching ? (
                     <NoResultsState t={t} searchQuery={searchQuery} />
                   ) : (
-                    <EmptyState t={t} eventId={eventId} onGuestsAdded={onGuestsAdded} />
+                    <EmptyState t={t} eventId={eventId} guestsEnabled={guestsEnabled} onGuestsAdded={onGuestsAdded} />
                   )}
                 </td>
               </tr>

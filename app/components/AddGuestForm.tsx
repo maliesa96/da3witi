@@ -13,6 +13,7 @@ type Cell = string | number | null;
 
 interface AddGuestFormProps {
   eventId: string;
+  guestsEnabled?: boolean;
   buttonClassName?: string;
   onGuestsAdded?: (guests: Array<{
     id: string;
@@ -24,7 +25,7 @@ interface AddGuestFormProps {
   }>) => void;
 }
 
-export default function AddGuestForm({ eventId, buttonClassName, onGuestsAdded }: AddGuestFormProps) {
+export default function AddGuestForm({ eventId, guestsEnabled = false, buttonClassName, onGuestsAdded }: AddGuestFormProps) {
   const t = useTranslations('Dashboard');
   const tw = useTranslations('Wizard.step1');
   const locale = useLocale();
@@ -59,9 +60,10 @@ export default function AddGuestForm({ eventId, buttonClassName, onGuestsAdded }
   const [importData, setImportData] = useState<Cell[][]>([]);
   const [importNameCol, setImportNameCol] = useState<number | null>(null);
   const [importPhoneCol, setImportPhoneCol] = useState<number | null>(null);
+  const [importInviteCountCol, setImportInviteCountCol] = useState<number | null>(null);
   const [importStartRow, setImportStartRow] = useState(0);
   const [importFileName, setImportFileName] = useState<string | null>(null);
-  const [fileContacts, setFileContacts] = useState<Array<{ name: string; phone: string }>>([]);
+  const [fileContacts, setFileContacts] = useState<Array<{ name: string; phone: string; inviteCount?: number }>>([]);
 
   const manualCount = useMemo(
     () => manualInvites.filter(i => i.name.trim() || i.phone.trim()).length,
@@ -78,6 +80,7 @@ export default function AddGuestForm({ eventId, buttonClassName, onGuestsAdded }
     setImportData([]);
     setImportNameCol(null);
     setImportPhoneCol(null);
+    setImportInviteCountCol(null);
     setImportStartRow(0);
     setImportFileName(null);
     setFileContacts([]);
@@ -184,12 +187,15 @@ export default function AddGuestForm({ eventId, buttonClassName, onGuestsAdded }
                         <>
                           <ContactImport
                             onContactsLoaded={(contacts) => setFileContacts(contacts)}
+                            guestsEnabled={guestsEnabled}
                             data={importData}
                             setData={setImportData}
                             nameCol={importNameCol}
                             setNameCol={setImportNameCol}
                             phoneCol={importPhoneCol}
                             setPhoneCol={setImportPhoneCol}
+                            inviteCountCol={importInviteCountCol}
+                            setInviteCountCol={setImportInviteCountCol}
                             startRow={importStartRow}
                             setStartRow={setImportStartRow}
                             fileName={importFileName}
@@ -263,6 +269,7 @@ export default function AddGuestForm({ eventId, buttonClassName, onGuestsAdded }
                                 setImportData([]);
                                 setImportNameCol(null);
                                 setImportPhoneCol(null);
+                                setImportInviteCountCol(null);
                                 setImportStartRow(0);
                                 setImportFileName(null);
                               }}

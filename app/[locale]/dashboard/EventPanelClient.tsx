@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect, memo } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle2, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X } from "lucide-react";
+import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle2, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Send } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import InvitePreview from "@/app/components/InvitePreview";
 import { useLocale, useTranslations } from "next-intl";
@@ -24,6 +24,7 @@ type EventForClient = {
   locationName: string | null;
   message: string | null;
   qrEnabled: boolean;
+  guestsEnabled: boolean;
   reminderEnabled: boolean;
   imageUrl: string | null;
   paidAt: string | null; // ISO
@@ -265,6 +266,7 @@ export default function EventPanelClient({
     return {
       invited: serverStats.total,
       pending: serverStats.pending + serverStats.failed,
+      sent: serverStats.sent,
       delivered: serverStats.delivered,
       read: serverStats.read,
       confirmed: serverStats.confirmed,
@@ -277,7 +279,7 @@ export default function EventPanelClient({
     return serverStats.pending + serverStats.failed;
   }, [serverStats]);
 
-  const eventDate = event.date ? new Date(event.date) : null;
+  const eventDate = event.date
 
   // Handle local state updates when guests are added
   const handleGuestsAdded = useCallback(
@@ -391,20 +393,23 @@ export default function EventPanelClient({
                   </span>
                 )}
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-stone-900 mb-2">
-                {event.title}
-              </h1>
+              <div className="flex items-center gap-4 flex-wrap">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-stone-900">
+                  {event.title}
+                </h1>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-stone-900 rounded-full">
+                  <Users size={14} className="text-stone-300" />
+                  <span className="text-sm font-semibold text-white tabular-nums">{stats.invited}</span>
+                  <span className="text-xs text-stone-400">{t("guests_label") || "guests"}</span>
+                </div>
+              </div>
               
               {/* Event Details Grid */}
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-stone-600">
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-stone-600 mt-2">
                 {eventDate && (
                   <div className="flex items-center gap-1.5">
                     <Calendar size={14} className="text-stone-400" />
-                    <span>{eventDate.toLocaleDateString(locale === "ar" ? "ar-SA" : "en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}</span>
+                    <span>{eventDate}</span>
                   </div>
                 )}
                 {event.time && (
@@ -454,13 +459,15 @@ export default function EventPanelClient({
                 <Eye size={16} />
                 {t("preview_invite") || "Preview Invite"}
               </button>
-              <Link
-                href={`/dashboard/scan?eventId=${event.id}`}
-                className="px-4 py-2 bg-white/70 hover:bg-white border border-stone-200 rounded-lg text-sm font-medium text-stone-700 transition-all flex items-center gap-2 shadow-sm"
-              >
-                <Camera size={16} />
-                {t("scan_qr") || "Scan QR"}
-              </Link>
+              {event.qrEnabled && (
+                <Link
+                  href={`/dashboard/scan?eventId=${event.id}`}
+                  className="px-4 py-2 bg-white/70 hover:bg-white border border-stone-200 rounded-lg text-sm font-medium text-stone-700 transition-all flex items-center gap-2 shadow-sm"
+                >
+                  <Camera size={16} />
+                  {t("scan_qr") || "Scan QR"}
+                </Link>
+              )}
             </div>
           </div>
 
@@ -475,6 +482,7 @@ export default function EventPanelClient({
             <div className="w-full">
               <AddGuestForm
                 eventId={event.id}
+                guestsEnabled={event.guestsEnabled}
                 onGuestsAdded={handleGuestsAdded}
                 buttonClassName="w-full px-6 py-3 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2 bg-white text-stone-900 border border-stone-200 hover:bg-stone-50 hover:-translate-y-0.5"
               />
@@ -486,16 +494,16 @@ export default function EventPanelClient({
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-8">
         <StatCard
-          label={t("invited")}
-          value={stats.invited}
-          icon={<Users size={16} />}
-          iconBgClassName="bg-stone-50 border border-stone-200 text-stone-500"
-        />
-        <StatCard
           label={t("pending")}
           value={stats.pending}
           icon={<Clock size={16} />}
           iconBgClassName="bg-amber-50 border border-amber-100 text-amber-600"
+        />
+        <StatCard
+          label={t("sent")}
+          value={stats.sent}
+          icon={<Send size={16} />}
+          iconBgClassName="bg-violet-50 border border-violet-100 text-violet-600"
         />
         <StatCard
           label={t("delivered")}
@@ -559,6 +567,7 @@ export default function EventPanelClient({
         <GuestListClient
           eventId={event.id}
           guests={displayGuests}
+          guestsEnabled={event.guestsEnabled}
           onGuestsAdded={handleGuestsAdded}
           onGuestDeleted={handleGuestDeleted}
           pagination={pagination}
@@ -598,17 +607,14 @@ export default function EventPanelClient({
                 <div className="p-4 overflow-visible" style={{ isolation: 'isolate' }}>
                   <InvitePreview
                   title={event.title}
-                  date={eventDate?.toLocaleDateString(locale === "ar" ? "ar-SA" : "en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  }) || ""}
+                  date={event.date || ""}
                   time={event.time || undefined}
                   locationName={event.locationName || ""}
                   location={event.location || undefined}
                   message={event.message || ""}
                   imageUrl={event.imageUrl || undefined}
                   showQr={event.qrEnabled}
+                  guestsEnabled={event.guestsEnabled}
                   locale={locale as "en" | "ar"}
                   />
                 </div>

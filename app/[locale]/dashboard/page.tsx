@@ -87,11 +87,7 @@ export default async function Dashboard({
                 </div>
                 <div className="text-[10px] mt-1 flex items-center gap-1">
                   <Calendar size={10} />
-                  {event.date?.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
+                  {event.date}
                 </div>
               </Link>
             ))}
@@ -106,12 +102,13 @@ export default async function Dashboard({
               id: currentEvent.id,
               title: currentEvent.title,
               isScheduled: currentEvent.isScheduled,
-              date: currentEvent.date ? currentEvent.date.toISOString() : null,
-              time: currentEvent.time ?? null,
+              date: currentEvent.date,
+              time: currentEvent.time,
               location: currentEvent.location ?? null,
               locationName: currentEvent.locationName ?? null,
               message: currentEvent.message ?? null,
               qrEnabled: currentEvent.qrEnabled,
+              guestsEnabled: currentEvent.guestsEnabled,
               reminderEnabled: currentEvent.reminderEnabled,
               imageUrl: currentEvent.imageUrl ?? null,
               paidAt: currentEvent.paidAt ? currentEvent.paidAt.toISOString() : null,

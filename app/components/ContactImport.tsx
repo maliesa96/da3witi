@@ -9,12 +9,14 @@ import { useTranslations } from "next-intl";
 interface Contact {
   name: string;
   phone: string;
+  inviteCount?: number;
 }
 
 type Cell = string | number | null;
 
 interface ContactImportProps {
   onContactsLoaded: (contacts: Contact[]) => void;
+  guestsEnabled?: boolean;
   // State lifted to parent to persist across tab switches
   data: Cell[][];
   setData: (data: Cell[][]) => void;
@@ -22,6 +24,8 @@ interface ContactImportProps {
   setNameCol: (col: number | null) => void;
   phoneCol: number | null;
   setPhoneCol: (col: number | null) => void;
+  inviteCountCol: number | null;
+  setInviteCountCol: (col: number | null) => void;
   startRow: number;
   setStartRow: (row: number) => void;
   fileName: string | null;
@@ -30,9 +34,11 @@ interface ContactImportProps {
 
 export default function ContactImport({ 
   onContactsLoaded,
+  guestsEnabled = false,
   data, setData,
   nameCol, setNameCol,
   phoneCol, setPhoneCol,
+  inviteCountCol, setInviteCountCol,
   startRow, setStartRow,
   fileName, setFileName
 }: ContactImportProps) {
@@ -130,9 +136,11 @@ export default function ContactImport({
     // 1. Try to find headers in first 5 rows
     const nameKeywords = ["name", "full name", "guest", "اسم", "الاسم", "المدعو", "الضيف"];
     const phoneKeywords = ["phone", "number", "mobile", "whatsapp", "رقم", "جوال", "هاتف", "واتساب", "تلفون"];
+    const inviteCountKeywords = ["invite", "count", "invites", "guests", "عدد", "دعوات", "ضيوف"];
     
     let detectedNameCol: number | null = null;
     let detectedPhoneCol: number | null = null;
+    let detectedInviteCountCol: number | null = null;
     let detectedStartRow = 0;
 
     // Check first few rows for header keywords
@@ -148,8 +156,13 @@ export default function ContactImport({
           detectedPhoneCol = j;
           detectedStartRow = i + 1;
         }
+        if (guestsEnabled && detectedInviteCountCol === null && inviteCountKeywords.some(k => cell.includes(k))) {
+          detectedInviteCountCol = j;
+          detectedStartRow = i + 1;
+        }
       }
-      if (detectedNameCol !== null && detectedPhoneCol !== null) break;
+      const requiredColsFound = detectedNameCol !== null && detectedPhoneCol !== null && (!guestsEnabled || detectedInviteCountCol !== null);
+      if (requiredColsFound) break;
     }
 
     // 2. If keywords fail, check content patterns in first 10 rows
@@ -194,16 +207,28 @@ export default function ContactImport({
 
     if (detectedNameCol !== null) setNameCol(detectedNameCol);
     if (detectedPhoneCol !== null) setPhoneCol(detectedPhoneCol);
+    if (guestsEnabled && detectedInviteCountCol !== null) setInviteCountCol(detectedInviteCountCol);
     setStartRow(detectedStartRow);
   };
 
   const handleConfirm = () => {
     if (nameCol === null || phoneCol === null) return;
+    if (guestsEnabled && inviteCountCol === null) return;
     
-    const contacts: Contact[] = data.slice(startRow).map(row => ({
-      name: String(row[nameCol] || "").trim(),
-      phone: String(row[phoneCol] || "").trim(),
-    })).filter(c => c.name || c.phone);
+    const contacts: Contact[] = data.slice(startRow).map(row => {
+      const contact: Contact = {
+        name: String(row[nameCol] || "").trim(),
+        phone: String(row[phoneCol] || "").trim(),
+      };
+      
+      if (guestsEnabled && inviteCountCol !== null) {
+        const countValue = row[inviteCountCol];
+        const parsedCount = typeof countValue === 'number' ? countValue : parseInt(String(countValue || "1"), 10);
+        contact.inviteCount = isNaN(parsedCount) ? 1 : Math.max(1, parsedCount);
+      }
+      
+      return contact;
+    }).filter(c => c.name || c.phone);
     
     onContactsLoaded(contacts);
   };
@@ -212,20 +237,25 @@ export default function ContactImport({
     setData([]);
     setNameCol(null);
     setPhoneCol(null);
+    setInviteCountCol(null);
     setStartRow(0);
     setFileName(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const setColumn = (index: number) => {
-    if (nameCol === null) {
-      setNameCol(index);
-    } else if (phoneCol === null && nameCol !== index) {
-      setPhoneCol(index);
-    } else if (nameCol === index) {
+    if (nameCol === index) {
       setNameCol(null);
     } else if (phoneCol === index) {
       setPhoneCol(null);
+    } else if (guestsEnabled && inviteCountCol === index) {
+      setInviteCountCol(null);
+    } else if (nameCol === null) {
+      setNameCol(index);
+    } else if (phoneCol === null) {
+      setPhoneCol(index);
+    } else if (guestsEnabled && inviteCountCol === null) {
+      setInviteCountCol(index);
     }
   };
 
@@ -324,6 +354,26 @@ export default function ContactImport({
                 ))}
               </select>
            </div>
+           {guestsEnabled && (
+             <div className="flex-1 min-w-[200px]">
+                <label className="flex items-center gap-2 text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">
+                  <Hash size={12} className="text-orange-500" />
+                  {t('select_invite_count_col')}
+                </label>
+                <select 
+                  className={`w-full bg-white border rounded-lg px-3 py-2 text-sm focus:outline-none transition-all ${
+                    inviteCountCol !== null ? "border-orange-200 ring-2 ring-orange-500/5" : "border-stone-200"
+                  }`}
+                  value={inviteCountCol ?? ""}
+                  onChange={(e) => setInviteCountCol(e.target.value === "" ? null : Number(e.target.value))}
+                >
+                  <option value="">{t('column')} ...</option>
+                  {Array.from({ length: maxCols }).map((_, i) => (
+                    <option key={i} value={i}>{t('column')} {String.fromCharCode(65 + i)}</option>
+                  ))}
+                </select>
+             </div>
+           )}
            <div className="w-24">
               <label className="flex items-center gap-2 text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">
                 {t('start_row')}
@@ -351,6 +401,7 @@ export default function ContactImport({
                     className={`p-3 border-r border-stone-200 font-medium cursor-pointer select-none transition-all min-w-[180px] relative group bg-stone-50 hover:bg-stone-100 ${
                       nameCol === i ? "bg-blue-100/90 ring-inset ring-2 ring-blue-500 z-10" : 
                       phoneCol === i ? "bg-green-100/90 ring-inset ring-2 ring-green-500 z-10" : 
+                      guestsEnabled && inviteCountCol === i ? "bg-orange-100/90 ring-inset ring-2 ring-orange-500 z-10" :
                       "text-stone-500"
                     }`}
                   >
@@ -369,11 +420,17 @@ export default function ContactImport({
                             <Hash size={10} /> {t('select_phone_col')}
                           </span>
                         )}
+                        {guestsEnabled && inviteCountCol === i && (
+                          <span className="bg-orange-600 text-white text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                            <Hash size={10} /> {t('select_invite_count_col')}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className={`truncate text-xs ${nameCol === i || phoneCol === i ? "font-bold text-stone-900" : ""}`}>
+                        <span className={`truncate text-xs ${nameCol === i || phoneCol === i || (guestsEnabled && inviteCountCol === i) ? "font-bold text-stone-900" : ""}`}>
                           {nameCol === i ? t('select_name_col') : 
                            phoneCol === i ? t('select_phone_col') : 
+                           guestsEnabled && inviteCountCol === i ? t('select_invite_count_col') :
                            t('column') + " " + String.fromCharCode(65 + i)}
                         </span>
                       </div>
@@ -402,7 +459,8 @@ export default function ContactImport({
                       onClick={() => setColumn(colIndex)}
                       className={`p-3 border-r border-stone-200 truncate cursor-pointer transition-all ${
                         nameCol === colIndex ? "bg-blue-50/40 font-medium text-blue-900 border-x-blue-200" : 
-                        phoneCol === colIndex ? "bg-green-50/40 font-medium text-green-900 border-x-green-200" : ""
+                        phoneCol === colIndex ? "bg-green-50/40 font-medium text-green-900 border-x-green-200" : 
+                        guestsEnabled && inviteCountCol === colIndex ? "bg-orange-50/40 font-medium text-orange-900 border-x-orange-200" : ""
                       } ${rowIndex < startRow ? "bg-stone-50/50" : ""}`}
                     >
                       {String(row[colIndex] || "")}
@@ -422,18 +480,18 @@ export default function ContactImport({
       </div>
 
       <div className="flex flex-col gap-3">
-        {nameCol === null || phoneCol === null ? (
+        {nameCol === null || phoneCol === null || (guestsEnabled && inviteCountCol === null) ? (
            <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100 text-xs">
               <Info size={16} />
-              <span>{t('select_both_warning')}</span>
+              <span>{guestsEnabled ? t('select_all_warning') : t('select_both_warning')}</span>
            </div>
         ) : null}
         
         <button
           onClick={handleConfirm}
-          disabled={nameCol === null || phoneCol === null}
+          disabled={nameCol === null || phoneCol === null || (guestsEnabled && inviteCountCol === null)}
           className={`w-full py-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-            nameCol !== null && phoneCol !== null
+            nameCol !== null && phoneCol !== null && (!guestsEnabled || inviteCountCol !== null)
               ? "bg-stone-900 text-white hover:bg-stone-800 shadow-xl shadow-stone-900/10 hover:-translate-y-0.5"
               : "bg-stone-200 text-stone-400 cursor-not-allowed"
           }`}

@@ -13,13 +13,14 @@ export async function createEvent(formData: {
   locationName: string;
   message: string;
   qrEnabled: boolean;
+  guestsEnabled: boolean;
   reminderEnabled: boolean;
   isScheduled: boolean;
   scheduledAt?: string;
   imageUrl?: string;
   mediaType?: MediaType;
   mediaFilename?: string;
-  guests: { name: string; phone: string }[]
+  guests: { name: string; phone: string; inviteCount?: number }[]
   locale: 'en' | 'ar';
 }) {
   const supabase = await createClient();
@@ -34,12 +35,13 @@ export async function createEvent(formData: {
     data: {
       userId: user.id,
       title: formData.title,
-      date: formData.date ? new Date(formData.date) : null,
+      date: formData.date,
       time: formData.time,
       location: formData.location,
       locationName: formData.locationName,
       message: formData.message,
       qrEnabled: formData.qrEnabled,
+      guestsEnabled: formData.guestsEnabled,
       reminderEnabled: formData.reminderEnabled,
       isScheduled: formData.isScheduled,
       scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt) : null,
@@ -50,6 +52,7 @@ export async function createEvent(formData: {
         create: formData.guests.map(guest => ({
           name: guest.name,
           phone: guest.phone,
+          inviteCount: guest.inviteCount || 1,
           status: 'pending'
         }))
       }

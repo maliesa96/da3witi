@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the origin for redirect URLs
-    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL;
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({

@@ -1,3 +1,5 @@
+import { TEMPLATE_OVERRIDES } from "./templates/templates";
+
 const WHATSAPP_VERSION = 'v23.0';
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
@@ -191,14 +193,18 @@ export async function sendWhatsAppImage(to: string, imageUrl: string, caption?: 
 }
 
 /**
- * Template name mapping based on locale, media type, and QR requirement
+ * Template name mapping based on locale, media type, QR requirement, and guests requirement
  */
-export function getInviteTemplateName(locale: string, qrEnabled: boolean, mediaType?: MediaType): string {
+export function getInviteTemplateName(locale: string, qrEnabled: boolean, mediaType: MediaType,
+    guestsEnabled: boolean,
+): string {
   const typePrefix = mediaType === 'image' ? 'invite_img' : 'invite_doc';
   const qrSuffix = qrEnabled ? '_qr' : '';
+  const guestsSuffix = guestsEnabled ? '_guests' : '';
   const langSuffix = locale === 'ar' ? '_ar' : '_en';
   
-  return `${typePrefix}${qrSuffix}${langSuffix}`;
+  const templateName = `${typePrefix}${qrSuffix}${guestsSuffix}${langSuffix}`;
+  return TEMPLATE_OVERRIDES[templateName] ?? templateName;
 }
 
 
@@ -206,17 +212,19 @@ interface SendInviteTemplateParams {
   to: string;
   locale: 'en' | 'ar';
   qrEnabled: boolean;
+  guestsEnabled: boolean;
+  inviteCount?: number;
   invitee: string;
   greetingText: string;
   date: string;
   time: string;
   locationName: string;
   /** Location coordinates or Google Maps URL for the CTA button */
-  location?: string;
+  location: string;
   /** Public URL of the media (image or PDF) */
-  mediaUrl?: string;
+  mediaUrl: string;
   /** Type of media: 'image' or 'document' (PDF) */
-  mediaType?: MediaType;
+  mediaType: MediaType;
   /** Filename to display for documents (optional) */
   mediaFilename?: string;
 }
@@ -232,12 +240,14 @@ interface SendInviteTemplateParams {
  * - {{time}} - Event time  
  * - {{location_name}} - Location/venue name
  * 
- * Header: Optional image or document
+ * Header: Image or document
  */
 export async function sendInviteTemplate({
   to,
   locale,
   qrEnabled,
+  guestsEnabled,
+  inviteCount,
   invitee,
   greetingText,
   date,
@@ -248,7 +258,7 @@ export async function sendInviteTemplate({
   mediaType,
   mediaFilename
 }: SendInviteTemplateParams): Promise<SendTemplateResult> {
-  const templateName = getInviteTemplateName(locale, qrEnabled, mediaType);
+  const templateName = getInviteTemplateName(locale, qrEnabled, mediaType, guestsEnabled);
   
   const components: TemplateComponent[] = [];
 
@@ -287,15 +297,23 @@ export async function sendInviteTemplate({
 
   // Add body component with named text parameters
   // Parameter names must match exactly what's defined in your Meta template
+  const bodyParameters: TextParameter[] = [
+    { type: 'text', text: invitee, parameter_name: 'invitee' },
+    { type: 'text', text: greetingText, parameter_name: 'greeting_text' },
+    { type: 'text', text: date, parameter_name: 'date' },
+    { type: 'text', text: time, parameter_name: 'time' },
+    { type: 'text', text: locationName, parameter_name: 'location_name' }
+  ];
+
+  // Add invite_count parameter if guests are enabled
+  if (guestsEnabled) {
+    const count = inviteCount || 2;
+    bodyParameters.push({ type: 'text', text: String(count), parameter_name: 'invite_count' });
+  }
+
   components.push({
     type: 'body',
-    parameters: [
-      { type: 'text', text: invitee, parameter_name: 'invitee' },
-      { type: 'text', text: greetingText, parameter_name: 'greeting_text' },
-      { type: 'text', text: date, parameter_name: 'date' },
-      { type: 'text', text: time, parameter_name: 'time' },
-      { type: 'text', text: locationName, parameter_name: 'location_name' }
-    ]
+    parameters: bodyParameters
   });
 
   // Add button component with location coordinates for the CTA URL

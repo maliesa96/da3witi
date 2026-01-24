@@ -41,6 +41,8 @@ export default function Wizard() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [mapMode, setMapMode] = useState<"link" | "map">("link");
+  const [dateMode, setDateMode] = useState<"picker" | "custom">("picker");
+  const [timeMode, setTimeMode] = useState<"picker" | "custom">("picker");
   const [details, setDetails] = useState({
     eventName: "",
     date: "",
@@ -50,6 +52,7 @@ export default function Wizard() {
     message: "",
     messageLocale: locale as 'en' | 'ar',
     qrEnabled: true,
+    guestsEnabled: false,
     reminderEnabled: true,
     isScheduled: false,
     scheduledDate: "",
@@ -61,7 +64,7 @@ export default function Wizard() {
   });
   
   const [inviteMode, setInviteMode] = useState<"file" | "manual">("file");
-  const [invites, setInvites] = useState([{ name: "", phone: "" }]);
+  const [invites, setInvites] = useState([{ name: "", phone: "", inviteCount: 1 }]);
 
   // Sync messageLocale with page locale when it changes
   useEffect(() => {
@@ -72,16 +75,21 @@ export default function Wizard() {
   const [importData, setImportData] = useState<(string | number | null)[][]>([]);
   const [importNameCol, setImportNameCol] = useState<number | null>(null);
   const [importPhoneCol, setImportPhoneCol] = useState<number | null>(null);
+  const [importInviteCountCol, setImportInviteCountCol] = useState<number | null>(null);
   const [importStartRow, setImportStartRow] = useState(0);
   const [importFileName, setImportFileName] = useState<string | null>(null);
 
   const addManualInvite = () => {
-    setInvites([...invites, { name: "", phone: "" }]);
+    setInvites([...invites, { name: "", phone: "", inviteCount: 1 }]);
   };
 
-  const updateManualInvite = (index: number, field: "name" | "phone", value: string) => {
+  const updateManualInvite = (index: number, field: "name" | "phone" | "inviteCount", value: string | number) => {
     const newInvites = [...invites];
-    newInvites[index][field] = value;
+    if (field === "inviteCount") {
+      newInvites[index][field] = typeof value === "number" ? value : parseInt(value, 10) || 1;
+    } else {
+      newInvites[index][field] = value as string;
+    }
     setInvites(newInvites);
   };
 
@@ -91,8 +99,8 @@ export default function Wizard() {
     }
   };
 
-  const handleContactsLoaded = (loadedContacts: { name: string; phone: string }[]) => {
-    setInvites(loadedContacts);
+  const handleContactsLoaded = (loadedContacts: { name: string; phone: string; inviteCount?: number }[]) => {
+    setInvites(loadedContacts.map(c => ({ ...c, inviteCount: c.inviteCount || 1 })));
     setInviteMode("manual"); // Switch to manual to show the list after import
   };
 
@@ -170,6 +178,7 @@ export default function Wizard() {
         locationName: details.locationName,
         message: details.message,
         qrEnabled: details.qrEnabled,
+        guestsEnabled: details.guestsEnabled,
         reminderEnabled: details.reminderEnabled,
         isScheduled: details.isScheduled,
         scheduledAt: details.isScheduled ? `${details.scheduledDate}T${details.scheduledTime}` : undefined,
@@ -394,46 +403,136 @@ export default function Wizard() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
-                      <span>{t('step2.date_label')} <span className="text-red-500">*</span></span>
-                      {errors.date && <span className="text-red-500 text-[10px]">{errors.date}</span>}
-                    </label>
-                    <input
-                      type="date"
-                      value={details.date}
-                      onChange={(e) => {
-                        setDetails({ ...details, date: e.target.value });
-                        if (errors.date) setErrors(prev => {
-                          const next = { ...prev };
-                          delete next.date;
-                          return next;
-                        });
-                      }}
-                      className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 ${
-                        errors.date ? 'border-red-300' : 'border-stone-200'
-                      }`}
-                    />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-medium text-stone-700 flex">
+                        {t('step2.date_label')} <span className="text-red-500 ml-1">*</span>
+                        {errors.date && <span className="text-red-500 text-[10px] ml-2 font-normal">{errors.date}</span>}
+                      </label>
+                      <div className="flex bg-stone-100 rounded-md p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setDateMode("picker")}
+                          className={`text-[10px] px-2 py-0.5 rounded-sm transition-all ${
+                            dateMode === "picker"
+                              ? "bg-white text-stone-900 shadow-sm"
+                              : "text-stone-500 hover:text-stone-700"
+                          }`}
+                        >
+                          {t('step2.calendar_btn')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDateMode("custom")}
+                          className={`text-[10px] px-2 py-0.5 rounded-sm transition-all ${
+                            dateMode === "custom"
+                              ? "bg-white text-stone-900 shadow-sm"
+                              : "text-stone-500 hover:text-stone-700"
+                          }`}
+                        >
+                          {t('step2.text_btn')}
+                        </button>
+                      </div>
+                    </div>
+                    {dateMode === "picker" ? (
+                      <input
+                        type="date"
+                        value={details.date}
+                        onChange={(e) => {
+                          setDetails({ ...details, date: e.target.value });
+                          if (errors.date) setErrors(prev => {
+                            const next = { ...prev };
+                            delete next.date;
+                            return next;
+                          });
+                        }}
+                        className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 ${
+                          errors.date ? 'border-red-300' : 'border-stone-200'
+                        }`}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={details.date}
+                        onChange={(e) => {
+                          setDetails({ ...details, date: e.target.value });
+                          if (errors.date) setErrors(prev => {
+                            const next = { ...prev };
+                            delete next.date;
+                            return next;
+                          });
+                        }}
+                        placeholder={t('step2.date_placeholder')}
+                        className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none focus:bg-white focus:border-stone-400 transition-all ${
+                          errors.date ? 'border-red-300' : 'border-stone-200'
+                        }`}
+                      />
+                    )}
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
-                      <span>{t('step2.time_label')} <span className="text-red-500">*</span></span>
-                      {errors.time && <span className="text-red-500 text-[10px]">{errors.time}</span>}
-                    </label>
-                    <input
-                      type="time"
-                      value={details.time}
-                      onChange={(e) => {
-                        setDetails({ ...details, time: e.target.value });
-                        if (errors.time) setErrors(prev => {
-                          const next = { ...prev };
-                          delete next.time;
-                          return next;
-                        });
-                      }}
-                      className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 ${
-                        errors.time ? 'border-red-300' : 'border-stone-200'
-                      }`}
-                    />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-medium text-stone-700 flex">
+                        {t('step2.time_label')} <span className="text-red-500 ml-1">*</span>
+                        {errors.time && <span className="text-red-500 text-[10px] ml-2 font-normal">{errors.time}</span>}
+                      </label>
+                      <div className="flex bg-stone-100 rounded-md p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setTimeMode("picker")}
+                          className={`text-[10px] px-2 py-0.5 rounded-sm transition-all ${
+                            timeMode === "picker"
+                              ? "bg-white text-stone-900 shadow-sm"
+                              : "text-stone-500 hover:text-stone-700"
+                          }`}
+                        >
+                          {t('step2.clock_btn')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTimeMode("custom")}
+                          className={`text-[10px] px-2 py-0.5 rounded-sm transition-all ${
+                            timeMode === "custom"
+                              ? "bg-white text-stone-900 shadow-sm"
+                              : "text-stone-500 hover:text-stone-700"
+                          }`}
+                        >
+                          {t('step2.text_btn')}
+                        </button>
+                      </div>
+                    </div>
+                    {timeMode === "picker" ? (
+                      <input
+                        type="time"
+                        value={details.time}
+                        onChange={(e) => {
+                          setDetails({ ...details, time: e.target.value });
+                          if (errors.time) setErrors(prev => {
+                            const next = { ...prev };
+                            delete next.time;
+                            return next;
+                          });
+                        }}
+                        className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 ${
+                          errors.time ? 'border-red-300' : 'border-stone-200'
+                        }`}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={details.time}
+                        onChange={(e) => {
+                          setDetails({ ...details, time: e.target.value });
+                          if (errors.time) setErrors(prev => {
+                            const next = { ...prev };
+                            delete next.time;
+                            return next;
+                          });
+                        }}
+                        placeholder={t('step2.time_placeholder')}
+                        className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none focus:bg-white focus:border-stone-400 transition-all ${
+                          errors.time ? 'border-red-300' : 'border-stone-200'
+                        }`}
+                      />
+                    )}
                   </div>
                 </div>
                 <div>
@@ -546,6 +645,27 @@ export default function Wizard() {
                       type="checkbox"
                       checked={details.qrEnabled}
                       onChange={(e) => setDetails({ ...details, qrEnabled: e.target.checked })}
+                      className="sr-only peer custom-checkbox"
+                    />
+                    <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
+                  </label>
+                </div>
+                <hr className="border-stone-100" />
+                {/* Toggle Item: Enable Guests */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-stone-900">
+                      {t('step2.guests_toggle')}
+                    </div>
+                    <div className="text-[11px] text-stone-500">
+                      {t('step2.guests_desc')}
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={details.guestsEnabled}
+                      onChange={(e) => setDetails({ ...details, guestsEnabled: e.target.checked })}
                       className="sr-only peer custom-checkbox"
                     />
                     <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
@@ -673,6 +793,7 @@ export default function Wizard() {
                     mediaFilename={details.mediaFilename}
                     mediaSize={details.mediaSize}
                     showQr={details.qrEnabled}
+                    guestsEnabled={details.guestsEnabled}
                     locale={details.messageLocale}
                  />
                </div>
@@ -749,12 +870,15 @@ export default function Wizard() {
                 <>
                   <ContactImport 
                     onContactsLoaded={handleContactsLoaded}
+                    guestsEnabled={details.guestsEnabled}
                     data={importData}
                     setData={setImportData}
                     nameCol={importNameCol}
                     setNameCol={setImportNameCol}
                     phoneCol={importPhoneCol}
                     setPhoneCol={setImportPhoneCol}
+                    inviteCountCol={importInviteCountCol}
+                    setInviteCountCol={setImportInviteCountCol}
                     startRow={importStartRow}
                     setStartRow={setImportStartRow}
                     fileName={importFileName}
@@ -779,30 +903,35 @@ export default function Wizard() {
                         <thead>
                           <tr className="bg-stone-50 border-b border-stone-200">
                             <th className="px-4 py-2 w-12 text-center text-xs font-medium text-stone-400 border-r border-stone-200">#</th>
-                            <th className="px-4 py-2 font-medium text-stone-600 border-r border-stone-200 w-1/2">A</th>
-                            <th className="px-4 py-2 font-medium text-stone-600 w-1/2">B</th>
+                            <th className={`px-4 py-2 font-medium text-stone-600 border-r border-stone-200 ${details.guestsEnabled ? 'w-1/3' : 'w-1/2'}`}>A</th>
+                            <th className={`px-4 py-2 font-medium text-stone-600 ${details.guestsEnabled ? 'border-r border-stone-200 w-1/3' : 'w-1/2'}`}>B</th>
+                            {details.guestsEnabled && <th className="px-4 py-2 font-medium text-stone-600 w-1/3">C</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-100">
                           <tr className="bg-stone-50/50">
                             <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">1</td>
                             <td className="px-4 py-2 font-medium text-stone-900 border-r border-stone-200 bg-blue-50/30 text-right">{t('step1.manual_name')}</td>
-                            <td className="px-4 py-2 font-medium text-stone-900 bg-green-50/30 text-right">{t('step1.manual_phone')}</td>
+                            <td className={`px-4 py-2 font-medium text-stone-900 bg-green-50/30 text-right ${details.guestsEnabled ? 'border-r border-stone-200' : ''}`}>{t('step1.manual_phone')}</td>
+                            {details.guestsEnabled && <td className="px-4 py-2 font-medium text-stone-900 bg-orange-50/30 text-right">{t('step1.invite_count')}</td>}
                           </tr>
                           <tr>
                             <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">2</td>
                             <td className="px-4 py-2 text-stone-600 border-r border-stone-200 text-right">{locale === 'ar' ? 'محمد السالم' : 'Mohammed Al-Salem'}</td>
-                            <td className="px-4 py-2 text-stone-600 font-mono text-xs text-right" dir="ltr">+966512992124</td>
+                            <td className={`px-4 py-2 text-stone-600 font-mono text-xs text-right ${details.guestsEnabled ? 'border-r border-stone-200' : ''}`} dir="ltr">+966512992124</td>
+                            {details.guestsEnabled && <td className="px-4 py-2 text-stone-600 text-right">2</td>}
                           </tr>
                           <tr>
                             <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">3</td>
                             <td className="px-4 py-2 text-stone-600 border-r border-stone-200 text-right">{locale === 'ar' ? 'عبدالله الدوسري' : 'Abdullah Al-Dosari'}</td>
-                            <td className="px-4 py-2 text-stone-600 font-mono text-xs text-right" dir="ltr">+96599828842</td>
+                            <td className={`px-4 py-2 text-stone-600 font-mono text-xs text-right ${details.guestsEnabled ? 'border-r border-stone-200' : ''}`} dir="ltr">+96599828842</td>
+                            {details.guestsEnabled && <td className="px-4 py-2 text-stone-600 text-right">3</td>}
                           </tr>
                           <tr>
                             <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">4</td>
                             <td className="px-4 py-2 text-stone-400 italic border-r border-stone-200 text-right">...</td>
-                            <td className="px-4 py-2 text-stone-400 italic text-right">...</td>
+                            <td className={`px-4 py-2 text-stone-400 italic text-right ${details.guestsEnabled ? 'border-r border-stone-200' : ''}`}>...</td>
+                            {details.guestsEnabled && <td className="px-4 py-2 text-stone-400 italic text-right">...</td>}
                           </tr>
                         </tbody>
                       </table>
@@ -838,6 +967,20 @@ export default function Wizard() {
                             className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm dir-ltr text-right"
                           />
                         </div>
+                        {details.guestsEnabled && (
+                          <div className="w-24">
+                            <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                              {t('step1.invite_count')}
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={invite.inviteCount}
+                              onChange={(e) => updateManualInvite(index, "inviteCount", parseInt(e.target.value, 10) || 1)}
+                              className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm text-center"
+                            />
+                          </div>
+                        )}
                         {invites.length > 1 && (
                           <button
                             onClick={() => removeManualInvite(index)}
@@ -927,6 +1070,7 @@ export default function Wizard() {
               mediaFilename={details.mediaFilename}
               mediaSize={details.mediaSize}
               showQr={details.qrEnabled}
+              guestsEnabled={details.guestsEnabled}
               locale={details.messageLocale}
             />
 

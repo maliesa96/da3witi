@@ -17,12 +17,13 @@ model Event {
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   userId           String?  @map("user_id") @db.Uuid
   title            String
-  date             DateTime? @db.Date
-  time             String?
+  date             String
+  time             String
   location         String?
   locationName     String?  @map("location_name")
   message          String?
   qrEnabled        Boolean  @default(true) @map("qr_enabled")
+  guestsEnabled    Boolean  @default(false) @map("guests_enabled")
   reminderEnabled  Boolean  @default(true) @map("reminder_enabled")
   isScheduled      Boolean  @default(false) @map("is_scheduled")
   scheduledAt      DateTime? @map("scheduled_at") @db.Timestamptz(6)
@@ -43,6 +44,7 @@ model Guest {
   event              Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   name               String
   phone              String
+  inviteCount        Int      @default(1) @map("invite_count")
   status             String   @default("no_reply")
   whatsappMessageId  String?  @unique @map("whatsapp_message_id")
   checkedIn          Boolean  @default(false) @map("checked_in")

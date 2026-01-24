@@ -19,6 +19,7 @@ interface InvitePreviewProps {
   mediaFilename?: string;
   mediaSize?: number;
   showQr?: boolean;
+  guestsEnabled?: boolean;
   locale?: 'en' | 'ar'; // Optional: override locale for user-specific preferences
 }
 
@@ -33,6 +34,7 @@ function InvitePreviewContent({
   mediaFilename,
   mediaSize,
   showQr = true,
+  guestsEnabled = false,
   locale: customLocale,
 }: InvitePreviewProps) {
   const t = useTranslations('InvitePreview');
@@ -43,7 +45,7 @@ function InvitePreviewContent({
   const now = new Date();
   const timeString = now.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
-  const templateName = getInviteTemplateName(locale, showQr, mediaType) as keyof typeof TEMPLATES;
+  const templateName = getInviteTemplateName(locale, showQr, mediaType, guestsEnabled) as keyof typeof TEMPLATES;
   const templateFn = TEMPLATES[templateName];
   
   const renderedMessage = templateFn ? templateFn({
@@ -54,6 +56,7 @@ function InvitePreviewContent({
     location_name: locationName || t('default_location_name'),
     event_name: t('app_name'),
     rsvp_date: date || t('default_rsvp_date'),
+    ...(guestsEnabled && { invite_count: '2' }),
   }) : message;
 
   const thankYouMsg = t('thank_you_message');

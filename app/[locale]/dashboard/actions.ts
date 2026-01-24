@@ -132,13 +132,15 @@ export async function sendInvitesForEvent(eventId: string, locale: 'en' | 'ar') 
         to: guest.phone,
         locale,
         qrEnabled: event.qrEnabled,
+        guestsEnabled: event.guestsEnabled ?? false,
+        inviteCount: guest.inviteCount,
         invitee: guest.name,
         greetingText: event.message || '',
-        date: event.date?.toLocaleDateString() || 'TBD',
-        time: event.time || 'TBD',
+        date: event.date,
+        time: event.time,
         locationName: event.locationName || 'See invitation',
-        location: event.location || undefined,
-        mediaUrl: event.imageUrl || undefined,
+        location: event.location || '',
+        mediaUrl: event.imageUrl || '',
         mediaType: (event.mediaType as MediaType) || 'image',
         mediaFilename: event.mediaFilename || undefined,
       });
@@ -210,6 +212,7 @@ export async function getGuestsPaginated(
         id: true,
         name: true,
         phone: true,
+        inviteCount: true,
         status: true,
         checkedIn: true,
         whatsappMessageId: true,
@@ -313,7 +316,7 @@ export async function deleteAllGuests(eventId: string) {
       status: { in: ['pending', 'failed'] },
     },
   });
-  
+
   return { success: true, deleted: result.count };
 }
 

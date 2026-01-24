@@ -50,7 +50,7 @@ async function createEventFromSession(session: Stripe.Checkout.Session) {
     data: {
       userId: metadata.userId,
       title: eventData.title || "Event",
-      date: eventData.date ? new Date(eventData.date) : null,
+      date: eventData.date,
       time: eventData.time,
       location: eventData.location,
       locationName: eventData.locationName,
