@@ -48,16 +48,7 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}/login`
     url.searchParams.set('next', request.nextUrl.pathname)
-    const redirectResponse = NextResponse.redirect(url)
-    
-    // IMPORTANT: Copy any cookies that were set during the getUser() call
-    // (e.g., refreshed tokens) to the redirect response. Without this,
-    // session refresh tokens are lost and users appear logged out.
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-    })
-    
-    return redirectResponse
+    return NextResponse.redirect(url)
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as is. If you're creating a
