@@ -10,6 +10,7 @@ import {
   QrCode,
   MessageCircle,
 } from "lucide-react";
+import ScrollToIdButton from "./components/ScrollToIdButton";
 
 export default function Home() {
   return (
@@ -39,23 +40,21 @@ export default function Home() {
                 <span>أنشئ دعوة جديدة</span>
                 <Sparkles size={18} />
               </Link>
-              <button 
-                onClick={() => {
-                  const phonePreview = document.querySelector('[class*="w-[300px]"]');
-                  if (phonePreview) {
-                    phonePreview.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }
-                }}
+              <ScrollToIdButton
+                targetId="phone-preview"
                 className="bg-white border border-stone-200 text-stone-700 px-8 py-3.5 rounded-xl font-medium hover:bg-stone-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>شاهد مثال</span>
                 <PlayCircle size={18} />
-              </button>
+              </ScrollToIdButton>
             </div>
           </div>
 
           {/* Visual/Phone Mockup */}
-          <div className="flex-1 w-full max-w-[400px] lg:max-w-none flex justify-center perspective-1000">
+          <div
+            id="phone-preview"
+            className="flex-1 w-full max-w-[400px] lg:max-w-none flex justify-center perspective-1000"
+          >
             <div className="relative w-[300px] h-[600px] bg-stone-900 rounded-[3rem] border-8 border-stone-900 shadow-2xl overflow-hidden transform rotate-y-12 transition-transform duration-700 hover:rotate-0">
               {/* Dynamic Island */}
               <div className="absolute top-0 inset-x-0 h-6 bg-stone-900 z-20 flex justify-center">
@@ -109,8 +108,8 @@ export default function Home() {
                         القادم. حضوركم يشرفنا.
                       </p>
                       <div className="mt-2 pt-2 border-t border-dashed border-stone-200 flex justify-between items-center">
-                        <button 
-                          onClick={(e) => e.preventDefault()}
+                        <button
+                          type="button"
                           className="text-[#007bfc] text-[11px] font-medium cursor-pointer"
                         >
                           تأكيد الحضور
