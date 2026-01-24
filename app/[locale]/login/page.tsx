@@ -1,5 +1,6 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { signInWithMagicLink } from './actions';
+import MagicLinkSubmitButton from './MagicLinkSubmitButton';
 
 export default function LoginPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const t = useTranslations('Auth');
@@ -30,12 +31,12 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ [k
             />
           </div>
 
-          <button
+          <MagicLinkSubmitButton
             formAction={signInWithMagicLink}
             className="w-full bg-stone-900 text-white font-medium py-2 rounded-lg hover:bg-stone-800 transition-all shadow-sm"
           >
             {t('send_magic_link')}
-          </button>
+          </MagicLinkSubmitButton>
         </form>
 
         {/* Success/Error Messages */}
