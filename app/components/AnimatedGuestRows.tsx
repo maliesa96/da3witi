@@ -388,7 +388,8 @@ function EditButton({
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(guest.name);
   const [phone, setPhone] = useState(guest.phone);
-  const [inviteCount, setInviteCount] = useState<number>(guest.inviteCount || 1);
+  // Keep as text so users can clear and type (e.g. replace "1" with "2")
+  const [inviteCountInput, setInviteCountInput] = useState<string>(String(guest.inviteCount || 1));
 
   useEffect(() => {
     setMounted(true);
@@ -398,7 +399,7 @@ function EditButton({
     setError(null);
     setName(guest.name);
     setPhone(guest.phone);
-    setInviteCount(guest.inviteCount || 1);
+    setInviteCountInput(String(guest.inviteCount || 1));
     setOpen(true);
   };
 
@@ -412,6 +413,17 @@ function EditButton({
     setPending(true);
     setError(null);
     try {
+      let inviteCount: number | undefined = undefined;
+      if (guestsEnabled) {
+        const trimmed = inviteCountInput.trim();
+        const n = trimmed === "" ? NaN : Number(trimmed);
+        if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 50) {
+          setError(t("error_invalid_invite_count"));
+          setPending(false);
+          return;
+        }
+        inviteCount = n;
+      }
       const res = await updateGuestServerAction(guest.id, {
         name,
         phone,
@@ -498,8 +510,20 @@ function EditButton({
                         type="number"
                         min={1}
                         max={50}
-                        value={inviteCount}
-                        onChange={(e) => setInviteCount(Number(e.target.value || 1))}
+                        inputMode="numeric"
+                        value={inviteCountInput}
+                        onChange={(e) => setInviteCountInput(e.target.value)}
+                        onBlur={() => {
+                          const trimmed = inviteCountInput.trim();
+                          if (trimmed === "") {
+                            setInviteCountInput("1");
+                            return;
+                          }
+                          const n = Number(trimmed);
+                          if (!Number.isFinite(n) || !Number.isInteger(n)) return;
+                          const clamped = Math.max(1, Math.min(50, n));
+                          setInviteCountInput(String(clamped));
+                        }}
                         className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:border-stone-400"
                         disabled={pending}
                       />

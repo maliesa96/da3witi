@@ -18,7 +18,10 @@ async function getAuthedUser() {
   return user;
 }
 
-export async function addGuest(eventId: string, guestData: { name: string; phone: string }) {
+export async function addGuest(
+  eventId: string,
+  guestData: { name: string; phone: string; inviteCount?: number | string }
+) {
   const user = await getAuthedUser();
 
   const event = await prisma.event.findUnique({
@@ -43,13 +46,24 @@ export async function addGuest(eventId: string, guestData: { name: string; phone
     throw new Error('INVALID_PHONE');
   }
 
+  let inviteCount: number | undefined = undefined;
+  if (typeof guestData.inviteCount !== 'undefined') {
+    const n =
+      typeof guestData.inviteCount === 'string' ? Number(guestData.inviteCount) : guestData.inviteCount;
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 50) {
+      throw new Error('INVALID_INVITE_COUNT');
+    }
+    inviteCount = n;
+  }
+
   // 1. Create guest
   const guest = await prisma.guest.create({
     data: {
       eventId,
       name,
       phone: phoneRes.phone,
-      status: 'pending'
+      status: 'pending',
+      ...(event.guestsEnabled ? { inviteCount: inviteCount ?? 1 } : {}),
     }
   });
 
@@ -57,7 +71,10 @@ export async function addGuest(eventId: string, guestData: { name: string; phone
   return { success: true, guestId: guest.id };
 }
 
-export async function addGuests(eventId: string, guests: { name: string; phone: string }[]) {
+export async function addGuests(
+  eventId: string,
+  guests: { name: string; phone: string; inviteCount?: number | string }[]
+) {
   const user = await getAuthedUser();
 
   const event = await prisma.event.findUnique({
@@ -76,18 +93,41 @@ export async function addGuests(eventId: string, guests: { name: string; phone: 
     .map(g => ({
       name: String(g.name || '').trim(),
       phone: String(g.phone || '').trim(),
+      inviteCount: g.inviteCount,
     }))
     .filter(g => g.name && g.phone);
 
   if (cleaned.length === 0) {
-    return { success: true, created: 0, guests: [] as Array<{ id: string; name: string; phone: string; status: string; checkedIn: boolean; whatsappMessageId: string | null }> };
+    return {
+      success: true,
+      created: 0,
+      guests: [] as Array<{
+        id: string;
+        name: string;
+        phone: string;
+        inviteCount: number;
+        status: string;
+        checkedIn: boolean;
+        whatsappMessageId: string | null;
+      }>,
+    };
   }
 
   const validated = cleaned.map((g) => {
     if (g.name.length < 2) throw new Error('NAME_TOO_SHORT');
     const res = normalizePhoneToE164(g.phone);
     if (!res.ok) throw new Error('INVALID_PHONE');
-    return { ...g, phone: res.phone };
+
+    let inviteCount: number | undefined = undefined;
+    if (event.guestsEnabled && typeof g.inviteCount !== 'undefined') {
+      const n = typeof g.inviteCount === 'string' ? Number(g.inviteCount) : g.inviteCount;
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 50) {
+        throw new Error('INVALID_INVITE_COUNT');
+      }
+      inviteCount = n;
+    }
+
+    return { ...g, phone: res.phone, inviteCount };
   });
 
   // Bulk create guests and return the created records
@@ -97,11 +137,13 @@ export async function addGuests(eventId: string, guests: { name: string; phone: 
       name: g.name,
       phone: g.phone,
       status: 'pending',
+      ...(event.guestsEnabled ? { inviteCount: g.inviteCount ?? 1 } : {}),
     })),
     select: {
       id: true,
       name: true,
       phone: true,
+      inviteCount: true,
       status: true,
       checkedIn: true,
       whatsappMessageId: true,

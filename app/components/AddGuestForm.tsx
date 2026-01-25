@@ -20,6 +20,7 @@ interface AddGuestFormProps {
     id: string;
     name: string;
     phone: string;
+    inviteCount?: number;
     status: string;
     checkedIn: boolean;
     whatsappMessageId: string | null;
@@ -54,8 +55,8 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
   }, [isOpen]);
 
   // Manual guests (wizard-like)
-  const [manualInvites, setManualInvites] = useState<Array<{ name: string; phone: string }>>([
-    { name: '', phone: '' },
+  const [manualInvites, setManualInvites] = useState<Array<{ name: string; phone: string; inviteCountInput?: string }>>([
+    { name: '', phone: '', inviteCountInput: '1' },
   ]);
 
   // File import state (lifted for ContactImport)
@@ -78,7 +79,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
     setIsOpen(false);
     setIsSubmitting(false);
     setMode('manual');
-    setManualInvites([{ name: '', phone: '' }]);
+    setManualInvites([{ name: '', phone: '', inviteCountInput: '1' }]);
     setImportData([]);
     setImportNameCol(null);
     setImportPhoneCol(null);
@@ -88,12 +89,13 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
     setFileContacts([]);
   };
 
-  const submitGuests = async (guests: Array<{ name: string; phone: string }>) => {
+  const submitGuests = async (guests: Array<{ name: string; phone: string; inviteCount?: number }>) => {
     if (!eventId) return;
     const cleaned = (guests || [])
       .map(g => ({
         name: String(g.name || '').trim(),
         phone: String(g.phone || '').trim(),
+        inviteCount: typeof g.inviteCount === 'number' ? g.inviteCount : undefined,
       }))
       .filter(g => g.name && g.phone);
 
@@ -104,16 +106,26 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
         alert(tWizard('errors.name_too_short'));
         return;
       }
+      if (guestsEnabled && typeof g.inviteCount !== 'undefined') {
+        if (!Number.isFinite(g.inviteCount) || !Number.isInteger(g.inviteCount) || g.inviteCount < 1 || g.inviteCount > 50) {
+          alert(t('error_invalid_invite_count'));
+          return;
+        }
+      }
     }
 
-    const normalized: Array<{ name: string; phone: string }> = [];
+    const normalized: Array<{ name: string; phone: string; inviteCount?: number }> = [];
     for (const g of cleaned) {
       const res = normalizePhoneToE164(g.phone);
       if (!res.ok) {
         alert(tWizard('errors.invalid_phone'));
         return;
       }
-      normalized.push({ ...g, phone: res.phone });
+      normalized.push({
+        ...g,
+        phone: res.phone,
+        ...(guestsEnabled ? { inviteCount: g.inviteCount ?? 1 } : {}),
+      });
     }
 
     setIsSubmitting(true);
@@ -130,6 +142,8 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
         alert(tWizard('errors.invalid_phone'));
       } else if (msg.includes('NAME_TOO_SHORT')) {
         alert(tWizard('errors.name_too_short'));
+      } else if (msg.includes('INVALID_INVITE_COUNT')) {
+        alert(t('error_invalid_invite_count'));
       } else {
         alert('Failed to add guests. Please try again.');
       }
@@ -320,6 +334,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                                 <tr>
                                   <th className="px-3 py-2 text-start">{tw('manual_name')}</th>
                                   <th className="px-3 py-2 text-start">{tw('manual_phone')}</th>
+                                  {guestsEnabled && <th className="px-3 py-2 text-start">{tw('invite_count')}</th>}
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-stone-100">
@@ -327,6 +342,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                                   <tr key={idx}>
                                     <td className="px-3 py-2 text-stone-900">{c.name}</td>
                                     <td className="px-3 py-2 text-stone-600 font-mono dir-ltr">{c.phone}</td>
+                                    {guestsEnabled && <td className="px-3 py-2 text-stone-700">{c.inviteCount ?? 1}</td>}
                                   </tr>
                                 ))}
                               </tbody>
@@ -376,6 +392,41 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                               className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm dir-ltr"
                             />
                           </div>
+                          {guestsEnabled && (
+                            <div className="w-32">
+                              <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                                {tw('invite_count')}
+                              </label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={50}
+                                inputMode="numeric"
+                                value={invite.inviteCountInput ?? '1'}
+                                onChange={(e) => {
+                                  const next = [...manualInvites];
+                                  next[index] = { ...next[index], inviteCountInput: e.target.value };
+                                  setManualInvites(next);
+                                }}
+                                onBlur={() => {
+                                  const current = manualInvites[index]?.inviteCountInput ?? '';
+                                  const trimmed = String(current).trim();
+                                  const next = [...manualInvites];
+                                  if (trimmed === '') {
+                                    next[index] = { ...next[index], inviteCountInput: '1' };
+                                    setManualInvites(next);
+                                    return;
+                                  }
+                                  const n = Number(trimmed);
+                                  if (!Number.isFinite(n) || !Number.isInteger(n)) return;
+                                  const clamped = Math.max(1, Math.min(50, n));
+                                  next[index] = { ...next[index], inviteCountInput: String(clamped) };
+                                  setManualInvites(next);
+                                }}
+                                className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm"
+                              />
+                            </div>
+                          )}
                           {manualInvites.length > 1 && (
                             <button
                               type="button"
@@ -390,7 +441,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
 
                       <button
                         type="button"
-                        onClick={() => setManualInvites([...manualInvites, { name: '', phone: '' }])}
+                        onClick={() => setManualInvites([...manualInvites, { name: '', phone: '', inviteCountInput: '1' }])}
                         className="mt-2 w-full py-3 border-2 border-dashed border-stone-200 rounded-xl text-stone-500 hover:text-stone-700 hover:border-stone-300 hover:bg-stone-50 transition-all flex items-center justify-center gap-2 text-sm font-medium"
                       >
                         <Plus size={18} />
@@ -416,9 +467,19 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                       type="button"
                       disabled={isSubmitting || totalCount === 0 || !eventId}
                       onClick={() => {
-                        const guests = mode === 'file'
-                          ? fileContacts
-                          : manualInvites.filter(i => i.name.trim().length >= 2 && i.phone.trim());
+                        const guests =
+                          mode === 'file'
+                            ? fileContacts
+                            : manualInvites
+                                .filter(i => i.name.trim().length >= 2 && i.phone.trim())
+                                .map(i => {
+                                  if (!guestsEnabled) return { name: i.name, phone: i.phone };
+                                  const trimmed = String(i.inviteCountInput ?? '').trim();
+                                  const n = trimmed === '' ? 1 : Number(trimmed);
+                                  const parsed =
+                                    Number.isFinite(n) && Number.isInteger(n) ? Math.max(1, Math.min(50, n)) : 1;
+                                  return { name: i.name, phone: i.phone, inviteCount: parsed };
+                                });
                         submitGuests(guests);
                       }}
                       className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
