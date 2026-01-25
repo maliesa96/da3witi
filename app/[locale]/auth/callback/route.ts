@@ -3,10 +3,28 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams, origin, pathname } = new URL(request.url)
   const code = searchParams.get('code')
   // if "next" is in search params, use it as the redirection URL
-  const next = searchParams.get('next') ?? '/'
+  const pathParts = pathname.split('/').filter(Boolean)
+  const locale = pathParts[0] || 'en'
+  const next = searchParams.get('next') ?? `/${locale}/dashboard`
+
+  const redirectToAuthError = (error: string) => {
+    const params = new URLSearchParams()
+    params.set('error', error)
+    const errorCode = searchParams.get('error_code')
+    const errorDescription = searchParams.get('error_description')
+    if (errorCode) params.set('error_code', errorCode)
+    if (errorDescription) params.set('error_description', errorDescription)
+    if (next) params.set('next', next)
+    return NextResponse.redirect(`${origin}/${locale}/auth/error?${params.toString()}`)
+  }
+
+  // Supabase can redirect back with error parameters (e.g. expired/invalid link)
+  if (searchParams.get('error') || searchParams.get('error_code')) {
+    return redirectToAuthError(searchParams.get('error') ?? 'auth_error')
+  }
 
   if (code) {
     const supabase = await createClient()
@@ -23,10 +41,12 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`)
       }
     }
+
+    return redirectToAuthError('exchange_failed')
   }
 
   // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  return redirectToAuthError('missing_code')
 }
 
 

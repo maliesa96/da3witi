@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { type MediaType } from '@/lib/whatsapp';
 import { revalidatePath } from 'next/cache';
+import { normalizePhoneToE164 } from '@/lib/phone';
+import { MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage } from '@/lib/inviteMessage';
 
 export async function createEvent(formData: {
   title: string;
@@ -30,6 +32,44 @@ export async function createEvent(formData: {
     throw new Error('Unauthorized');
   }
 
+  const guestsValidated = (formData.guests || []).map((guest) => {
+    const name = String(guest.name || '').trim();
+    const phoneRaw = String(guest.phone || '').trim();
+    const res = normalizePhoneToE164(phoneRaw);
+    if (!name || !phoneRaw || !res.ok) throw new Error('INVALID_PHONE');
+    return {
+      name,
+      phone: res.phone,
+      inviteCount: guest.inviteCount || 1,
+    };
+  });
+
+  // Validate rendered invite message length (includes template wrapper + parameters)
+  const mediaType: MediaType = formData.mediaType ?? 'image';
+  const inviteesToValidate =
+    guestsValidated.length > 0
+      ? guestsValidated.map(g => ({ name: g.name, inviteCount: g.inviteCount }))
+      : [{ name: formData.locale === 'ar' ? 'ضيف' : 'Guest', inviteCount: 2 }];
+
+  for (const g of inviteesToValidate) {
+    const rendered = renderInviteMessage({
+      locale: formData.locale,
+      qrEnabled: formData.qrEnabled,
+      guestsEnabled: formData.guestsEnabled,
+      mediaType,
+      invitee: g.name,
+      greetingText: formData.message ?? '',
+      date: formData.date ?? '',
+      time: formData.time ?? '',
+      locationName: formData.locationName ?? '',
+      inviteCount: g.inviteCount,
+    });
+
+    if (countMessageChars(rendered) > MAX_INVITE_MESSAGE_CHARS) {
+      throw new Error('MESSAGE_TOO_LONG');
+    }
+  }
+
   // 1. Create the event in Prisma
   const event = await prisma.event.create({
     data: {
@@ -49,10 +89,10 @@ export async function createEvent(formData: {
       mediaType: formData.mediaType,
       mediaFilename: formData.mediaFilename,
       guests: {
-        create: formData.guests.map(guest => ({
+        create: guestsValidated.map(guest => ({
           name: guest.name,
           phone: guest.phone,
-          inviteCount: guest.inviteCount || 1,
+          inviteCount: guest.inviteCount,
           status: 'pending'
         }))
       }

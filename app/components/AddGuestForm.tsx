@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import ContactImport from '@/app/components/ContactImport';
 import { addGuests } from '../[locale]/dashboard/actions';
+import { normalizePhoneToE164 } from '@/lib/phone';
 
 type Cell = string | number | null;
 
@@ -28,6 +29,7 @@ interface AddGuestFormProps {
 export default function AddGuestForm({ eventId, guestsEnabled = false, buttonClassName, onGuestsAdded }: AddGuestFormProps) {
   const t = useTranslations('Dashboard');
   const tw = useTranslations('Wizard.step1');
+  const tWizard = useTranslations('Wizard');
   const locale = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<'file' | 'manual'>('manual');
@@ -66,7 +68,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
   const [fileContacts, setFileContacts] = useState<Array<{ name: string; phone: string; inviteCount?: number }>>([]);
 
   const manualCount = useMemo(
-    () => manualInvites.filter(i => i.name.trim() || i.phone.trim()).length,
+    () => manualInvites.filter(i => i.name.trim() && i.phone.trim()).length,
     [manualInvites]
   );
   const fileCount = fileContacts.length;
@@ -88,16 +90,40 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
 
   const submitGuests = async (guests: Array<{ name: string; phone: string }>) => {
     if (!eventId) return;
+    const cleaned = (guests || [])
+      .map(g => ({
+        name: String(g.name || '').trim(),
+        phone: String(g.phone || '').trim(),
+      }))
+      .filter(g => g.name && g.phone);
+
+    if (cleaned.length === 0) return;
+
+    const normalized: Array<{ name: string; phone: string }> = [];
+    for (const g of cleaned) {
+      const res = normalizePhoneToE164(g.phone);
+      if (!res.ok) {
+        alert(tWizard('errors.invalid_phone'));
+        return;
+      }
+      normalized.push({ ...g, phone: res.phone });
+    }
+
     setIsSubmitting(true);
     try {
-      const res = await addGuests(eventId, guests);
+      const res = await addGuests(eventId, normalized);
       if (res?.success) {
         onGuestsAdded?.(res.guests);
       }
       closeAndReset();
     } catch (error) {
       console.error('Failed to add guests:', error);
-      alert('Failed to add guests. Please try again.');
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('INVALID_PHONE')) {
+        alert(tWizard('errors.invalid_phone'));
+      } else {
+        alert('Failed to add guests. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -123,7 +149,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              className="fixed inset-0 z-[9999] p-4 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center"
+              className="fixed inset-0 z-9999 p-4 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -136,7 +162,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
               exit={{ opacity: 0, y: 10, scale: 0.98 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
             >
-            <div className="px-6 py-5 border-b border-stone-100 bg-gradient-to-b from-white to-stone-50/60">
+            <div className="px-6 py-5 border-b border-stone-100 bg-linear-to-b from-white to-stone-50/60">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-semibold text-stone-900">{t('add_guest_title')}</h3>
@@ -383,7 +409,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                       onClick={() => {
                         const guests = mode === 'file'
                           ? fileContacts
-                          : manualInvites.filter(i => i.name.trim() || i.phone.trim());
+                          : manualInvites.filter(i => i.name.trim() && i.phone.trim());
                         submitGuests(guests);
                       }}
                       className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${

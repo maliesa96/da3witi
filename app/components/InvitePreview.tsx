@@ -175,7 +175,7 @@ function InvitePreviewContent({
               
               {/* Body */}
               <div className="px-3 pt-1 pb-5 text-start" dir="auto">
-                <p className="text-[14px] text-[#e9edef] leading-relaxed whitespace-pre-wrap font-sans">
+                <p className="text-[14px] text-[#e9edef] leading-relaxed whitespace-pre-wrap font-sans overflow-hidden wrap-anywhere">
                   {renderedMessage}
                 </p>
               </div>

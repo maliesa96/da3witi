@@ -1,10 +1,37 @@
-import { useLocale, useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
+import { redirect } from 'next/navigation';
 import { signInWithMagicLink } from './actions';
 import MagicLinkSubmitButton from './MagicLinkSubmitButton';
+import { createClient } from '@/lib/supabase/server';
 
-export default function LoginPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
-  const t = useTranslations('Auth');
-  const locale = useLocale();
+export default async function LoginPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations('Auth');
+
+  // If already authenticated, bounce straight to dashboard (or ?next=...).
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const sp = await searchParams;
+    const nextRaw = typeof sp.next === 'string' ? sp.next : '';
+    // Prevent open redirects / cross-locale redirects:
+    // only allow absolute paths that stay within this locale.
+    const localePrefix = `/${locale}`;
+    const nextSafe =
+      nextRaw === localePrefix || nextRaw.startsWith(`${localePrefix}/`)
+        ? nextRaw
+        : `/${locale}/dashboard`;
+    redirect(nextSafe);
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8] px-6">
@@ -48,11 +75,7 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ [k
 
 async function AuthMessages({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const params = await searchParams;
-  const t = await (async () => {
-    // We can't use useTranslations here as it's a server component part of a hybrid file, 
-    // but LoginPage is already using it. Let's just use simple logic.
-    return (key: string) => key; 
-  })();
+  void params;
 
   if (params.sent) {
     return (

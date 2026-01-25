@@ -6,7 +6,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Smartphone,
-  Palette,
+  Wand2,
   Zap,
   Users,
   Send,
@@ -418,7 +418,7 @@ export default function Home() {
              className="bg-[#E3E8C9] rounded-[2.5rem] p-10 min-h-[480px] flex flex-col justify-between group"
            >
               <div className="w-16 h-16 rounded-full border border-stone-900 flex items-center justify-center text-stone-900">
-                 <Palette size={28} strokeWidth={1.5} />
+                 <Wand2 size={28} strokeWidth={1.5} />
               </div>
               <div className="space-y-4">
                  <h3 className="text-3xl font-display font-bold uppercase leading-[0.95] tracking-tight text-stone-900">{t('why_choose_us.beautiful_designs.title')}</h3>

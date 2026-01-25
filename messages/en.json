@@ -12,9 +12,9 @@
       "subtitle": "Add details, upload guests + card, then send — we’ll track replies."
     },
     "stats": {
-      "invites_sent": "1K+ Unique Designs",
-      "happy_guests": "10K+ Happy Guests",
-      "app_rating": "4.8+ App Rating"
+      "invites_sent": "1K+ Happy Guests",
+      "happy_guests": "Live RSVP Tracking",
+      "app_rating": "QR Check-in Ready"
     },
     "feature_showcase": {
       "title": "Smart Guest Management",
@@ -22,9 +22,9 @@
       "cta": "Learn More"
     },
     "why_choose_us": {
-      "title": "Why Hosts  Choose Us",
-      "subtitle_header": "We are the top invitation platform",
-      "subtitle_desc": "According to user reviews in 2024",
+      "title": "Why Da3witi",
+      "subtitle_header": "Made for modern hosts",
+      "subtitle_desc": "Fully automated. No agents. No calls. Send WhatsApp invites and track RSVPs.",
       "simple_interface": {
         "title": "Clear & Simple Interface",
         "desc": "Create your invitation in just a few clicks. It's that simple."
@@ -34,8 +34,8 @@
         "desc": "You can design and preview your invitation without any upfront cost."
       },
       "beautiful_designs": {
-        "title": "Beautiful Designs",
-        "desc": "Choose from our curated collection of luxury templates."
+        "title": "Personalized to Your Event",
+        "desc": "Your card, your wording, your vibe — it looks premium in minutes."
       }
     },
     "community": {
@@ -107,7 +107,9 @@
     },
     "errors": {
       "required": "This field is required",
-      "invalid_map_link": "Please provide a valid Google Maps link or coordinates"
+      "invalid_map_link": "Please provide a valid Google Maps link or coordinates",
+      "invalid_phone": "Invalid phone number. Please include the country code (example: +966...) and use digits only.",
+      "invalid_phone_row": "Row {row}: invalid phone number. Please include the country code (example: +966...) and use digits only."
     },
     "step1": {
       "title": "Guest List",
@@ -213,7 +215,8 @@
   "Navbar": {
     "brand": "Da3witi",
     "dashboard": "Dashboard",
-    "start_now": "Start Now"
+    "start_now": "Start Now",
+    "create_event": "Create Event"
   },
   "Footer": {
     "about": "About",
@@ -347,6 +350,11 @@
     "magic_link_desc": "Enter your email to receive a magic link to sign in.",
     "send_magic_link": "Send Magic Link",
     "check_email": "Check your email for the magic link!",
-    "error_magic_link": "Error sending magic link. Please try again."
+    "error_magic_link": "Error sending magic link. Please try again.",
+    "auth_error_title": "This sign-in link isn't valid",
+    "auth_error_expired": "This sign-in link has expired or was already used. Request a new link from the login page.",
+    "auth_error_generic": "We couldn't sign you in. Please request a new link and try again.",
+    "auth_error_cta_login": "Go to login",
+    "auth_error_cta_home": "Go to home"
   }
 }

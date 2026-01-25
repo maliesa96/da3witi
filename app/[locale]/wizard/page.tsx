@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   ArrowRight,
   UploadCloud,
@@ -18,6 +18,8 @@ import dynamic from "next/dynamic";
 import { useTranslations, useLocale } from "next-intl";
 import { uploadEventMedia, validateFileType, type MediaType } from "@/lib/supabase/storage";
 import { formatGoogleMapsLink } from "@/lib/maps";
+import { normalizePhoneToE164 } from "@/lib/phone";
+import { type InviteMediaType, MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage } from "@/lib/inviteMessage";
 
 const MapPicker = dynamic(() => import("../../components/MapPicker"), {
   ssr: false,
@@ -34,15 +36,19 @@ const MapPicker = dynamic(() => import("../../components/MapPicker"), {
 
 export default function Wizard() {
   const t = useTranslations('Wizard');
+  const tPreview = useTranslations('InvitePreview');
   const locale = useLocale() as 'en' | 'ar';
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [step1ValidationError, setStep1ValidationError] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState<"link" | "map">("link");
   const [dateMode, setDateMode] = useState<"picker" | "custom">("picker");
   const [timeMode, setTimeMode] = useState<"picker" | "custom">("picker");
+  const [datePickerValue, setDatePickerValue] = useState("");
+  const [timePickerValue, setTimePickerValue] = useState("");
   const [details, setDetails] = useState({
     eventName: "",
     date: "",
@@ -66,10 +72,99 @@ export default function Wizard() {
   const [inviteMode, setInviteMode] = useState<"file" | "manual">("file");
   const [invites, setInvites] = useState([{ name: "", phone: "", inviteCount: 1 }]);
 
+  const messageTextLength = useMemo(() => countMessageChars(details.message || ""), [details.message]);
+
+  const baseRenderedMessageLength = useMemo(() => {
+    try {
+      const fallbackInvitee = tPreview("default_invitee");
+      const inviteeFromList = invites.find(i => String(i.name || "").trim())?.name;
+      const invitee = String(inviteeFromList || fallbackInvitee || "").trim();
+
+      const inviteCount = invites.reduce((max, i) => Math.max(max, Number(i.inviteCount || 1)), 2);
+
+      const renderedBase = renderInviteMessage({
+        locale: details.messageLocale,
+        qrEnabled: details.qrEnabled,
+        guestsEnabled: details.guestsEnabled,
+        mediaType: (details.mediaType ?? "image") as InviteMediaType,
+        invitee,
+        greetingText: "",
+        date: details.date || tPreview("default_date"),
+        time: details.time || "",
+        locationName: details.locationName || tPreview("default_location_name"),
+        inviteCount,
+      });
+
+      return countMessageChars(renderedBase);
+    } catch {
+      return 0;
+    }
+  }, [
+    details.messageLocale,
+    details.qrEnabled,
+    details.guestsEnabled,
+    details.mediaType,
+    details.date,
+    details.time,
+    details.locationName,
+    invites,
+    tPreview,
+  ]);
+
+  const maxMessageTextChars = useMemo(() => {
+    return Math.max(0, MAX_INVITE_MESSAGE_CHARS - baseRenderedMessageLength);
+  }, [baseRenderedMessageLength]);
+
+  const renderedMessageLength = useMemo(() => {
+    try {
+      if (!details.message.trim()) return 0;
+
+      const fallbackInvitee = tPreview("default_invitee");
+      const inviteeFromList = invites.find(i => String(i.name || "").trim())?.name;
+      const invitee = String(inviteeFromList || fallbackInvitee || "").trim();
+
+      const inviteCount = invites.reduce((max, i) => Math.max(max, Number(i.inviteCount || 1)), 2);
+
+      const rendered = renderInviteMessage({
+        locale: details.messageLocale,
+        qrEnabled: details.qrEnabled,
+        guestsEnabled: details.guestsEnabled,
+        mediaType: (details.mediaType ?? "image") as InviteMediaType,
+        invitee,
+        greetingText: details.message,
+        date: details.date || tPreview("default_date"),
+        time: details.time || "",
+        locationName: details.locationName || tPreview("default_location_name"),
+        inviteCount,
+      });
+
+      return countMessageChars(rendered);
+    } catch {
+      return countMessageChars(details.message || "");
+    }
+  }, [
+    details.message,
+    details.messageLocale,
+    details.qrEnabled,
+    details.guestsEnabled,
+    details.mediaType,
+    details.date,
+    details.time,
+    details.locationName,
+    invites,
+    tPreview,
+  ]);
+
   // Sync messageLocale with page locale when it changes
   useEffect(() => {
     setDetails(prev => ({ ...prev, messageLocale: locale }));
   }, [locale]);
+
+  useEffect(() => {
+    if (step1ValidationError && Object.keys(errors).length === 0) {
+      setStep1ValidationError(null);
+    }
+  }, [errors, step1ValidationError]);
 
   // State for ContactImport to persist across tab switches
   const [importData, setImportData] = useState<(string | number | null)[][]>([]);
@@ -91,6 +186,28 @@ export default function Wizard() {
       newInvites[index][field] = value as string;
     }
     setInvites(newInvites);
+  };
+
+  const validateAndNormalizeInvites = () => {
+    const next = invites.map((inv) => ({
+      ...inv,
+      name: String(inv.name || "").trim(),
+      phone: String(inv.phone || "").trim(),
+    }));
+
+    for (let i = 0; i < next.length; i++) {
+      const phone = next[i].phone;
+      if (!phone) continue; // optional step; validate only when provided
+      const res = normalizePhoneToE164(phone);
+      if (!res.ok) {
+        alert(t("errors.invalid_phone"));
+        return { ok: false as const };
+      }
+      next[i].phone = res.phone;
+    }
+
+    setInvites(next);
+    return { ok: true as const, invites: next };
   };
 
   const removeManualInvite = (index: number) => {
@@ -134,12 +251,49 @@ export default function Wizard() {
         mediaFilename: file.name,
         mediaSize: file.size
       }));
+      setErrors(prev => {
+        if (!prev.imageUrl) return prev;
+        const next = { ...prev };
+        delete next.imageUrl;
+        return next;
+      });
     } catch (error) {
       console.error('Upload error:', error);
       setUploadError('Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const formatDateFromPicker = (value: string) => {
+    // value: "YYYY-MM-DD"
+    const [y, m, d] = value.split("-").map(Number);
+    if (!y || !m || !d) return value;
+    const date = new Date(Date.UTC(y, m - 1, d));
+    const intlLocale = locale === "ar" ? "ar-SA" : "en-US";
+    return new Intl.DateTimeFormat(intlLocale, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      timeZone: "UTC",
+    }).format(date);
+  };
+
+  const formatTimeFromPicker = (value: string) => {
+    // value: "HH:MM"
+    const [hh, mm] = value.split(":").map(Number);
+    if (Number.isNaN(hh) || Number.isNaN(mm)) return value;
+    const date = new Date(Date.UTC(1970, 0, 1, hh, mm, 0));
+    const intlLocale = locale === "ar" ? "ar-SA" : "en-US";
+    const base: Intl.DateTimeFormatOptions = {
+      hour: "numeric",
+      hour12: true,
+      timeZone: "UTC",
+    };
+    // If minutes are 00, omit them: "5 PM" not "5:00 PM"
+    const opts: Intl.DateTimeFormatOptions =
+      mm === 0 ? base : { ...base, minute: "2-digit" };
+    return new Intl.DateTimeFormat(intlLocale, opts).format(date);
   };
 
   const validateStep2 = () => {
@@ -161,6 +315,11 @@ export default function Wizard() {
       if (!details.scheduledDate) newErrors.scheduledDate = t('errors.required');
       if (!details.scheduledTime) newErrors.scheduledTime = t('errors.required');
     }
+
+    // Enforce final rendered message length (template wrapper + parameters included)
+    if (details.message.trim() && renderedMessageLength > MAX_INVITE_MESSAGE_CHARS) {
+      newErrors.message = t('errors.message_too_long', { max: MAX_INVITE_MESSAGE_CHARS });
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -170,6 +329,11 @@ export default function Wizard() {
     setIsSubmitting(true);
     try {
       const { createEvent } = await import('./actions');
+      const normalized = validateAndNormalizeInvites();
+      if (!normalized.ok) {
+        setIsSubmitting(false);
+        return;
+      }
       const result = await createEvent({
         title: details.eventName || "Event",
         date: details.date,
@@ -185,7 +349,7 @@ export default function Wizard() {
         imageUrl: details.imageUrl,
         mediaType: details.mediaType,
         mediaFilename: details.mediaFilename,
-        guests: invites.filter(i => i.name && i.phone),
+        guests: normalized.invites.filter(i => i.name && i.phone),
         locale: details.messageLocale
       });
 
@@ -197,11 +361,21 @@ export default function Wizard() {
       }
     } catch (error) {
       console.error('Event creation failed:', error);
-      alert('Failed to create event. Please try again.');
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('INVALID_PHONE')) {
+        alert(t('errors.invalid_phone'));
+      } else if (msg.includes('MESSAGE_TOO_LONG')) {
+        alert(t('errors.message_too_long', { max: MAX_INVITE_MESSAGE_CHARS }));
+      } else {
+        alert('Failed to create event. Please try again.');
+      }
       setIsSubmitting(false);
     }
   };
 
+
+  const imageErrorText = uploadError || errors.imageUrl;
+  const imageHasError = Boolean(imageErrorText && !details.imageUrl);
 
   return (
     <div className="max-w-7xl mx-auto px-6 pb-24">
@@ -211,8 +385,7 @@ export default function Wizard() {
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="bg-stone-50 px-2 flex flex-col items-center gap-2 cursor-pointer"
-            onClick={() => setStep(i)}
+            className="bg-stone-50 px-2 flex flex-col items-center gap-2 cursor-default select-none"
           >
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
@@ -254,10 +427,25 @@ export default function Wizard() {
             {/* Main Form */}
             <div className="lg:col-span-3 space-y-6">
               {/* Image/Document Upload */}
-              <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm space-y-4">
+              <div
+                className={`bg-white p-6 rounded-xl border shadow-sm space-y-4 ${
+                  imageHasError ? "border-red-300 ring-2 ring-red-100" : "border-stone-200"
+                }`}
+              >
                 <h3 className="text-sm font-medium text-stone-900">
                   {t('step2.image_upload')}
                 </h3>
+
+                {imageHasError && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 flex items-start gap-2">
+                    <span className="mt-0.5 text-red-600">
+                      <Info size={14} />
+                    </span>
+                    <span>
+                      {t('step2.image_upload')}: {t('errors.required')}
+                    </span>
+                  </div>
+                )}
                 
                 {details.imageUrl ? (
                   <div className="border border-stone-200 rounded-lg p-4 bg-stone-50">
@@ -295,7 +483,7 @@ export default function Wizard() {
                 ) : (
                   <label className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer group block ${
                     isUploading ? 'border-stone-300 bg-stone-50' : 'border-stone-200 hover:bg-stone-50'
-                  } ${uploadError ? 'border-red-300' : ''}`}>
+                  } ${(uploadError || errors.imageUrl) ? 'border-red-300 bg-red-50/40' : ''}`}>
                     <input 
                       type="file" 
                       accept="image/jpeg,image/png,image/webp,application/pdf" 
@@ -365,8 +553,10 @@ export default function Wizard() {
                     placeholder={t('step2.default_message')}
                     onChange={(e) => {
                       setDetails({ ...details, message: e.target.value });
-                      if (errors.message) setErrors(prev => {
+                      // Keep message error in sync with length requirement
+                      setErrors(prev => {
                         const next = { ...prev };
+                        // Clear any existing message error; validateStep2 will re-set on next action
                         delete next.message;
                         return next;
                       });
@@ -375,6 +565,11 @@ export default function Wizard() {
                       errors.message ? 'border-red-300' : 'border-stone-200'
                     }`}
                   />
+                  <div className="mt-1.5 flex justify-end">
+                    <span className={`text-[10px] ${renderedMessageLength > MAX_INVITE_MESSAGE_CHARS ? 'text-red-500' : 'text-stone-500'}`}>
+                      {messageTextLength}/{maxMessageTextChars}
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
@@ -436,9 +631,11 @@ export default function Wizard() {
                     {dateMode === "picker" ? (
                       <input
                         type="date"
-                        value={details.date}
+                        value={datePickerValue}
                         onChange={(e) => {
-                          setDetails({ ...details, date: e.target.value });
+                          const raw = e.target.value;
+                          setDatePickerValue(raw);
+                          setDetails({ ...details, date: raw ? formatDateFromPicker(raw) : "" });
                           if (errors.date) setErrors(prev => {
                             const next = { ...prev };
                             delete next.date;
@@ -502,9 +699,11 @@ export default function Wizard() {
                     {timeMode === "picker" ? (
                       <input
                         type="time"
-                        value={details.time}
+                        value={timePickerValue}
                         onChange={(e) => {
-                          setDetails({ ...details, time: e.target.value });
+                          const raw = e.target.value;
+                          setTimePickerValue(raw);
+                          setDetails({ ...details, time: raw ? formatTimeFromPicker(raw) : "" });
                           if (errors.time) setErrors(prev => {
                             const next = { ...prev };
                             delete next.time;
@@ -764,18 +963,30 @@ export default function Wizard() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4">
-                <button
-                  onClick={() => {
-                    if (validateStep2()) {
-                      setStep(2);
-                    }
-                  }}
-                  className="bg-stone-900 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-stone-800 transition-all shadow-sm flex items-center gap-2"
-                >
-                  <span>{t('step1.next')}</span>
-                  <ArrowRight size={16} className="rtl:rotate-180" />
-                </button>
+              <div className="pt-4">
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      const ok = validateStep2();
+                      if (ok) {
+                        setStep1ValidationError(null);
+                        setStep(2);
+                      } else {
+                        setStep1ValidationError(t("errors.fix_above"));
+                      }
+                    }}
+                    className="bg-stone-900 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-stone-800 transition-all shadow-sm flex items-center gap-2"
+                  >
+                    <span>{t('step1.next')}</span>
+                    <ArrowRight size={16} className="rtl:rotate-180" />
+                  </button>
+                </div>
+
+                {step1ValidationError && (
+                  <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+                    {step1ValidationError}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1016,7 +1227,10 @@ export default function Wizard() {
                   <span>{t('step1.back')}</span>
                 </button>
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => {
+                    const normalized = validateAndNormalizeInvites();
+                    if (normalized.ok) setStep(3);
+                  }}
                   className="bg-stone-900 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-all flex items-center gap-2"
                 >
                   <span>{t('step1.next')}</span>

@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { sendInviteTemplate, type MediaType } from '@/lib/whatsapp';
-import { revalidatePath } from 'next/cache';
+import { normalizePhoneToE164 } from '@/lib/phone';
 
 async function getAuthedUser() {
   const supabase = await createClient();
@@ -33,12 +33,19 @@ export async function addGuest(eventId: string, guestData: { name: string; phone
     throw new Error('Forbidden');
   }
 
+  const name = String(guestData.name || '').trim();
+  const phoneRaw = String(guestData.phone || '').trim();
+  const phoneRes = normalizePhoneToE164(phoneRaw);
+  if (!name || !phoneRaw || !phoneRes.ok) {
+    throw new Error('INVALID_PHONE');
+  }
+
   // 1. Create guest
   const guest = await prisma.guest.create({
     data: {
       eventId,
-      name: guestData.name,
-      phone: guestData.phone,
+      name,
+      phone: phoneRes.phone,
       status: 'pending'
     }
   });
@@ -67,15 +74,21 @@ export async function addGuests(eventId: string, guests: { name: string; phone: 
       name: String(g.name || '').trim(),
       phone: String(g.phone || '').trim(),
     }))
-    .filter(g => g.name || g.phone);
+    .filter(g => g.name && g.phone);
 
   if (cleaned.length === 0) {
     return { success: true, created: 0, guests: [] as Array<{ id: string; name: string; phone: string; status: string; checkedIn: boolean; whatsappMessageId: string | null }> };
   }
 
+  const validated = cleaned.map((g) => {
+    const res = normalizePhoneToE164(g.phone);
+    if (!res.ok) throw new Error('INVALID_PHONE');
+    return { ...g, phone: res.phone };
+  });
+
   // Bulk create guests and return the created records
   const createdGuests = await prisma.guest.createManyAndReturn({
-    data: cleaned.map((g) => ({
+    data: validated.map((g) => ({
       eventId,
       name: g.name,
       phone: g.phone,

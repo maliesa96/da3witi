@@ -568,6 +568,7 @@ export default function EventPanelClient({
           eventId={event.id}
           guests={displayGuests}
           guestsEnabled={event.guestsEnabled}
+          qrEnabled={event.qrEnabled}
           onGuestsAdded={handleGuestsAdded}
           onGuestDeleted={handleGuestDeleted}
           pagination={pagination}

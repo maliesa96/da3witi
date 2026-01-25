@@ -5,6 +5,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { UploadCloud, Check, Info, FileText, Hash, User } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { normalizePhoneToE164 } from "@/lib/phone";
 
 interface Contact {
   name: string;
@@ -43,6 +44,7 @@ export default function ContactImport({
   fileName, setFileName
 }: ContactImportProps) {
   const t = useTranslations("Wizard.step1");
+  const tWizard = useTranslations("Wizard");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragDepthRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -215,22 +217,33 @@ export default function ContactImport({
     if (nameCol === null || phoneCol === null) return;
     if (guestsEnabled && inviteCountCol === null) return;
     
-    const contacts: Contact[] = data.slice(startRow).map(row => {
+    const rows = data.slice(startRow);
+    const contactsWithRow = rows.map((row, idx) => {
       const contact: Contact = {
         name: String(row[nameCol] || "").trim(),
         phone: String(row[phoneCol] || "").trim(),
       };
-      
+
       if (guestsEnabled && inviteCountCol !== null) {
         const countValue = row[inviteCountCol];
         const parsedCount = typeof countValue === 'number' ? countValue : parseInt(String(countValue || "1"), 10);
         contact.inviteCount = isNaN(parsedCount) ? 1 : Math.max(1, parsedCount);
       }
-      
-      return contact;
-    }).filter(c => c.name || c.phone);
-    
-    onContactsLoaded(contacts);
+
+      return { contact, rowNumber: startRow + idx + 1 };
+    }).filter(({ contact }) => contact.name && contact.phone);
+
+    const normalized: Contact[] = [];
+    for (const { contact, rowNumber } of contactsWithRow) {
+      const res = normalizePhoneToE164(contact.phone);
+      if (!res.ok) {
+        alert(tWizard('errors.invalid_phone_row', { row: rowNumber }));
+        return;
+      }
+      normalized.push({ ...contact, phone: res.phone });
+    }
+
+    onContactsLoaded(normalized);
   };
 
   const reset = () => {
@@ -410,29 +423,25 @@ export default function ContactImport({
                         <span className="text-[10px] uppercase tracking-tighter font-bold opacity-60">
                           {t('column')} {String.fromCharCode(65 + i)}
                         </span>
-                        {nameCol === i && (
+                      </div>
+                      <div className="flex items-center justify-between">
+                        {nameCol === i ? (
                           <span className="bg-blue-500 text-white text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
                             <User size={10} /> {t('select_name_col')}
                           </span>
-                        )}
-                        {phoneCol === i && (
+                        ) : phoneCol === i ? (
                           <span className="bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
                             <Hash size={10} /> {t('select_phone_col')}
                           </span>
-                        )}
-                        {guestsEnabled && inviteCountCol === i && (
+                        ) : guestsEnabled && inviteCountCol === i ? (
                           <span className="bg-orange-600 text-white text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
                             <Hash size={10} /> {t('select_invite_count_col')}
                           </span>
+                        ) : (
+                          <span className="truncate text-xs text-stone-500">
+                            {String(data[0]?.[i] ?? "") || "\u00A0"}
+                          </span>
                         )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className={`truncate text-xs ${nameCol === i || phoneCol === i || (guestsEnabled && inviteCountCol === i) ? "font-bold text-stone-900" : ""}`}>
-                          {nameCol === i ? t('select_name_col') : 
-                           phoneCol === i ? t('select_phone_col') : 
-                           guestsEnabled && inviteCountCol === i ? t('select_invite_count_col') :
-                           t('column') + " " + String.fromCharCode(65 + i)}
-                        </span>
                       </div>
                     </div>
                   </th>

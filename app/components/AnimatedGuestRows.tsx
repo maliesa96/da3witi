@@ -370,6 +370,7 @@ export function GuestListClient({
   guests,
   eventId,
   guestsEnabled = false,
+  qrEnabled = false,
   onGuestDeleted,
   onGuestsAdded,
   pagination,
@@ -380,6 +381,7 @@ export function GuestListClient({
   guests: GuestRowData[];
   eventId: string;
   guestsEnabled?: boolean;
+  qrEnabled?: boolean;
   onGuestDeleted: (guestId: string) => void;
   onGuestsAdded?: (guests: GuestRowData[]) => void;
   pagination?: PaginationInfo;
@@ -416,7 +418,9 @@ export function GuestListClient({
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-medium text-stone-900">{guest.name}</div>
-                    <div className="text-xs text-stone-500 dir-ltr">{guest.phone}</div>
+                    <div className="text-xs text-stone-500 dir-ltr ltr:text-end rtl:text-start">
+                      {guest.phone}
+                    </div>
                     {guestsEnabled && guest.inviteCount && (
                       <div className="text-xs text-stone-500 mt-0.5">
                         {guest.inviteCount} {guest.inviteCount === 1 ? t("invite_count_singular") : t("invite_count_plural")}
@@ -427,21 +431,25 @@ export function GuestListClient({
                 </div>
 
                 <div className="flex items-center justify-between mt-1">
-                  <div>
-                    {guest.status === "declined" ? (
-                      <span className="text-stone-300 text-xs">-</span>
-                    ) : guest.checkedIn ? (
-                      <div className="flex items-center gap-1.5 text-green-600">
-                        <CheckCircle2 size={14} />
-                        <span className="text-xs font-medium">{t("qr_checked_in")}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-stone-400">
-                        <Circle size={12} />
-                        <span className="text-xs">{t("qr_not_arrived")}</span>
-                      </div>
-                    )}
-                  </div>
+                  {qrEnabled ? (
+                    <div>
+                      {guest.status === "declined" ? (
+                        <span className="text-stone-300 text-xs">-</span>
+                      ) : guest.checkedIn ? (
+                        <div className="flex items-center gap-1.5 text-green-600">
+                          <CheckCircle2 size={14} />
+                          <span className="text-xs font-medium">{t("qr_checked_in")}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-stone-400">
+                          <Circle size={12} />
+                          <span className="text-xs">{t("qr_not_arrived")}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div />
+                  )}
 
                   <div className="flex items-center gap-2">
                     {canDelete && (
@@ -472,7 +480,7 @@ export function GuestListClient({
               <th className="px-6 py-3 text-start">{t("col_phone")}</th>
               {guestsEnabled && <th className="px-6 py-3 text-start">{t("col_invite_count")}</th>}
               <th className="px-6 py-3 text-start">{t("col_status")}</th>
-              <th className="px-6 py-3 text-start">{t("col_qr")}</th>
+              {qrEnabled && <th className="px-6 py-3 text-start">{t("col_qr")}</th>}
               <th className="px-6 py-3 text-start"></th>
             </tr>
           </thead>
@@ -496,7 +504,7 @@ export function GuestListClient({
                     className="hover:bg-stone-50/50 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium text-stone-900">{guest.name}</td>
-                    <td className="px-6 py-4 dir-ltr text-start text-stone-500 font-mono">
+                    <td className="px-6 py-4 dir-ltr ltr:text-start rtl:text-end text-stone-500 font-mono">
                       {guest.phone}
                     </td>
                     {guestsEnabled && (
@@ -505,21 +513,23 @@ export function GuestListClient({
                       </td>
                     )}
                     <td className="px-6 py-4">{statusBadge}</td>
-                    <td className="px-6 py-4">
-                      {guest.status === "declined" ? (
-                        <span className="text-stone-300">-</span>
-                      ) : guest.checkedIn ? (
-                        <div className="flex items-center gap-1.5 text-green-600">
-                          <CheckCircle2 size={14} />
-                          <span className="text-xs font-medium">{t("qr_checked_in")}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-stone-400">
-                          <Circle size={12} />
-                          <span className="text-xs">{t("qr_not_arrived")}</span>
-                        </div>
-                      )}
-                    </td>
+                    {qrEnabled && (
+                      <td className="px-6 py-4">
+                        {guest.status === "declined" ? (
+                          <span className="text-stone-300">-</span>
+                        ) : guest.checkedIn ? (
+                          <div className="flex items-center gap-1.5 text-green-600">
+                            <CheckCircle2 size={14} />
+                            <span className="text-xs font-medium">{t("qr_checked_in")}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-stone-400">
+                            <Circle size={12} />
+                            <span className="text-xs">{t("qr_not_arrived")}</span>
+                          </div>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 text-end">
                       <div className="flex items-center justify-end gap-2">
                         {canDelete && (
@@ -539,7 +549,7 @@ export function GuestListClient({
 
             {guests.length === 0 && showEmpty && (
               <tr>
-                <td colSpan={guestsEnabled ? 6 : 5}>
+                <td colSpan={4 + (guestsEnabled ? 1 : 0) + (qrEnabled ? 1 : 0)}>
                   {isSearching ? (
                     <NoResultsState t={t} searchQuery={searchQuery} />
                   ) : (

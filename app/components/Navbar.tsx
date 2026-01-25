@@ -1,6 +1,6 @@
 "use client";
 
-import { MailOpen, Globe, ArrowRight, LogOut, User } from "lucide-react";
+import { MailOpen, Globe, Plus, LogOut, User } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/navigation";
 import { useEffect, useState } from "react";
@@ -14,21 +14,26 @@ export function Navbar() {
   const locale = useLocale();
   const pathname = usePathname();
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const supabase = createClient();
 
   useEffect(() => {
+    // Client Components can still be SSR'd; create the browser client only in the browser.
+    const supabase = createClient();
+
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
     };
-    getUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      setUser(session?.user ?? null);
-    });
+    void getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+        setUser(session?.user ?? null);
+      }
+    );
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   const otherLocale = locale === 'ar' ? 'en' : 'ar';
   const langLabel = locale === 'ar' ? 'English' : 'العربية';
@@ -89,10 +94,10 @@ export function Navbar() {
             prefetch={false}
             className="bg-stone-900 text-white text-xs md:text-sm font-semibold px-4 md:px-6 py-2.5 rounded-full hover:bg-stone-800 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 group shrink-0 cursor-pointer"
           >
-            <span>{t('start_now')}</span>
-            <ArrowRight
+            <span>{user ? t('create_event') : t('start_now')}</span>
+            <Plus
               size={16}
-              className="group-hover:translate-x-1 transition-transform rtl:-scale-x-100 rtl:group-hover:-translate-x-1 md:block hidden"
+              className="transition-transform group-hover:rotate-90 md:block hidden"
             />
           </Link>
         </div>

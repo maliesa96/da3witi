@@ -61,3 +61,9 @@
 }
 
 /* Utilities not covered by Tailwind v4 defaults if needed, but v4 is quite comprehensive */
+
+/* Force LTR rendering inside RTL pages (e.g., phone numbers like +966...) */
+.dir-ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+}

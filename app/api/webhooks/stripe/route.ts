@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
+import { normalizePhoneToE164 } from '@/lib/phone';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -162,11 +163,18 @@ async function createEventIfNotExists(session: Stripe.Checkout.Session) {
       guests: {
         create: guests
           .filter((g: { name: string; phone: string }) => g.name && g.phone)
-          .map((guest: { name: string; phone: string }) => ({
-            name: guest.name,
-            phone: guest.phone,
-            status: 'pending',
-          })),
+          .flatMap((guest: { name: string; phone: string }) => {
+            const res = normalizePhoneToE164(guest.phone);
+            if (!res.ok) {
+              console.warn('Skipping invalid phone in webhook-created guest:', guest.phone);
+              return [];
+            }
+            return [{
+              name: guest.name,
+              phone: res.phone,
+              status: 'pending',
+            }];
+          }),
       },
     },
   });
