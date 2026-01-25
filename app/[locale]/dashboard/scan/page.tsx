@@ -1,9 +1,17 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/navigation";
 import { ArrowLeft, Camera } from "lucide-react";
 import QRScanner from "@/app/components/QRScanner";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function ScanPage({
   searchParams

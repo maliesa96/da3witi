@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import HomePageClient from "./HomePageClient";
 
 export async function generateMetadata({
   params,
@@ -8,10 +7,10 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "HomePage" });
+  const tHome = await getTranslations({ locale, namespace: "HomePage" });
 
-  const title = t("title");
-  const description = t("description");
+  const title = tHome("cta_create");
+  const description = tHome("description");
 
   return {
     title,
@@ -21,16 +20,16 @@ export async function generateMetadata({
       follow: true,
     },
     alternates: {
-      canonical: `/${locale}`,
+      canonical: `/${locale}/wizard`,
       languages: {
-        en: "/en",
-        ar: "/ar",
+        en: "/en/wizard",
+        ar: "/ar/wizard",
       },
     },
     openGraph: {
       title,
       description,
-      url: `/${locale}`,
+      url: `/${locale}/wizard`,
     },
     twitter: {
       title,
@@ -39,6 +38,11 @@ export async function generateMetadata({
   };
 }
 
-export default function Home() {
-  return <HomePageClient />;
+export default function WizardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return children;
 }
+

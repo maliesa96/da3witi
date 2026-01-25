@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 function getStringParam(
   params: { [key: string]: string | string[] | undefined },

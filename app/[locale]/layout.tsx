@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_Arabic, Inter, Cairo, Bricolage_Grotesque, Alexandria, Instrument_Serif } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages } from 'next-intl/server';
+import { getMessages, getTranslations } from 'next-intl/server';
 import "../globals.css";
+
+const SITE_URL = new URL("https://da3witi.com");
 
 const bricolageGrotesque = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -42,10 +44,51 @@ const inter = Inter({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: "Da3witi - دعـوتـي",
-  description: "نظام الدعوات الآلي الأول في الخليج",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+
+  // Use existing marketing copy as a safe default for the whole locale segment.
+  const t = await getTranslations({ locale, namespace: "HomePage" });
+  const brand = locale === "ar" ? "دعـوتـي" : "Da3witi";
+  const description = t("description");
+
+  return {
+    metadataBase: SITE_URL,
+    title: {
+      default: brand,
+      template: `%s | ${brand}`,
+    },
+    description,
+    alternates: {
+      languages: {
+        en: "/en",
+        ar: "/ar",
+      },
+    },
+    openGraph: {
+      type: "website",
+      url: `/${locale}`,
+      siteName: brand,
+      locale: locale === "ar" ? "ar_SA" : "en_US",
+      images: [
+        {
+          url: `/${locale}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: brand,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [`/${locale}/twitter-image`],
+    },
+  };
+}
 
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";

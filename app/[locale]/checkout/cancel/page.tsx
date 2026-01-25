@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import { XCircle, ArrowLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/navigation";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function CheckoutCancel({
   params,

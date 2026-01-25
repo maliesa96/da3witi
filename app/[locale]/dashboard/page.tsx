@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Calendar } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
@@ -7,6 +8,13 @@ import EventPanelClient from "./EventPanelClient";
 import { Link } from "@/navigation";
 import { Prisma } from "@prisma/client";
 import { sendInvitesForEvent, getGuestsPaginated } from "./actions";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function Dashboard({ 
   params,

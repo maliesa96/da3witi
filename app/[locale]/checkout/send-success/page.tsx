@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { CheckCircle2, ArrowRight, AlertCircle } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/navigation";
@@ -5,6 +6,13 @@ import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { sendInvitesForEvent } from "@/app/[locale]/dashboard/actions";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 

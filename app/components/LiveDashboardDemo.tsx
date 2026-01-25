@@ -2,8 +2,49 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Users, CheckCircle, XCircle, Clock, Bell, Plus, MessageSquare, Check, CheckCheck } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Bell, Plus, Check, CheckCheck } from "lucide-react";
 import { useLocale } from "next-intl";
+
+type ActivityType =
+  | "rsvp_yes"
+  | "rsvp_no"
+  | "new_guest"
+  | "msg_sent"
+  | "msg_delivered"
+  | "msg_read";
+
+type Activity = {
+  id: number;
+  type: ActivityType;
+  user: string;
+  time: string;
+};
+
+function generateRandomActivity(isArabic: boolean): Activity {
+  const types: ActivityType[] = [
+    "rsvp_yes",
+    "rsvp_no",
+    "new_guest",
+    "msg_sent",
+    "msg_delivered",
+    "msg_read",
+  ];
+  // Weighted random to make RSVPs less frequent than status updates
+  const type = types[Math.floor(Math.random() * types.length)];
+
+  const namesEn = ["Khalid M.", "Noura A.", "James B.", "Layla H.", "Omar S.", "Dana W.", "Tariq A."];
+  const namesAr = ["خالد م.", "نورة ع.", "جيمس ب.", "ليلى هـ.", "عمر س.", "دانة و.", "طارق ع."];
+
+  const names = isArabic ? namesAr : namesEn;
+  const name = names[Math.floor(Math.random() * names.length)];
+
+  return {
+    id: Date.now(),
+    type,
+    user: name,
+    time: isArabic ? "الآن" : "Just now",
+  };
+}
 
 export default function LiveDashboardDemo() {
   const locale = useLocale();
@@ -16,7 +57,7 @@ export default function LiveDashboardDemo() {
     pending: 30,
   });
 
-  const [activities, setActivities] = useState([
+  const [activities, setActivities] = useState<Activity[]>([
     { id: 1, type: "rsvp_yes", user: isAr ? "أحمد السالم" : "Ahmed Al-Salem", time: "2m" },
     { id: 2, type: "msg_read", user: isAr ? "سارة محمد" : "Sarah Smith", time: "5m" },
     { id: 3, type: "msg_delivered", user: isAr ? "فهد الكريم" : "Fahad K.", time: "12m" },
@@ -47,25 +88,6 @@ export default function LiveDashboardDemo() {
 
     return () => clearInterval(interval);
   }, [isAr]);
-
-  const generateRandomActivity = (isArabic: boolean) => {
-    const types = ["rsvp_yes", "rsvp_no", "new_guest", "msg_sent", "msg_delivered", "msg_read"];
-    // Weighted random to make RSVPs less frequent than status updates
-    const type = types[Math.floor(Math.random() * types.length)];
-    
-    const namesEn = ["Khalid M.", "Noura A.", "James B.", "Layla H.", "Omar S.", "Dana W.", "Tariq A."];
-    const namesAr = ["خالد م.", "نورة ع.", "جيمس ب.", "ليلى هـ.", "عمر س.", "دانة و.", "طارق ع."];
-    
-    const names = isArabic ? namesAr : namesEn;
-    const name = names[Math.floor(Math.random() * names.length)];
-    
-    return {
-      id: Date.now(),
-      type,
-      user: name,
-      time: isArabic ? "الآن" : "Just now"
-    };
-  };
 
   return (
     <div className="w-full max-w-md mx-auto bg-white rounded-3xl shadow-2xl border border-stone-100 overflow-hidden flex flex-col h-[400px]" dir={isAr ? "rtl" : "ltr"}>
@@ -147,7 +169,7 @@ function CountUp({ value }: { value: number }) {
     )
 }
 
-function ActivityIcon({ type }: { type: string }) {
+function ActivityIcon({ type }: { type: ActivityType }) {
   switch (type) {
     case "rsvp_yes":
       return <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600"><CheckCircle size={14} /></div>;
@@ -166,7 +188,7 @@ function ActivityIcon({ type }: { type: string }) {
   }
 }
 
-function getActivityText(activity: any, isAr: boolean) {
+function getActivityText(activity: Activity, isAr: boolean) {
     if (isAr) {
         switch (activity.type) {
             case "rsvp_yes": return `${activity.user} أكد الحضور`;
