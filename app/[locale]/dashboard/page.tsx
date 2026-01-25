@@ -43,7 +43,7 @@ export default async function Dashboard({
     : events[0];
   
   // Fetch paginated guests for the current event
-  const { guests, pagination, stats } = await getGuestsPaginated(currentEvent.id, {
+  const { guests, pagination, stats, inviteTotals } = await getGuestsPaginated(currentEvent.id, {
     page: 1,
     pageSize: 50,
   });
@@ -117,6 +117,7 @@ export default async function Dashboard({
             initialGuests={guests}
             initialPagination={pagination}
             initialStats={stats}
+            initialInviteTotals={inviteTotals}
           />
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect, memo } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle2, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Send } from "lucide-react";
+import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle2, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Send, Filter } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import InvitePreview from "@/app/components/InvitePreview";
 import { useLocale, useTranslations } from "next-intl";
@@ -50,20 +50,45 @@ type GuestStats = {
   failed: number;
 };
 
+type InviteTotals = {
+  filtered: number;
+  all: number;
+};
+
 // Memoized stat card to avoid re-renders
 const StatCard = memo(function StatCard({
   label,
   value,
   icon,
   iconBgClassName,
+  onClick,
+  isActive = false,
+  activeTintClassName,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   iconBgClassName: string;
+  onClick?: () => void;
+  isActive?: boolean;
+  activeTintClassName?: string;
 }) {
   return (
-    <div className="group bg-white p-4 rounded-xl border border-stone-200 shadow-sm flex flex-col justify-between h-full transition-all hover:shadow-md hover:border-stone-300">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className={`group p-4 rounded-xl border shadow-sm flex flex-col justify-between h-full transition-all text-start ${
+        onClick
+          ? "cursor-pointer hover:shadow-md hover:border-stone-300 hover:-translate-y-0.5 active:translate-y-0"
+          : "cursor-default"
+      } ${
+        isActive
+          ? `border-stone-900 shadow-md ${activeTintClassName || "bg-stone-50"}`
+          : "border-stone-200 bg-white"
+      }`}
+      aria-pressed={isActive}
+    >
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] md:text-xs font-medium text-stone-500">{label}</span>
         <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${iconBgClassName}`}>
@@ -73,7 +98,7 @@ const StatCard = memo(function StatCard({
       <div className="text-xl md:text-2xl font-semibold text-stone-900 tabular-nums">
         {value}
       </div>
-    </div>
+    </button>
   );
 });
 
@@ -82,12 +107,14 @@ export default function EventPanelClient({
   initialGuests,
   initialPagination,
   initialStats,
+  initialInviteTotals,
   sendInvitesAction,
 }: {
   event: EventForClient;
   initialGuests: GuestRowData[];
   initialPagination: PaginationInfo;
   initialStats: GuestStats;
+  initialInviteTotals: InviteTotals;
   sendInvitesAction: (formData: FormData) => Promise<void>;
 }) {
   const t = useTranslations("Dashboard");
@@ -100,7 +127,9 @@ export default function EventPanelClient({
 
   // Shared state
   const [serverStats, setServerStats] = useState<GuestStats>(initialStats);
+  const [serverInviteTotals, setServerInviteTotals] = useState<InviteTotals>(initialInviteTotals);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -155,14 +184,24 @@ export default function EventPanelClient({
   // Client-side filtering (instant)
   const clientFilteredGuests = useMemo(() => {
     if (!useClientSide) return [];
-    if (!searchQuery.trim()) return allGuests;
     const query = searchQuery.toLowerCase().trim();
-    return allGuests.filter(
-      (g) =>
-        g.name.toLowerCase().includes(query) ||
-        g.phone.toLowerCase().includes(query)
-    );
-  }, [useClientSide, allGuests, searchQuery]);
+    return allGuests.filter((g) => {
+      const statusOk = selectedStatuses.length === 0 || selectedStatuses.includes(g.status);
+      if (!statusOk) return false;
+      if (!query) return true;
+      return g.name.toLowerCase().includes(query) || g.phone.toLowerCase().includes(query);
+    });
+  }, [useClientSide, allGuests, searchQuery, selectedStatuses]);
+
+  const clientInviteTotals = useMemo(() => {
+    if (!useClientSide) return { all: 0, filtered: 0 };
+    const sum = (arr: GuestRowData[]) =>
+      arr.reduce((acc, g) => acc + (Number.isFinite(g.inviteCount) ? (g.inviteCount as number) : 1), 0);
+    return {
+      all: sum(allGuests),
+      filtered: sum(clientFilteredGuests),
+    };
+  }, [useClientSide, allGuests, clientFilteredGuests]);
 
   // === SERVER-SIDE MODE (for large lists) ===
   const [serverGuests, setServerGuests] = useState<GuestRowData[]>(
@@ -182,17 +221,19 @@ export default function EventPanelClient({
 
   // Fetch from server when search/page changes (server-side mode only)
   const fetchFromServer = useCallback(
-    async (page: number, search: string) => {
+    async (page: number, search: string, statuses: string[]) => {
       setIsLoading(true);
       try {
         const result = await getGuestsPaginated(event.id, {
           page,
           pageSize,
           search,
+          statuses,
         });
         setServerGuests(result.guests);
         setServerPagination(result.pagination);
         setServerStats(result.stats);
+        setServerInviteTotals(result.inviteTotals);
       } catch (error) {
         console.error("Failed to fetch guests:", error);
       } finally {
@@ -206,12 +247,13 @@ export default function EventPanelClient({
   const [hasSearched, setHasSearched] = useState(false);
   useEffect(() => {
     if (useClientSide) return;
-    if (debouncedSearch !== "") setHasSearched(true);
-    if (debouncedSearch !== "" || hasSearched) {
-      fetchFromServer(1, debouncedSearch);
+    const hasAnyFilter = debouncedSearch !== "" || selectedStatuses.length > 0;
+    if (hasAnyFilter) setHasSearched(true);
+    if (hasAnyFilter || hasSearched) {
+      fetchFromServer(1, debouncedSearch, selectedStatuses);
       setCurrentPage(1);
     }
-  }, [useClientSide, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [useClientSide, debouncedSearch, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // === UNIFIED OUTPUT ===
   const displayGuests = useMemo(() => {
@@ -243,17 +285,17 @@ export default function EventPanelClient({
     if (useClientSide) {
       setCurrentPage(1);
     }
-  }, [useClientSide, searchQuery]);
+  }, [useClientSide, searchQuery, selectedStatuses]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
     if (!useClientSide) {
-      fetchFromServer(newPage, debouncedSearch);
+      fetchFromServer(newPage, debouncedSearch, selectedStatuses);
     }
   };
 
   // Track if a search is in progress (debouncing or fetching)
-  const isSearching = !useClientSide && searchQuery !== "" && (
+  const isSearching = !useClientSide && (searchQuery !== "" || selectedStatuses.length > 0) && (
     searchQuery !== debouncedSearch || isLoading
   );
 
@@ -269,6 +311,16 @@ export default function EventPanelClient({
       declined: serverStats.declined,
     };
   }, [serverStats]);
+
+  const invitedCountDisplay = useMemo(() => {
+    if (!event.guestsEnabled) return stats.invited;
+    return useClientSide ? clientInviteTotals.all : serverInviteTotals.all;
+  }, [event.guestsEnabled, stats.invited, useClientSide, clientInviteTotals.all, serverInviteTotals.all]);
+
+  const listTotalDisplay = useMemo(() => {
+    if (!event.guestsEnabled) return pagination.totalCount;
+    return useClientSide ? clientInviteTotals.filtered : serverInviteTotals.filtered;
+  }, [event.guestsEnabled, pagination.totalCount, useClientSide, clientInviteTotals.filtered, serverInviteTotals.filtered]);
 
   const pendingToSend = useMemo(() => {
     // Count from server stats since we need the full count
@@ -292,6 +344,14 @@ export default function EventPanelClient({
           totalPages: Math.ceil((prev.totalCount + newGuests.length) / prev.pageSize),
         }));
       }
+      // Update invite totals locally (best-effort; server refresh will correct as needed)
+      if (event.guestsEnabled) {
+        const addedInvites = newGuests.reduce((acc, g) => acc + (Number.isFinite(g.inviteCount) ? (g.inviteCount as number) : 1), 0);
+        setServerInviteTotals((prev) => ({
+          all: prev.all + addedInvites,
+          filtered: prev.filtered + addedInvites,
+        }));
+      }
       // Update stats locally
       setServerStats((prev) => ({
         ...prev,
@@ -299,7 +359,7 @@ export default function EventPanelClient({
         pending: prev.pending + newGuests.length,
       }));
     },
-    [useClientSide, pageSize]
+    [useClientSide, pageSize, event.guestsEnabled]
   );
 
   // Handle local state updates when a guest is deleted
@@ -308,12 +368,20 @@ export default function EventPanelClient({
       if (useClientSide) {
         setAllGuests((prev) => prev.filter((g) => g.id !== guestId));
       } else {
+        const removed = serverGuests.find((g) => g.id === guestId);
         setServerGuests((prev) => prev.filter((g) => g.id !== guestId));
         setServerPagination((prev) => ({
           ...prev,
           totalCount: Math.max(0, prev.totalCount - 1),
           totalPages: Math.ceil(Math.max(0, prev.totalCount - 1) / prev.pageSize),
         }));
+        if (event.guestsEnabled && removed) {
+          const removedInvites = Number.isFinite(removed.inviteCount) ? (removed.inviteCount as number) : 1;
+          setServerInviteTotals((prev) => ({
+            all: Math.max(0, prev.all - removedInvites),
+            filtered: Math.max(0, prev.filtered - removedInvites),
+          }));
+        }
       }
       // Update stats locally
       setServerStats((prev) => ({
@@ -322,7 +390,7 @@ export default function EventPanelClient({
         pending: Math.max(0, prev.pending - 1),
       }));
     },
-    [useClientSide]
+    [useClientSide, event.guestsEnabled, serverGuests]
   );
 
   const handleGuestUpdated = useCallback(
@@ -330,10 +398,22 @@ export default function EventPanelClient({
       if (useClientSide) {
         setAllGuests((prev) => prev.map((g) => (g.id === updated.id ? { ...g, ...updated } : g)));
       } else {
+        const prevRow = serverGuests.find((g) => g.id === updated.id);
         setServerGuests((prev) => prev.map((g) => (g.id === updated.id ? { ...g, ...updated } : g)));
+        if (event.guestsEnabled && prevRow) {
+          const before = Number.isFinite(prevRow.inviteCount) ? (prevRow.inviteCount as number) : 1;
+          const after = Number.isFinite(updated.inviteCount) ? (updated.inviteCount as number) : 1;
+          const delta = after - before;
+          if (delta !== 0) {
+            setServerInviteTotals((prev) => ({
+              all: Math.max(0, prev.all + delta),
+              filtered: Math.max(0, prev.filtered + delta),
+            }));
+          }
+        }
       }
     },
-    [useClientSide]
+    [useClientSide, event.guestsEnabled, serverGuests]
   );
 
   // Handle when all pending guests are deleted
@@ -342,31 +422,43 @@ export default function EventPanelClient({
       // Remove all pending/failed guests from local state
       setAllGuests((prev) => prev.filter((g) => g.status !== 'pending' && g.status !== 'failed'));
     } else {
-      // For server-side, filter current page and update pagination
-      setServerGuests((prev) => prev.filter((g) => g.status !== 'pending' && g.status !== 'failed'));
-      setServerPagination((prev) => ({
-        ...prev,
-        totalCount: Math.max(0, prev.totalCount - serverStats.pending - serverStats.failed),
-        totalPages: Math.ceil(Math.max(0, prev.totalCount - serverStats.pending - serverStats.failed) / prev.pageSize),
-      }));
+      // Server-side: refresh from server to keep invite totals accurate
+      (async () => {
+        setIsLoading(true);
+        try {
+          const result = await getGuestsPaginated(event.id, {
+            page: 1,
+            pageSize,
+            search: debouncedSearch,
+            statuses: selectedStatuses,
+          });
+          setServerGuests(result.guests);
+          setServerPagination(result.pagination);
+          setServerStats(result.stats);
+          setServerInviteTotals(result.inviteTotals);
+          setCurrentPage(1);
+        } catch (error) {
+          console.error("Failed to refresh guests after delete-all:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      })();
     }
-    // Reset stats for pending/failed
-    setServerStats((prev) => ({
-      ...prev,
-      total: prev.total - prev.pending - prev.failed,
-      pending: 0,
-      failed: 0,
-    }));
-  }, [useClientSide, serverStats.pending, serverStats.failed]);
+  }, [useClientSide, event.id, pageSize, debouncedSearch, selectedStatuses]);
 
   // Handle when invites are sent - refresh data to get updated statuses
   const handleInvitesSent = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await getGuestsPaginated(event.id, {
+      const result = await getGuestsPaginated(event.id, useClientSide ? {
+        page: 1,
+        pageSize: Math.max(serverStats.total || 0, pageSize),
+        search: "",
+      } : {
         page: currentPage,
         pageSize,
-        search: useClientSide ? "" : debouncedSearch,
+        search: debouncedSearch,
+        statuses: selectedStatuses,
       });
       if (useClientSide) {
         setAllGuests(result.guests);
@@ -375,12 +467,73 @@ export default function EventPanelClient({
         setServerPagination(result.pagination);
       }
       setServerStats(result.stats);
+      setServerInviteTotals(result.inviteTotals);
     } catch (error) {
       console.error("Failed to refresh guests:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [event.id, currentPage, pageSize, useClientSide, debouncedSearch]);
+  }, [event.id, currentPage, pageSize, useClientSide, debouncedSearch, selectedStatuses, serverStats.total]);
+
+  const statusOptions = useMemo(
+    () => [
+      { value: "pending", label: t("status_pending") },
+      { value: "sent", label: t("status_sent") },
+      { value: "delivered", label: t("status_delivered") },
+      { value: "read", label: t("status_read") },
+      { value: "confirmed", label: t("status_present") },
+      { value: "declined", label: t("status_declined") },
+      { value: "failed", label: t("status_failed") },
+    ],
+    [t]
+  );
+
+  const hasFilters = searchQuery.trim() !== "" || selectedStatuses.length > 0;
+
+  const normalizeStatuses = useCallback((arr: string[]) => {
+    return Array.from(new Set(arr.map((s) => String(s || "").trim()).filter(Boolean))).sort();
+  }, []);
+
+  const sameStatuses = useCallback(
+    (a: string[], b: string[]) => {
+      const aa = normalizeStatuses(a);
+      const bb = normalizeStatuses(b);
+      if (aa.length !== bb.length) return false;
+      for (let i = 0; i < aa.length; i++) if (aa[i] !== bb[i]) return false;
+      return true;
+    },
+    [normalizeStatuses]
+  );
+
+  const toggleStatusFilter = useCallback(
+    (statusesToApply: string[]) => {
+      setSelectedStatuses((prev) => {
+        const next = normalizeStatuses(statusesToApply);
+        return sameStatuses(prev, next) ? [] : next;
+      });
+    },
+    [normalizeStatuses, sameStatuses]
+  );
+
+  const activeQuickFilter = useMemo(() => normalizeStatuses(selectedStatuses), [normalizeStatuses, selectedStatuses]);
+  const isPendingQuickActive = useMemo(
+    () => sameStatuses(activeQuickFilter, ["pending", "failed"]),
+    [activeQuickFilter, sameStatuses]
+  );
+  const isSentQuickActive = useMemo(() => sameStatuses(activeQuickFilter, ["sent"]), [activeQuickFilter, sameStatuses]);
+  const isDeliveredQuickActive = useMemo(
+    () => sameStatuses(activeQuickFilter, ["delivered"]),
+    [activeQuickFilter, sameStatuses]
+  );
+  const isReadQuickActive = useMemo(() => sameStatuses(activeQuickFilter, ["read"]), [activeQuickFilter, sameStatuses]);
+  const isConfirmedQuickActive = useMemo(
+    () => sameStatuses(activeQuickFilter, ["confirmed"]),
+    [activeQuickFilter, sameStatuses]
+  );
+  const isDeclinedQuickActive = useMemo(
+    () => sameStatuses(activeQuickFilter, ["declined"]),
+    [activeQuickFilter, sameStatuses]
+  );
 
   return (
     <div className="space-y-8">
@@ -406,7 +559,7 @@ export default function EventPanelClient({
                 </h1>
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-stone-900 rounded-full">
                   <Users size={14} className="text-stone-300" />
-                  <span className="text-sm font-semibold text-white tabular-nums">{stats.invited}</span>
+                  <span className="text-sm font-semibold text-white tabular-nums">{invitedCountDisplay}</span>
                   <span className="text-xs text-stone-400">{t("guests_label") || "guests"}</span>
                 </div>
               </div>
@@ -461,7 +614,7 @@ export default function EventPanelClient({
               <button
                 type="button"
                 onClick={() => setShowPreview(true)}
-                className="px-4 py-2 bg-white/70 hover:bg-white border border-stone-200 rounded-lg text-sm font-medium text-stone-700 transition-all flex items-center gap-2 shadow-sm"
+                className="px-4 py-2 bg-white/70 hover:bg-white border border-stone-200 rounded-lg text-sm font-medium text-stone-700 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
               >
                 <Eye size={16} />
                 {t("preview_invite") || "Preview Invite"}
@@ -491,7 +644,7 @@ export default function EventPanelClient({
                 eventId={event.id}
                 guestsEnabled={event.guestsEnabled}
                 onGuestsAdded={handleGuestsAdded}
-                buttonClassName="w-full px-6 py-3 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2 bg-white text-stone-900 border border-stone-200 hover:bg-stone-50 hover:-translate-y-0.5"
+                buttonClassName="w-full px-6 py-3 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2 bg-white text-stone-900 border border-stone-200 hover:bg-stone-50 hover:-translate-y-0.5 cursor-pointer"
               />
             </div>
           </div>
@@ -505,36 +658,54 @@ export default function EventPanelClient({
           value={stats.pending}
           icon={<Clock size={16} />}
           iconBgClassName="bg-amber-50 border border-amber-100 text-amber-600"
+          onClick={() => toggleStatusFilter(["pending", "failed"])}
+          isActive={isPendingQuickActive}
+          activeTintClassName="bg-amber-50/70"
         />
         <StatCard
           label={t("sent")}
           value={stats.sent}
           icon={<Send size={16} />}
           iconBgClassName="bg-violet-50 border border-violet-100 text-violet-600"
+          onClick={() => toggleStatusFilter(["sent"])}
+          isActive={isSentQuickActive}
+          activeTintClassName="bg-violet-50/70"
         />
         <StatCard
           label={t("delivered")}
           value={stats.delivered}
           icon={<Check size={16} />}
           iconBgClassName="bg-sky-50 border border-sky-100 text-sky-600"
+          onClick={() => toggleStatusFilter(["delivered"])}
+          isActive={isDeliveredQuickActive}
+          activeTintClassName="bg-sky-50/70"
         />
         <StatCard
           label={t("read")}
           value={stats.read}
           icon={<CheckCheck size={16} />}
           iconBgClassName="bg-blue-50 border border-blue-100 text-blue-600"
+          onClick={() => toggleStatusFilter(["read"])}
+          isActive={isReadQuickActive}
+          activeTintClassName="bg-blue-50/70"
         />
         <StatCard
           label={t("confirmed")}
           value={stats.confirmed}
           icon={<CheckCircle2 size={16} />}
           iconBgClassName="bg-green-50 border border-green-100 text-green-600"
+          onClick={() => toggleStatusFilter(["confirmed"])}
+          isActive={isConfirmedQuickActive}
+          activeTintClassName="bg-green-50/70"
         />
         <StatCard
           label={t("declined")}
           value={stats.declined}
           icon={<XCircle size={16} />}
           iconBgClassName="bg-red-50 border border-red-100 text-red-600"
+          onClick={() => toggleStatusFilter(["declined"])}
+          isActive={isDeclinedQuickActive}
+          activeTintClassName="bg-red-50/70"
         />
       </div>
 
@@ -545,7 +716,7 @@ export default function EventPanelClient({
             <h3 className="font-medium text-stone-900">{t("guest_list")}</h3>
             {isLoading && <Loader2 size={14} className="animate-spin text-stone-400" />}
             <span className="text-xs text-stone-400">
-              ({pagination.totalCount} {t("total_guests") || "total"})
+              ({listTotalDisplay} {t("total_guests") || "total"})
             </span>
             <DeleteAllGuestsButton
               eventId={event.id}
@@ -553,21 +724,72 @@ export default function EventPanelClient({
               onDeleted={handleAllGuestsDeleted}
             />
           </div>
-          <div className="relative w-full sm:w-auto">
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 rtl:right-auto rtl:left-3">
-              {isSearching ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Search size={14} />
-              )}
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("search_placeholder")}
-              className="pr-8 pl-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-xs focus:outline-none focus:border-stone-400 w-full sm:w-48 rtl:pr-4 rtl:pl-8"
-            />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <details className="relative group">
+              <summary className="list-none cursor-pointer select-none px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-xs text-stone-700 hover:bg-stone-100 transition-colors inline-flex items-center gap-2 whitespace-nowrap">
+                <Filter size={14} className="text-stone-400" />
+                <span>
+                  {selectedStatuses.length === 0
+                    ? `${t("status_filter")} · ${t("status_filter_all")}`
+                    : `${t("status_filter")} · ${selectedStatuses.length}`}
+                </span>
+              </summary>
+              <div className="absolute z-50 mt-2 right-0 rtl:right-auto rtl:left-0 w-60 bg-white border border-stone-200 rounded-xl shadow-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-medium text-stone-700">{t("status_filter")}</div>
+                  <button
+                    type="button"
+                    className="text-xs text-stone-500 hover:text-stone-900 cursor-pointer disabled:cursor-not-allowed"
+                    onClick={() => setSelectedStatuses([])}
+                    disabled={selectedStatuses.length === 0}
+                  >
+                    {t("status_filter_clear")}
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {statusOptions.map((opt) => {
+                    const checked = selectedStatuses.includes(opt.value);
+                    return (
+                      <label
+                        key={opt.value}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-stone-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setSelectedStatuses((prev) =>
+                              prev.includes(opt.value)
+                                ? prev.filter((s) => s !== opt.value)
+                                : [...prev, opt.value]
+                            );
+                          }}
+                          className="accent-stone-900"
+                        />
+                        <span className="text-xs text-stone-700">{opt.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </details>
+
+            <div className="relative w-full sm:w-auto">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 rtl:right-auto rtl:left-3">
+                {isSearching ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Search size={14} />
+                )}
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t("search_placeholder")}
+                className="pr-8 pl-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-xs focus:outline-none focus:border-stone-400 w-full sm:w-48 rtl:pr-4 rtl:pl-8"
+              />
+            </div>
           </div>
         </div>
 
@@ -583,6 +805,7 @@ export default function EventPanelClient({
           onPageChange={handlePageChange}
           isLoading={isLoading}
           searchQuery={searchQuery}
+          hasFilters={hasFilters}
         />
       </div>
 

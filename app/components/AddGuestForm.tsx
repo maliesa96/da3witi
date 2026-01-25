@@ -161,7 +161,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
         aria-expanded={isOpen}
         className={
           buttonClassName ??
-          "w-full md:w-auto px-4 py-2 bg-stone-900 text-white rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          "w-full md:w-auto px-4 py-2 bg-stone-900 text-white rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         }
       >
         <Plus size={16} />
@@ -194,7 +194,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                 <button
                   type="button"
                   onClick={closeAndReset}
-                  className="p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+                  className="p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
                   aria-label={t('cancel')}
                 >
                   <X size={18} />
@@ -208,7 +208,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                   <button
                     type="button"
                     onClick={() => setMode('file')}
-                    className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                    className={`flex-1 py-3 text-sm font-medium transition-colors cursor-pointer ${
                       mode === 'file'
                         ? 'text-stone-900 border-b-2 border-stone-900 bg-white'
                         : 'text-stone-500 hover:text-stone-700'
@@ -219,7 +219,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                   <button
                     type="button"
                     onClick={() => setMode('manual')}
-                    className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                    className={`flex-1 py-3 text-sm font-medium transition-colors cursor-pointer ${
                       mode === 'manual'
                         ? 'text-stone-900 border-b-2 border-stone-900 bg-white'
                         : 'text-stone-500 hover:text-stone-700'
@@ -322,7 +322,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                                 setImportStartRow(0);
                                 setImportFileName(null);
                               }}
-                              className="text-xs font-medium text-stone-600 hover:text-stone-900 border border-stone-200 bg-white px-3 py-2 rounded-lg"
+                              className="text-xs font-medium text-stone-600 hover:text-stone-900 border border-stone-200 bg-white px-3 py-2 rounded-lg cursor-pointer"
                             >
                               {tw('change_file')}
                             </button>
@@ -431,7 +431,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                             <button
                               type="button"
                               onClick={() => setManualInvites(manualInvites.filter((_, i) => i !== index))}
-                              className="mt-7 p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              className="mt-7 p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                             >
                               <Trash2 size={18} />
                             </button>
@@ -442,7 +442,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                       <button
                         type="button"
                         onClick={() => setManualInvites([...manualInvites, { name: '', phone: '', inviteCountInput: '1' }])}
-                        className="mt-2 w-full py-3 border-2 border-dashed border-stone-200 rounded-xl text-stone-500 hover:text-stone-700 hover:border-stone-300 hover:bg-stone-50 transition-all flex items-center justify-center gap-2 text-sm font-medium"
+                        className="mt-2 w-full py-3 border-2 border-dashed border-stone-200 rounded-xl text-stone-500 hover:text-stone-700 hover:border-stone-300 hover:bg-stone-50 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer"
                       >
                         <Plus size={18} />
                         <span>{tw('add_guest')}</span>
@@ -459,7 +459,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                     <button
                       type="button"
                       onClick={closeAndReset}
-                      className="px-4 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all"
+                      className="px-4 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all cursor-pointer"
                     >
                       {t('cancel')}
                     </button>
@@ -485,7 +485,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                       className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                         isSubmitting || totalCount === 0 || !eventId
                           ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
-                          : 'bg-stone-900 text-white hover:bg-stone-800'
+                          : 'bg-stone-900 text-white hover:bg-stone-800 cursor-pointer'
                       }`}
                     >
                       {isSubmitting ? (

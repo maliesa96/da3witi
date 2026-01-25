@@ -150,7 +150,7 @@ export default function ConfirmSendInvitesButton({
                 transition={{ duration: 0.18, ease: "easeOut" }}
                 onClick={(e) => e.stopPropagation()}
               >
-            <div className="px-6 py-5 border-b border-stone-100 bg-gradient-to-b from-white to-stone-50/60">
+            <div className="px-6 py-5 border-b border-stone-100 bg-linear-to-b from-white to-stone-50/60">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 border border-amber-100 text-amber-700">
@@ -170,7 +170,7 @@ export default function ConfirmSendInvitesButton({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+                  className="p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
                   aria-label={t("cancel")}
                 >
                   <X size={18} />
@@ -194,7 +194,7 @@ export default function ConfirmSendInvitesButton({
               {!isPaid && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                   <div className="flex items-start gap-2">
-                    <CreditCard size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                    <CreditCard size={14} className="text-amber-600 mt-0.5 shrink-0" />
                     <div className="text-xs text-amber-700 space-y-1">
                       <div>
                         {locale === 'ar' 
@@ -219,7 +219,7 @@ export default function ConfirmSendInvitesButton({
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={isSending || isRedirectingToPayment}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {t("cancel")}
               </button>
@@ -230,7 +230,7 @@ export default function ConfirmSendInvitesButton({
                 className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                   isSending || isRedirectingToPayment
                     ? "bg-stone-200 text-stone-400 cursor-not-allowed"
-                    : "bg-stone-900 text-white hover:bg-stone-800"
+                    : "bg-stone-900 text-white hover:bg-stone-800 cursor-pointer"
                 }`}
               >
                 {isSending || isRedirectingToPayment ? (

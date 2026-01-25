@@ -62,7 +62,7 @@ export default function DeleteAllGuestsButton({
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5"
+        className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
       >
         <Trash2 size={14} />
         {t('delete_all') || 'Delete All'}
@@ -72,7 +72,7 @@ export default function DeleteAllGuestsButton({
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              className="fixed inset-0 z-[9999] p-4 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center"
+              className="fixed inset-0 z-9999 p-4 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -106,7 +106,7 @@ export default function DeleteAllGuestsButton({
                     type="button"
                     onClick={() => !isDeleting && setIsOpen(false)}
                     disabled={isDeleting}
-                    className="p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors disabled:opacity-50"
+                    className="p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <X size={18} />
                   </button>
@@ -125,7 +125,7 @@ export default function DeleteAllGuestsButton({
                   type="button"
                   onClick={() => setIsOpen(false)}
                   disabled={isDeleting}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {t('cancel') || 'Cancel'}
                 </button>
@@ -133,7 +133,7 @@ export default function DeleteAllGuestsButton({
                   type="button"
                   onClick={handleDelete}
                   disabled={isDeleting}
-                  className="px-5 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-all flex items-center gap-2 disabled:opacity-70"
+                  className="px-5 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isDeleting ? (
                     <>

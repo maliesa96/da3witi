@@ -6,8 +6,11 @@ import { prisma } from '@/lib/prisma';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 // Pricing in fils (1 KWD = 1000 fils)
-const BASE_PRICE = 50000; // 50 KWD
-const QR_ADDON_PRICE = 10000; // 10 KWD
+// const BASE_PRICE = 50000; // 50 KWD
+// const QR_ADDON_PRICE = 10000; // 10 KWD
+
+const BASE_PRICE = 59500;
+const QR_ADDON_PRICE = 11900;
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,17 +48,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Event already paid for' }, { status: 400 });
     }
 
-    // Calculate total price
-    let totalPrice = BASE_PRICE;
-    if (event.qrEnabled) {
-      totalPrice += QR_ADDON_PRICE;
-    }
-
     // Build line items
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
       {
         price_data: {
-          currency: 'kwd',
+          currency: 'aed',
           product_data: {
             name: locale === 'ar' ? 'دعوة رقمية' : 'Digital Invitation',
             description: locale === 'ar' 

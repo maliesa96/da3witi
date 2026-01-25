@@ -181,7 +181,7 @@ function DeleteButton({
     <button
       type="button"
       disabled={pending}
-      className={`text-stone-400 hover:text-red-600 p-2 border border-stone-100 rounded-md hover:border-red-100 hover:bg-red-50 transition-colors ${
+      className={`text-stone-400 hover:text-red-600 p-2 border border-stone-100 rounded-md hover:border-red-100 hover:bg-red-50 transition-colors cursor-pointer disabled:cursor-not-allowed ${
         pending ? "opacity-60 cursor-not-allowed" : ""
       }`}
       title={t("delete_guest")}
@@ -245,6 +245,7 @@ function NoResultsState({
   t: (key: string, values?: Record<string, string | number | Date>) => string;
   searchQuery: string;
 }) {
+  const query = searchQuery.trim();
   return (
     <div className="px-6 py-16 text-center flex flex-col items-center">
       <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mb-4">
@@ -254,8 +255,10 @@ function NoResultsState({
         {t("no_results_title") || "No Results Found"}
       </h3>
       <p className="text-stone-500 text-sm max-w-xs mx-auto">
-        {t("no_results_desc", { query: searchQuery }) ||
-          `No guests match "${searchQuery}". Try a different search term.`}
+        {query
+          ? t("no_results_desc", { query }) ||
+            `No guests match "${query}". Try a different search term.`
+          : t("no_results_desc_filters") || "No guests match the selected filters."}
       </p>
     </div>
   );
@@ -330,7 +333,7 @@ function PaginationControls({
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={!pagination.hasPrevPage || isLoading}
-          className="p-2 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="p-2 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           aria-label={t("prev_page") || "Previous page"}
         >
           <ChevronLeft size={16} />
@@ -351,7 +354,7 @@ function PaginationControls({
                   pageNum === page
                     ? "bg-stone-900 text-white"
                     : "border border-stone-200 text-stone-600 hover:bg-stone-50"
-                } disabled:opacity-60`}
+                } cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed`}
               >
                 {pageNum}
               </button>
@@ -362,7 +365,7 @@ function PaginationControls({
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={!pagination.hasNextPage || isLoading}
-          className="p-2 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="p-2 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           aria-label={t("next_page") || "Next page"}
         >
           <ChevronRight size={16} />
@@ -451,7 +454,7 @@ function EditButton({
       <button
         type="button"
         disabled={pending}
-        className={`text-stone-400 hover:text-stone-900 p-2 border border-stone-100 rounded-md hover:border-stone-200 hover:bg-stone-50 transition-colors ${
+        className={`text-stone-400 hover:text-stone-900 p-2 border border-stone-100 rounded-md hover:border-stone-200 hover:bg-stone-50 transition-colors cursor-pointer disabled:cursor-not-allowed ${
           pending ? "opacity-60 cursor-not-allowed" : ""
         }`}
         title={t("edit_guest")}
@@ -475,7 +478,7 @@ function EditButton({
               <button
                 type="button"
                 onClick={closeModal}
-                className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white text-stone-500 hover:text-stone-700 transition-colors shadow-sm"
+                className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white text-stone-500 hover:text-stone-700 transition-colors shadow-sm cursor-pointer"
                 aria-label={t("cancel")}
               >
                 <X size={18} />
@@ -542,7 +545,7 @@ function EditButton({
                     type="button"
                     onClick={closeModal}
                     disabled={pending}
-                    className="px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm hover:bg-stone-50 disabled:opacity-60"
+                    className="px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm hover:bg-stone-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {t("cancel")}
                   </button>
@@ -550,7 +553,7 @@ function EditButton({
                     type="button"
                     onClick={save}
                     disabled={pending}
-                    className="px-3 py-2 rounded-lg bg-stone-900 text-white text-sm hover:bg-stone-800 disabled:opacity-60 inline-flex items-center gap-2"
+                    className="px-3 py-2 rounded-lg bg-stone-900 text-white text-sm hover:bg-stone-800 inline-flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {pending ? <Loader2 size={14} className="animate-spin" /> : null}
                     {pending ? t("saving") : t("save_changes")}
@@ -577,6 +580,7 @@ export function GuestListClient({
   onPageChange,
   isLoading,
   searchQuery = "",
+  hasFilters = false,
 }: {
   guests: GuestRowData[];
   eventId: string;
@@ -589,10 +593,11 @@ export function GuestListClient({
   onPageChange?: (page: number) => void;
   isLoading?: boolean;
   searchQuery?: string;
+  hasFilters?: boolean;
 }) {
   const t = useTranslations("Dashboard");
   const [showEmpty, setShowEmpty] = useState(guests.length === 0);
-  const isSearching = searchQuery.trim() !== "";
+  const isSearching = searchQuery.trim() !== "" || hasFilters;
 
   return (
     <>

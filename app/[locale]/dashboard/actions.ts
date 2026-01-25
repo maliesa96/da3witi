@@ -231,10 +231,13 @@ export async function sendInvitesForEvent(eventId: string, locale: 'en' | 'ar') 
 
 export async function getGuestsPaginated(
   eventId: string,
-  options: { page?: number; pageSize?: number; search?: string } = {}
+  options: { page?: number; pageSize?: number; search?: string; statuses?: string[] } = {}
 ) {
   const user = await getAuthedUser();
-  const { page = 1, pageSize = 50, search = '' } = options;
+  const { page = 1, pageSize = 50, search = '', statuses = [] } = options;
+  const normalizedStatuses = (statuses || [])
+    .map((s) => String(s || '').trim())
+    .filter(Boolean);
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -253,6 +256,7 @@ export async function getGuestsPaginated(
   // Build where clause for search
   const whereClause = {
     eventId,
+    ...(normalizedStatuses.length ? { status: { in: normalizedStatuses } } : {}),
     ...(search
       ? {
           OR: [
@@ -264,7 +268,7 @@ export async function getGuestsPaginated(
   };
 
   // Fetch guests and total count in parallel
-  const [guests, totalCount, statusCounts] = await Promise.all([
+  const [guests, totalCount, statusCounts, filteredInviteAgg, allInviteAgg] = await Promise.all([
     prisma.guest.findMany({
       where: whereClause,
       select: {
@@ -286,6 +290,14 @@ export async function getGuestsPaginated(
       by: ['status'],
       where: { eventId },
       _count: { status: true },
+    }),
+    prisma.guest.aggregate({
+      where: whereClause,
+      _sum: { inviteCount: true },
+    }),
+    prisma.guest.aggregate({
+      where: { eventId },
+      _sum: { inviteCount: true },
     }),
   ]);
 
@@ -322,6 +334,10 @@ export async function getGuestsPaginated(
       hasPrevPage: page > 1,
     },
     stats,
+    inviteTotals: {
+      filtered: filteredInviteAgg._sum.inviteCount ?? 0,
+      all: allInviteAgg._sum.inviteCount ?? 0,
+    },
   };
 }
 
