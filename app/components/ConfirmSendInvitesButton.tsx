@@ -8,13 +8,11 @@ import { useTranslations, useLocale } from "next-intl";
 
 export default function ConfirmSendInvitesButton({
   pendingToSend,
-  action,
   onSent,
   eventId,
   isPaid,
 }: {
   pendingToSend: number;
-  action: (formData: FormData) => Promise<void>;
   onSent?: () => void;
   eventId: string;
   isPaid: boolean;
@@ -88,7 +86,18 @@ export default function ConfirmSendInvitesButton({
     // If paid, send invites directly
     setIsSending(true);
     try {
-      await action(new FormData());
+      const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/send-invites`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ locale }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to send invites");
+      }
       setOpen(false);
       onSent?.();
     } catch (error) {

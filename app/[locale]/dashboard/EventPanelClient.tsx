@@ -12,7 +12,6 @@ import AddGuestForm from "@/app/components/AddGuestForm";
 import ConfirmSendInvitesButton from "@/app/components/ConfirmSendInvitesButton";
 import DeleteAllGuestsButton from "@/app/components/DeleteAllGuestsButton";
 import { GuestListClient, type GuestRowData } from "@/app/components/AnimatedGuestRows";
-import { getGuestsPaginated } from "./actions";
 
 type EventForClient = {
   id: string;
@@ -108,14 +107,12 @@ export default function EventPanelClient({
   initialPagination,
   initialStats,
   initialInviteTotals,
-  sendInvitesAction,
 }: {
   event: EventForClient;
   initialGuests: GuestRowData[];
   initialPagination: PaginationInfo;
   initialStats: GuestStats;
   initialInviteTotals: InviteTotals;
-  sendInvitesAction: (formData: FormData) => Promise<void>;
 }) {
   const t = useTranslations("Dashboard");
   const locale = useLocale();
@@ -124,6 +121,39 @@ export default function EventPanelClient({
   const CLIENT_SIDE_THRESHOLD = 500;
   const useClientSide = initialPagination.totalCount <= CLIENT_SIDE_THRESHOLD;
   const pageSize = initialPagination.pageSize;
+
+  const fetchGuestsFromApi = useCallback(
+    async (options: { page?: number; pageSize?: number; search?: string; statuses?: string[] }) => {
+      const params = new URLSearchParams();
+      params.set("page", String(options.page ?? 1));
+      params.set("pageSize", String(options.pageSize ?? pageSize));
+      if (options.search) params.set("search", options.search);
+      if (options.statuses?.length) params.set("statuses", options.statuses.join(","));
+
+      const res = await fetch(`/api/events/${encodeURIComponent(event.id)}/guests?${params.toString()}`, {
+        cache: "no-store",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to fetch guests");
+      }
+      const normalized = {
+        ...data,
+        guests: (data?.guests || []).map((g: GuestRowData & { inviteCount?: number | null }) => ({
+          ...g,
+          inviteCount: g.inviteCount ?? undefined,
+        })),
+      };
+      return normalized as {
+        guests: GuestRowData[];
+        pagination: PaginationInfo;
+        stats: GuestStats;
+        inviteTotals: InviteTotals;
+      };
+    },
+    [event.id, pageSize]
+  );
 
   // Shared state
   const [serverStats, setServerStats] = useState<GuestStats>(initialStats);
@@ -164,7 +194,7 @@ export default function EventPanelClient({
     setIsLoading(true);
     (async () => {
       try {
-        const result = await getGuestsPaginated(event.id, {
+        const result = await fetchGuestsFromApi({
           page: 1,
           pageSize: initialPagination.totalCount,
         });
@@ -179,7 +209,7 @@ export default function EventPanelClient({
       }
     })();
     return () => { cancelled = true; };
-  }, [useClientSide, event.id, initialPagination.totalCount, initialGuests.length]);
+  }, [useClientSide, fetchGuestsFromApi, initialPagination.totalCount, initialGuests.length]);
 
   // Client-side filtering (instant)
   const clientFilteredGuests = useMemo(() => {
@@ -224,7 +254,7 @@ export default function EventPanelClient({
     async (page: number, search: string, statuses: string[]) => {
       setIsLoading(true);
       try {
-        const result = await getGuestsPaginated(event.id, {
+        const result = await fetchGuestsFromApi({
           page,
           pageSize,
           search,
@@ -240,7 +270,7 @@ export default function EventPanelClient({
         setIsLoading(false);
       }
     },
-    [event.id, pageSize]
+    [fetchGuestsFromApi, pageSize]
   );
 
   // Trigger server fetch on search/page change
@@ -426,7 +456,7 @@ export default function EventPanelClient({
       (async () => {
         setIsLoading(true);
         try {
-          const result = await getGuestsPaginated(event.id, {
+          const result = await fetchGuestsFromApi({
             page: 1,
             pageSize,
             search: debouncedSearch,
@@ -444,22 +474,26 @@ export default function EventPanelClient({
         }
       })();
     }
-  }, [useClientSide, event.id, pageSize, debouncedSearch, selectedStatuses]);
+  }, [useClientSide, fetchGuestsFromApi, pageSize, debouncedSearch, selectedStatuses]);
 
   // Handle when invites are sent - refresh data to get updated statuses
   const handleInvitesSent = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await getGuestsPaginated(event.id, useClientSide ? {
-        page: 1,
-        pageSize: Math.max(serverStats.total || 0, pageSize),
-        search: "",
-      } : {
-        page: currentPage,
-        pageSize,
-        search: debouncedSearch,
-        statuses: selectedStatuses,
-      });
+      const result = await fetchGuestsFromApi(
+        useClientSide
+          ? {
+              page: 1,
+              pageSize: Math.max(serverStats.total || 0, pageSize),
+              search: "",
+            }
+          : {
+              page: currentPage,
+              pageSize,
+              search: debouncedSearch,
+              statuses: selectedStatuses,
+            }
+      );
       if (useClientSide) {
         setAllGuests(result.guests);
       } else {
@@ -473,7 +507,7 @@ export default function EventPanelClient({
     } finally {
       setIsLoading(false);
     }
-  }, [event.id, currentPage, pageSize, useClientSide, debouncedSearch, selectedStatuses, serverStats.total]);
+  }, [fetchGuestsFromApi, useClientSide, serverStats.total, pageSize, currentPage, debouncedSearch, selectedStatuses]);
 
   const statusOptions = useMemo(
     () => [
@@ -634,7 +668,6 @@ export default function EventPanelClient({
           <div className="flex flex-col gap-3 min-w-[200px]">
             <ConfirmSendInvitesButton 
               pendingToSend={pendingToSend} 
-              action={sendInvitesAction} 
               onSent={handleInvitesSent}
               eventId={event.id}
               isPaid={!!event.paidAt}
