@@ -68,7 +68,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
   const [fileContacts, setFileContacts] = useState<Array<{ name: string; phone: string; inviteCount?: number }>>([]);
 
   const manualCount = useMemo(
-    () => manualInvites.filter(i => i.name.trim() && i.phone.trim()).length,
+    () => manualInvites.filter(i => i.name.trim().length >= 2 && i.phone.trim()).length,
     [manualInvites]
   );
   const fileCount = fileContacts.length;
@@ -99,6 +99,13 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
 
     if (cleaned.length === 0) return;
 
+    for (const g of cleaned) {
+      if (g.name.length < 2) {
+        alert(tWizard('errors.name_too_short'));
+        return;
+      }
+    }
+
     const normalized: Array<{ name: string; phone: string }> = [];
     for (const g of cleaned) {
       const res = normalizePhoneToE164(g.phone);
@@ -121,6 +128,8 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
       const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('INVALID_PHONE')) {
         alert(tWizard('errors.invalid_phone'));
+      } else if (msg.includes('NAME_TOO_SHORT')) {
+        alert(tWizard('errors.name_too_short'));
       } else {
         alert('Failed to add guests. Please try again.');
       }
@@ -409,7 +418,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                       onClick={() => {
                         const guests = mode === 'file'
                           ? fileContacts
-                          : manualInvites.filter(i => i.name.trim() && i.phone.trim());
+                          : manualInvites.filter(i => i.name.trim().length >= 2 && i.phone.trim());
                         submitGuests(guests);
                       }}
                       className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${

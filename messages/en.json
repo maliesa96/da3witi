@@ -109,7 +109,8 @@
       "required": "This field is required",
       "invalid_map_link": "Please provide a valid Google Maps link or coordinates",
       "invalid_phone": "Invalid phone number. Please include the country code (example: +966...) and use digits only.",
-      "invalid_phone_row": "Row {row}: invalid phone number. Please include the country code (example: +966...) and use digits only."
+      "invalid_phone_row": "Row {row}: invalid phone number. Please include the country code (example: +966...) and use digits only.",
+      "name_too_short": "Guest name must be at least 2 characters."
     },
     "step1": {
       "title": "Guest List",

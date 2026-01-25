@@ -35,6 +35,7 @@ export async function createEvent(formData: {
   const guestsValidated = (formData.guests || []).map((guest) => {
     const name = String(guest.name || '').trim();
     const phoneRaw = String(guest.phone || '').trim();
+    if (name.length > 0 && name.length < 2) throw new Error('NAME_TOO_SHORT');
     const res = normalizePhoneToE164(phoneRaw);
     if (!name || !phoneRaw || !res.ok) throw new Error('INVALID_PHONE');
     return {

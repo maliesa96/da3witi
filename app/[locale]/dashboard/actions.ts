@@ -35,6 +35,9 @@ export async function addGuest(eventId: string, guestData: { name: string; phone
 
   const name = String(guestData.name || '').trim();
   const phoneRaw = String(guestData.phone || '').trim();
+  if (name.length > 0 && name.length < 2) {
+    throw new Error('NAME_TOO_SHORT');
+  }
   const phoneRes = normalizePhoneToE164(phoneRaw);
   if (!name || !phoneRaw || !phoneRes.ok) {
     throw new Error('INVALID_PHONE');
@@ -81,6 +84,7 @@ export async function addGuests(eventId: string, guests: { name: string; phone: 
   }
 
   const validated = cleaned.map((g) => {
+    if (g.name.length < 2) throw new Error('NAME_TOO_SHORT');
     const res = normalizePhoneToE164(g.phone);
     if (!res.ok) throw new Error('INVALID_PHONE');
     return { ...g, phone: res.phone };

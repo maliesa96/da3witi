@@ -196,6 +196,11 @@ export default function Wizard() {
     }));
 
     for (let i = 0; i < next.length; i++) {
+      const name = next[i].name;
+      if (name && name.length < 2) {
+        alert(t("errors.name_too_short"));
+        return { ok: false as const };
+      }
       const phone = next[i].phone;
       if (!phone) continue; // optional step; validate only when provided
       const res = normalizePhoneToE164(phone);
@@ -364,6 +369,8 @@ export default function Wizard() {
       const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('INVALID_PHONE')) {
         alert(t('errors.invalid_phone'));
+      } else if (msg.includes('NAME_TOO_SHORT')) {
+        alert(t('errors.name_too_short'));
       } else if (msg.includes('MESSAGE_TOO_LONG')) {
         alert(t('errors.message_too_long', { max: MAX_INVITE_MESSAGE_CHARS }));
       } else {
