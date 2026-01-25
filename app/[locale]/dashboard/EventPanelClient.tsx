@@ -125,9 +125,6 @@ export default function EventPanelClient({
 
   // === CLIENT-SIDE MODE (for small lists) ===
   const [allGuests, setAllGuests] = useState<GuestRowData[]>(initialGuests);
-  const [clientSideReady, setClientSideReady] = useState(
-    useClientSide && initialPagination.totalCount <= initialGuests.length
-  );
 
   // Load all guests for client-side filtering (only if under threshold)
   useEffect(() => {
@@ -145,7 +142,6 @@ export default function EventPanelClient({
         if (!cancelled) {
           setAllGuests(result.guests);
           setServerStats(result.stats);
-          setClientSideReady(true);
         }
       } catch (error) {
         console.error("Failed to fetch all guests:", error);
@@ -329,6 +325,17 @@ export default function EventPanelClient({
     [useClientSide]
   );
 
+  const handleGuestUpdated = useCallback(
+    (updated: GuestRowData) => {
+      if (useClientSide) {
+        setAllGuests((prev) => prev.map((g) => (g.id === updated.id ? { ...g, ...updated } : g)));
+      } else {
+        setServerGuests((prev) => prev.map((g) => (g.id === updated.id ? { ...g, ...updated } : g)));
+      }
+    },
+    [useClientSide]
+  );
+
   // Handle when all pending guests are deleted
   const handleAllGuestsDeleted = useCallback(() => {
     if (useClientSide) {
@@ -378,8 +385,8 @@ export default function EventPanelClient({
   return (
     <div className="space-y-8">
       {/* Event Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white via-stone-50 to-white border border-stone-200 shadow-sm">
-        <div className="absolute inset-0 bg-gradient-to-r from-amber-50/60 via-transparent to-blue-50/50"></div>
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-white via-stone-50 to-white border border-stone-200 shadow-sm">
+        <div className="absolute inset-0 bg-linear-to-r from-amber-50/60 via-transparent to-blue-50/50"></div>
         <div className="absolute top-0 right-0 -mt-16 -mr-16 w-72 h-72 bg-amber-200/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-72 h-72 bg-blue-200/20 rounded-full blur-3xl"></div>
 
@@ -571,6 +578,7 @@ export default function EventPanelClient({
           qrEnabled={event.qrEnabled}
           onGuestsAdded={handleGuestsAdded}
           onGuestDeleted={handleGuestDeleted}
+          onGuestUpdated={handleGuestUpdated}
           pagination={pagination}
           onPageChange={handlePageChange}
           isLoading={isLoading}
@@ -583,7 +591,7 @@ export default function EventPanelClient({
         <AnimatePresence>
           {showPreview && (
             <motion.div
-              className="fixed inset-0 z-[9999] p-4 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center"
+              className="fixed inset-0 z-9999 p-4 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

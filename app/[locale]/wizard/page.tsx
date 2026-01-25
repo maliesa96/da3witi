@@ -41,6 +41,8 @@ export default function Wizard() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isMobilePreviewOpen, setIsMobilePreviewOpen] = useState(false);
+  const [mobilePreviewTab, setMobilePreviewTab] = useState<"preview" | "text">("preview");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [step1ValidationError, setStep1ValidationError] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export default function Wizard() {
     messageLocale: locale as 'en' | 'ar',
     qrEnabled: true,
     guestsEnabled: false,
-    reminderEnabled: true,
+    reminderEnabled: false,
     isScheduled: false,
     scheduledDate: "",
     scheduledTime: "",
@@ -155,10 +157,82 @@ export default function Wizard() {
     tPreview,
   ]);
 
+  const renderedFullMessage = useMemo(() => {
+    try {
+      const fallbackInvitee = tPreview("default_invitee");
+      const inviteeFromList = invites.find(i => String(i.name || "").trim())?.name;
+      const invitee = String(inviteeFromList || fallbackInvitee || "").trim();
+
+      const inviteCount = invites.reduce((max, i) => Math.max(max, Number(i.inviteCount || 1)), 2);
+
+      return renderInviteMessage({
+        locale: details.messageLocale,
+        qrEnabled: details.qrEnabled,
+        guestsEnabled: details.guestsEnabled,
+        mediaType: (details.mediaType ?? "image") as InviteMediaType,
+        invitee,
+        greetingText: details.message || "",
+        // For the "full message text" helper we only show what the user entered.
+        // No example defaults for date/time/location.
+        date: details.date || "",
+        time: details.time || "",
+        locationName: details.locationName || "",
+        inviteCount,
+      });
+    } catch {
+      return details.message || "";
+    }
+  }, [
+    details.message,
+    details.messageLocale,
+    details.qrEnabled,
+    details.guestsEnabled,
+    details.mediaType,
+    details.date,
+    details.time,
+    details.locationName,
+    invites,
+    tPreview,
+  ]);
+
+  const renderedFullMessageHighlighted = useMemo(() => {
+    const greeting = String(details.message || "");
+    const full = String(renderedFullMessage || "");
+    const trimmed = greeting.trim();
+    if (!trimmed) {
+      return { before: full, match: "", after: "", hasMatch: false };
+    }
+    const idx = full.indexOf(greeting);
+    if (idx === -1) {
+      return { before: full, match: "", after: "", hasMatch: false };
+    }
+    return {
+      before: full.slice(0, idx),
+      match: full.slice(idx, idx + greeting.length),
+      after: full.slice(idx + greeting.length),
+      hasMatch: true,
+    };
+  }, [details.message, renderedFullMessage]);
+
   // Sync messageLocale with page locale when it changes
   useEffect(() => {
     setDetails(prev => ({ ...prev, messageLocale: locale }));
   }, [locale]);
+
+  // Mobile preview: lock scroll + esc to close
+  useEffect(() => {
+    if (!isMobilePreviewOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMobilePreviewOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isMobilePreviewOpen]);
 
   useEffect(() => {
     if (step1ValidationError && Object.keys(errors).length === 0) {
@@ -577,6 +651,41 @@ export default function Wizard() {
                       {messageTextLength}/{maxMessageTextChars}
                     </span>
                   </div>
+
+                  <div className="mt-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-700 flex items-start gap-2">
+                    <span className="mt-0.5 text-stone-500">
+                      <Info size={14} />
+                    </span>
+                    <div className="leading-relaxed">
+                      <div className="font-semibold text-stone-800">
+                        {t('step2.auto_adds_title')}
+                      </div>
+                      <div className="text-[11px] text-stone-600">
+                        {t('step2.auto_adds_desc')}
+                      </div>
+                    </div>
+                  </div>
+
+                  <details className="mt-3 rounded-lg border border-stone-200 bg-white overflow-hidden group">
+                    <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-stone-800 flex items-center justify-between hover:bg-stone-50">
+                      <span>{t('step2.full_message_summary')}</span>
+                      <span className="text-stone-400 group-open:rotate-180 transition-transform">▾</span>
+                    </summary>
+                    <div className="px-3 pb-3 pt-1">
+                      <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-800 whitespace-pre-wrap wrap-break-word" dir="auto">
+                        {renderedFullMessageHighlighted.before}
+                        {renderedFullMessageHighlighted.hasMatch && (
+                          <mark className="rounded px-1 bg-yellow-200/70 text-stone-900">
+                            {renderedFullMessageHighlighted.match}
+                          </mark>
+                        )}
+                        {renderedFullMessageHighlighted.hasMatch ? renderedFullMessageHighlighted.after : ""}
+                      </div>
+                      <div className="mt-2 text-[10px] text-stone-500">
+                        {t('step2.full_message_hint')}
+                      </div>
+                    </div>
+                  </details>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
@@ -603,7 +712,7 @@ export default function Wizard() {
                     {t('step2.event_name_hint')}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-xs font-medium text-stone-700 flex">
@@ -882,17 +991,23 @@ export default function Wizard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium text-stone-900">
-                      {t('step2.reminder_toggle')}
+                      <span className="inline-flex items-center gap-2">
+                        <span>{t('step2.reminder_toggle')}</span>
+                        <span className="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] font-semibold text-stone-600">
+                          {t('step2.coming_soon')}
+                        </span>
+                      </span>
                     </div>
                     <div className="text-[11px] text-stone-500">
                       {t('step2.reminder_desc')}
                     </div>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
+                  <label className="relative inline-flex items-center cursor-not-allowed opacity-60">
                     <input
                       type="checkbox"
-                      checked={details.reminderEnabled}
-                      onChange={(e) => setDetails({ ...details, reminderEnabled: e.target.checked })}
+                      checked={false}
+                      disabled
+                      readOnly
                       className="sr-only peer custom-checkbox"
                     />
                     <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
@@ -1020,6 +1135,132 @@ export default function Wizard() {
                </h4>
             </div>
           </div>
+
+          {/* Mobile: sticky preview button */}
+          <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pb-6 pt-4 bg-linear-to-t from-stone-50 via-stone-50/95 to-transparent">
+            <button
+              type="button"
+              onClick={() => {
+                setMobilePreviewTab("preview");
+                setIsMobilePreviewOpen(true);
+              }}
+              className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium text-sm hover:bg-stone-800 transition-colors shadow-lg"
+            >
+              {t('step2.open_preview')}
+            </button>
+          </div>
+
+          {/* Mobile: preview bottom sheet */}
+          {isMobilePreviewOpen && (
+            <div className="fixed inset-0 z-50 lg:hidden">
+              <button
+                type="button"
+                aria-label={t('step2.close_preview')}
+                onClick={() => setIsMobilePreviewOpen(false)}
+                className="absolute inset-0 bg-black/40"
+              />
+              <div className="absolute inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl bg-stone-50 border-t border-stone-200 shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-white">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-10 rounded-full bg-stone-200 mx-auto absolute left-1/2 -translate-x-1/2 -top-2 hidden" />
+                    <span className="text-sm font-semibold text-stone-900">
+                      {t('step2.preview_sheet_title')}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobilePreviewOpen(false)}
+                    className="text-xs font-semibold text-stone-600 hover:text-stone-900"
+                  >
+                    {t('step2.close_preview')}
+                  </button>
+                </div>
+
+                <div className="px-4 pt-3">
+                  <div className="inline-flex bg-stone-100 rounded-lg p-0.5 w-full">
+                    <button
+                      type="button"
+                      onClick={() => setMobilePreviewTab("preview")}
+                      className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-all ${
+                        mobilePreviewTab === "preview"
+                          ? "bg-white text-stone-900 shadow-sm"
+                          : "text-stone-600 hover:text-stone-900"
+                      }`}
+                    >
+                      {t('step2.preview_tab')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobilePreviewTab("text")}
+                      className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-all ${
+                        mobilePreviewTab === "text"
+                          ? "bg-white text-stone-900 shadow-sm"
+                          : "text-stone-600 hover:text-stone-900"
+                      }`}
+                    >
+                      {t('step2.text_tab')}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-y-auto max-h-[calc(92vh-112px)] px-4 pb-6 pt-4">
+                  {mobilePreviewTab === "preview" ? (
+                    <div className="flex justify-center">
+                      <div className="w-full max-w-[420px] scale-[0.92] origin-top">
+                        <InvitePreview
+                          date={details.date}
+                          time={details.time}
+                          locationName={details.locationName}
+                          location={details.location}
+                          message={details.message}
+                          imageUrl={details.imageUrl}
+                          mediaType={details.mediaType}
+                          mediaFilename={details.mediaFilename}
+                          mediaSize={details.mediaSize}
+                          showQr={details.qrEnabled}
+                          guestsEnabled={details.guestsEnabled}
+                          locale={details.messageLocale}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 flex items-start gap-2">
+                        <span className="mt-0.5 text-stone-500">
+                          <Info size={14} />
+                        </span>
+                        <div className="leading-relaxed">
+                          <div className="font-semibold text-stone-800">
+                            {t('step2.auto_adds_title')}
+                          </div>
+                          <div className="text-[11px] text-stone-600">
+                            {t('step2.auto_adds_desc')}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-stone-200 bg-white px-3 py-2">
+                        <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">
+                          {t('step2.full_message_title')}
+                        </div>
+                        <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-800 whitespace-pre-wrap wrap-break-word" dir="auto">
+                          {renderedFullMessageHighlighted.before}
+                          {renderedFullMessageHighlighted.hasMatch && (
+                            <mark className="rounded px-1 bg-yellow-200/70 text-stone-900">
+                              {renderedFullMessageHighlighted.match}
+                            </mark>
+                          )}
+                          {renderedFullMessageHighlighted.hasMatch ? renderedFullMessageHighlighted.after : ""}
+                        </div>
+                        <div className="mt-2 text-[10px] text-stone-500">
+                          {t('step2.full_message_hint')}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

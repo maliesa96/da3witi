@@ -237,7 +237,7 @@ export default function ContactImport({
     for (const { contact, rowNumber } of contactsWithRow) {
       const res = normalizePhoneToE164(contact.phone);
       if (!res.ok) {
-        alert(tWizard('errors.invalid_phone_row', { row: rowNumber }));
+        alert(tWizard('errors.invalid_phone_row', { row: rowNumber, phone: contact.phone }));
         return;
       }
       normalized.push({ ...contact, phone: res.phone });

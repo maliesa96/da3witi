@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   CheckCircle2,
@@ -8,13 +9,18 @@ import {
   ChevronRight,
   Circle,
   Loader2,
+  Pencil,
   Search,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { deleteGuest as deleteGuestServerAction } from "@/app/[locale]/dashboard/actions";
+import {
+  deleteGuest as deleteGuestServerAction,
+  updateGuest as updateGuestServerAction,
+} from "@/app/[locale]/dashboard/actions";
 import AddGuestForm from "@/app/components/AddGuestForm";
 
 export type GuestRowData = {
@@ -366,12 +372,182 @@ function PaginationControls({
   );
 }
 
+function EditButton({
+  guest,
+  guestsEnabled,
+  onUpdated,
+}: {
+  guest: GuestRowData;
+  guestsEnabled: boolean;
+  onUpdated: (guest: GuestRowData) => void;
+}) {
+  const t = useTranslations("Dashboard");
+  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState(guest.name);
+  const [phone, setPhone] = useState(guest.phone);
+  const [inviteCount, setInviteCount] = useState<number>(guest.inviteCount || 1);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const openModal = () => {
+    setError(null);
+    setName(guest.name);
+    setPhone(guest.phone);
+    setInviteCount(guest.inviteCount || 1);
+    setOpen(true);
+  };
+
+  const closeModal = () => {
+    if (pending) return;
+    setOpen(false);
+    setError(null);
+  };
+
+  const save = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      const res = await updateGuestServerAction(guest.id, {
+        name,
+        phone,
+        ...(guestsEnabled ? { inviteCount } : {}),
+      });
+      if (res?.success && res.guest) {
+        onUpdated(res.guest as GuestRowData);
+        setOpen(false);
+      } else {
+        setError(t("edit_guest_save_failed"));
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("NAME_TOO_SHORT")) setError(t("error_name_too_short"));
+      else if (msg.includes("INVALID_PHONE")) setError(t("error_invalid_phone"));
+      else if (msg.includes("INVALID_INVITE_COUNT")) setError(t("error_invalid_invite_count"));
+      else setError(t("edit_guest_save_failed"));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        disabled={pending}
+        className={`text-stone-400 hover:text-stone-900 p-2 border border-stone-100 rounded-md hover:border-stone-200 hover:bg-stone-50 transition-colors ${
+          pending ? "opacity-60 cursor-not-allowed" : ""
+        }`}
+        title={t("edit_guest")}
+        aria-label={t("edit_guest")}
+        onClick={openModal}
+      >
+        <Pencil size={16} />
+      </button>
+
+      {open &&
+        mounted &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-9999 p-4 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center"
+            onClick={closeModal}
+          >
+            <div
+              className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={closeModal}
+                className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white text-stone-500 hover:text-stone-700 transition-colors shadow-sm"
+                aria-label={t("cancel")}
+              >
+                <X size={18} />
+              </button>
+
+              <div className="p-5">
+                <div className="text-sm font-medium text-stone-900">{t("edit_guest_title")}</div>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">{t("guest_name")}</label>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:border-stone-400"
+                      placeholder={t("guest_name_placeholder")}
+                      disabled={pending}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">{t("guest_phone")}</label>
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:border-stone-400 dir-ltr text-start font-mono"
+                      disabled={pending}
+                    />
+                  </div>
+                  {guestsEnabled && (
+                    <div>
+                      <label className="block text-xs text-stone-500 mb-1">{t("col_invite_count")}</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={inviteCount}
+                        onChange={(e) => setInviteCount(Number(e.target.value || 1))}
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:border-stone-400"
+                        disabled={pending}
+                      />
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                      {error}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    disabled={pending}
+                    className="px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm hover:bg-stone-50 disabled:opacity-60"
+                  >
+                    {t("cancel")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={save}
+                    disabled={pending}
+                    className="px-3 py-2 rounded-lg bg-stone-900 text-white text-sm hover:bg-stone-800 disabled:opacity-60 inline-flex items-center gap-2"
+                  >
+                    {pending ? <Loader2 size={14} className="animate-spin" /> : null}
+                    {pending ? t("saving") : t("save_changes")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
+  );
+}
+
 export function GuestListClient({
   guests,
   eventId,
   guestsEnabled = false,
   qrEnabled = false,
   onGuestDeleted,
+  onGuestUpdated,
   onGuestsAdded,
   pagination,
   onPageChange,
@@ -383,6 +559,7 @@ export function GuestListClient({
   guestsEnabled?: boolean;
   qrEnabled?: boolean;
   onGuestDeleted: (guestId: string) => void;
+  onGuestUpdated: (guest: GuestRowData) => void;
   onGuestsAdded?: (guests: GuestRowData[]) => void;
   pagination?: PaginationInfo;
   onPageChange?: (page: number) => void;
@@ -406,6 +583,7 @@ export function GuestListClient({
           {guests.map((guest) => {
             const statusBadge = getStatusBadge(t, guest.status);
             const canDelete = guest.status === "pending" || guest.status === "failed";
+            const canEdit = guest.status === "pending" || guest.status === "failed";
             return (
               <motion.div
                 key={guest.id}
@@ -418,7 +596,7 @@ export function GuestListClient({
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-medium text-stone-900">{guest.name}</div>
-                    <div className="text-xs text-stone-500 dir-ltr ltr:text-end rtl:text-start">
+                    <div className="text-xs text-stone-500 dir-ltr text-start rtl:text-end">
                       {guest.phone}
                     </div>
                     {guestsEnabled && guest.inviteCount && (
@@ -452,6 +630,13 @@ export function GuestListClient({
                   )}
 
                   <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <EditButton
+                        guest={guest}
+                        guestsEnabled={!!guestsEnabled}
+                        onUpdated={onGuestUpdated}
+                      />
+                    )}
                     {canDelete && (
                       <DeleteButton guestId={guest.id} onDeleted={() => onGuestDeleted(guest.id)} />
                     )}
@@ -494,6 +679,7 @@ export function GuestListClient({
               {guests.map((guest) => {
                 const statusBadge = getStatusBadge(t, guest.status);
                 const canDelete = guest.status === "pending" || guest.status === "failed";
+                const canEdit = guest.status === "pending" || guest.status === "failed";
                 return (
                   <motion.tr
                     key={guest.id}
@@ -532,6 +718,15 @@ export function GuestListClient({
                     )}
                     <td className="px-6 py-4 text-end">
                       <div className="flex items-center justify-end gap-2">
+                        {canEdit && (
+                          <div className="scale-[0.92] origin-right">
+                            <EditButton
+                              guest={guest}
+                              guestsEnabled={!!guestsEnabled}
+                              onUpdated={onGuestUpdated}
+                            />
+                          </div>
+                        )}
                         {canDelete && (
                           <div className="scale-[0.92] origin-right">
                             <DeleteButton

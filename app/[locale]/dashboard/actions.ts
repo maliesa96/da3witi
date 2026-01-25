@@ -337,3 +337,67 @@ export async function deleteAllGuests(eventId: string) {
   return { success: true, deleted: result.count };
 }
 
+export async function updateGuest(
+  guestId: string,
+  guestData: { name: string; phone: string; inviteCount?: number | string }
+) {
+  const user = await getAuthedUser();
+
+  const guest = await prisma.guest.findUnique({
+    where: { id: guestId },
+    include: { event: true },
+  });
+
+  if (!guest) {
+    throw new Error('Guest not found');
+  }
+
+  if (guest.event.userId !== user.id) {
+    throw new Error('Forbidden');
+  }
+
+  // Only allow editing if pending/failed (i.e., not successfully invited yet)
+  if (guest.status !== 'pending' && guest.status !== 'failed') {
+    throw new Error('Cannot edit guest who has already been invited');
+  }
+
+  const name = String(guestData.name || '').trim();
+  const phoneRaw = String(guestData.phone || '').trim();
+  if (name.length > 0 && name.length < 2) {
+    throw new Error('NAME_TOO_SHORT');
+  }
+  const phoneRes = normalizePhoneToE164(phoneRaw);
+  if (!name || !phoneRaw || !phoneRes.ok) {
+    throw new Error('INVALID_PHONE');
+  }
+
+  let inviteCount: number | undefined = undefined;
+  if (typeof guestData.inviteCount !== 'undefined') {
+    const n = typeof guestData.inviteCount === 'string' ? Number(guestData.inviteCount) : guestData.inviteCount;
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 50) {
+      throw new Error('INVALID_INVITE_COUNT');
+    }
+    inviteCount = n;
+  }
+
+  const updated = await prisma.guest.update({
+    where: { id: guestId },
+    data: {
+      name,
+      phone: phoneRes.phone,
+      ...(typeof inviteCount === 'number' ? { inviteCount } : {}),
+    },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      inviteCount: true,
+      status: true,
+      checkedIn: true,
+      whatsappMessageId: true,
+    },
+  });
+
+  return { success: true, guest: updated };
+}
+
