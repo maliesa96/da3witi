@@ -3,9 +3,9 @@
 import { MailOpen, Globe, ArrowRight, LogOut, User } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { User as SupabaseUser } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User as SupabaseUser } from "@supabase/supabase-js";
 import { signOut } from "@/app/[locale]/login/actions";
 
 export function Navbar() {
@@ -14,9 +14,7 @@ export function Navbar() {
   const locale = useLocale();
   const pathname = usePathname();
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  
-  // Memoize the supabase client so it's stable across renders
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = createClient();
 
   useEffect(() => {
     const getUser = async () => {
@@ -25,7 +23,7 @@ export function Navbar() {
     };
     getUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setUser(session?.user ?? null);
     });
 
@@ -88,6 +86,7 @@ export function Navbar() {
 
           <Link
             href="/wizard"
+            prefetch={false}
             className="bg-stone-900 text-white text-xs md:text-sm font-semibold px-4 md:px-6 py-2.5 rounded-full hover:bg-stone-800 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 group shrink-0 cursor-pointer"
           >
             <span>{t('start_now')}</span>

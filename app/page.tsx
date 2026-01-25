@@ -35,6 +35,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
               <Link
                 href="/wizard"
+                prefetch={false}
                 className="bg-stone-900 text-stone-50 px-8 py-3.5 rounded-xl font-medium shadow-lg shadow-stone-900/10 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>أنشئ دعوة جديدة</span>

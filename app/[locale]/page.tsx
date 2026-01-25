@@ -167,6 +167,7 @@ export default function Home() {
             >
               <Link
                 href="/wizard"
+                prefetch={false}
                 className="bg-stone-900 text-white px-10 py-4 rounded-full font-medium shadow-xl shadow-stone-900/20 hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-lg cursor-pointer"
               >
                 <span>{t('cta_create')}</span>
@@ -497,6 +498,7 @@ export default function Home() {
 
                   <Link
                     href="/wizard"
+                    prefetch={false}
                     className="relative z-10 w-full block text-center bg-white text-stone-900 py-5 rounded-2xl font-bold text-lg uppercase tracking-wide hover:bg-stone-100 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-white/10"
                   >
                      {t('pricing.standard.cta')}
@@ -588,7 +590,7 @@ export default function Home() {
               </motion.p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-                 <Link href="/wizard" className="bg-white text-stone-900 px-10 py-4 rounded-full font-bold text-lg hover:bg-stone-100 transition-colors cursor-pointer">
+                 <Link href="/wizard" prefetch={false} className="bg-white text-stone-900 px-10 py-4 rounded-full font-bold text-lg hover:bg-stone-100 transition-colors cursor-pointer">
                     {t('community.cta_download')}
                  </Link>
               </div>

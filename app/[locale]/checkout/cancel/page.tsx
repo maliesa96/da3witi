@@ -26,6 +26,7 @@ export default async function CheckoutCancel({
         <div className="space-y-3">
           <Link
             href="/wizard"
+            prefetch={false}
             className="w-full inline-flex items-center justify-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-xl font-medium hover:bg-stone-800 transition-colors"
           >
             <ArrowLeft size={16} className="rtl:rotate-180" />

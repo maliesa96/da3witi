@@ -65,6 +65,7 @@ export default async function Dashboard({
             </h2>
             <Link 
               href="/wizard" 
+              prefetch={false}
               className="p-1.5 bg-stone-100 text-stone-600 rounded-md hover:bg-stone-200 transition-colors"
               title="Create New Event"
             >
