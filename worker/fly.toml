@@ -1,0 +1,29 @@
+# fly.toml app configuration file generated for da3witi-whatsapp-worker on 2026-01-26T03:40:49+03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'da3witi-whatsapp-worker'
+primary_region = 'ams'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  WHATSAPP_DLQ_STREAM_KEY = 'whatsapp:dlq'
+  WHATSAPP_OUTBOX_STREAM_KEY = 'whatsapp:outbox'
+  WHATSAPP_STREAM_GROUP = 'whatsapp-worker'
+  WORKER_CONCURRENCY = '10'
+  WORKER_IDLE_SLEEP_MS = '750'
+  WORKER_MAX_RETRIES = '5'
+  WORKER_READ_COUNT = '50'
+  WORKER_RPS = '30'
+
+[processes]
+  worker = 'npm start'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '1gb'
+  cpus = 1
+  memory_mb = 1024

@@ -46,151 +46,111 @@ interface SendTemplateResult {
   error?: unknown;
 }
 
-export async function sendWhatsAppTemplate({
+/**
+ * Build the exact JSON body that WhatsApp Cloud API expects for POST /messages.
+ * The worker will send this payload "as is".
+ */
+export function buildWhatsAppTemplatePayload({
   to,
   templateName,
-  languageCode = 'en',
-  components = []
-}: SendTemplateParams): Promise<SendTemplateResult> {
-  if (!WHATSAPP_PHONE_NUMBER_ID || !META_ACCESS_TOKEN) {
-    console.error('WhatsApp API credentials missing');
-    return { success: false, error: 'Credentials missing' };
-  }
-
-  const url = `https://graph.facebook.com/${WHATSAPP_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-
-  const body = {
-    messaging_product: 'whatsapp',
+  languageCode = "en",
+  components = [],
+}: SendTemplateParams) {
+  return {
+    messaging_product: "whatsapp",
     to,
-    type: 'template',
+    type: "template",
     template: {
       name: templateName,
       language: {
-        code: languageCode
+        code: languageCode,
       },
-      components
-    }
-  };
-
-  console.dir(body, { depth: null })
-  console.log('url', url);
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${META_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('WhatsApp API Error:', data);
-      return { success: false, error: data };
-    }
-
-    // Extract message ID from response
-    const messageId = data.messages?.[0]?.id;
-    return { success: true, messageId };
-  } catch (error) {
-    console.error('WhatsApp Request Failed:', error);
-    return { success: false, error };
-  }
+      components,
+    },
+  } as const;
 }
 
-/**
- * Sends a simple text message via WhatsApp
- */
-export async function sendWhatsAppText(to: string, text: string): Promise<SendTemplateResult> {
-  if (!WHATSAPP_PHONE_NUMBER_ID || !META_ACCESS_TOKEN) {
-    console.error('WhatsApp API credentials missing');
-    return { success: false, error: 'Credentials missing' };
-  }
-
-  const url = `https://graph.facebook.com/${WHATSAPP_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-
-  const body = {
-    messaging_product: 'whatsapp',
-    recipient_type: 'individual',
+export function buildWhatsAppTextPayload(to: string, text: string) {
+  return {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
     to,
-    type: 'text',
-    text: { body: text }
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${META_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('WhatsApp API Error:', data);
-      return { success: false, error: data };
-    }
-
-    const messageId = data.messages?.[0]?.id;
-    return { success: true, messageId };
-  } catch (error) {
-    console.error('WhatsApp Text Request Failed:', error);
-    return { success: false, error };
-  }
+    type: "text",
+    text: { body: text },
+  } as const;
 }
 
-/**
- * Sends an image message via WhatsApp
- */
-export async function sendWhatsAppImage(to: string, imageUrl: string, caption?: string): Promise<SendTemplateResult> {
-  if (!WHATSAPP_PHONE_NUMBER_ID || !META_ACCESS_TOKEN) {
-    console.error('WhatsApp API credentials missing');
-    return { success: false, error: 'Credentials missing' };
-  }
-
-  const url = `https://graph.facebook.com/${WHATSAPP_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-
-  const body = {
-    messaging_product: 'whatsapp',
-    recipient_type: 'individual',
+export function buildWhatsAppImagePayload(to: string, imageUrl: string, caption?: string) {
+  return {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
     to,
-    type: 'image',
+    type: "image",
     image: {
       link: imageUrl,
-      ...(caption ? { caption } : {})
-    }
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${META_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('WhatsApp API Error:', data);
-      return { success: false, error: data };
-    }
-
-    const messageId = data.messages?.[0]?.id;
-    return { success: true, messageId };
-  } catch (error) {
-    console.error('WhatsApp Image Request Failed:', error);
-    return { success: false, error };
-  }
+      ...(caption ? { caption } : {}),
+    },
+  } as const;
 }
+
+// export async function sendWhatsAppPayload(payload: unknown): Promise<SendTemplateResult> {
+//   if (!WHATSAPP_PHONE_NUMBER_ID || !META_ACCESS_TOKEN) {
+//     console.error("WhatsApp API credentials missing");
+//     return { success: false, error: "Credentials missing" };
+//   }
+
+//   const url = `https://graph.facebook.com/${WHATSAPP_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+
+//   try {
+//     const response = await fetch(url, {
+//       method: "POST",
+//       headers: {
+//         Authorization: `Bearer ${META_ACCESS_TOKEN}`,
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify(payload),
+//     });
+
+//     const data = await response.json();
+
+//     if (!response.ok) {
+//       console.error("WhatsApp API Error:", data);
+//       return { success: false, error: data };
+//     }
+
+//     const messageId = data.messages?.[0]?.id;
+//     return { success: true, messageId };
+//   } catch (error) {
+//     console.error("WhatsApp Request Failed:", error);
+//     return { success: false, error };
+//   }
+// }
+
+// export async function sendWhatsAppTemplate({
+//   to,
+//   templateName,
+//   languageCode = 'en',
+//   components = []
+// }: SendTemplateParams): Promise<SendTemplateResult> {
+//   const body = buildWhatsAppTemplatePayload({ to, templateName, languageCode, components });
+//   return await sendWhatsAppPayload(body);
+// }
+
+// /**
+//  * Sends a simple text message via WhatsApp
+//  */
+// export async function sendWhatsAppText(to: string, text: string): Promise<SendTemplateResult> {
+//   const body = buildWhatsAppTextPayload(to, text);
+//   return await sendWhatsAppPayload(body);
+// }
+
+// /**
+//  * Sends an image message via WhatsApp
+//  */
+// export async function sendWhatsAppImage(to: string, imageUrl: string, caption?: string): Promise<SendTemplateResult> {
+//   const body = buildWhatsAppImagePayload(to, imageUrl, caption);
+//   return await sendWhatsAppPayload(body);
+// }
 
 /**
  * Template name mapping based on locale, media type, QR requirement, and guests requirement
@@ -242,7 +202,43 @@ interface SendInviteTemplateParams {
  * 
  * Header: Image or document
  */
-export async function sendInviteTemplate({
+// export async function sendInviteTemplate({
+//   to,
+//   locale,
+//   qrEnabled,
+//   guestsEnabled,
+//   inviteCount,
+//   invitee,
+//   greetingText,
+//   date,
+//   time,
+//   locationName,
+//   location,
+//   mediaUrl,
+//   mediaType,
+//   mediaFilename
+// }: SendInviteTemplateParams): Promise<SendTemplateResult> {
+//   const body = buildInviteTemplatePayload({
+//     to,
+//     locale,
+//     qrEnabled,
+//     guestsEnabled,
+//     inviteCount,
+//     invitee,
+//     greetingText,
+//     date,
+//     time,
+//     locationName,
+//     location,
+//     mediaUrl,
+//     mediaType,
+//     mediaFilename,
+//   });
+
+//   return await sendWhatsAppPayload(body);
+// }
+
+export function buildInviteTemplatePayload({
   to,
   locale,
   qrEnabled,
@@ -256,8 +252,8 @@ export async function sendInviteTemplate({
   location,
   mediaUrl,
   mediaType,
-  mediaFilename
-}: SendInviteTemplateParams): Promise<SendTemplateResult> {
+  mediaFilename,
+}: SendInviteTemplateParams) {
   const templateName = getInviteTemplateName(locale, qrEnabled, mediaType, guestsEnabled);
   
   const components: TemplateComponent[] = [];
@@ -352,10 +348,10 @@ export async function sendInviteTemplate({
   // account for overrides for names in WABA that dont match the naming pattern
   const template = TEMPLATE_OVERRIDES[templateName] ?? templateName;
 
-  return sendWhatsAppTemplate({
+  return buildWhatsAppTemplatePayload({
     to,
     templateName: template,
     languageCode: locale,
-    components
+    components,
   });
 }

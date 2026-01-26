@@ -47,7 +47,7 @@ async function markEventAsPaidAndSendInvites(session: Stripe.Checkout.Session, e
   // Send invites
   try {
     const result = await sendInvitesForEvent(eventId, locale);
-    return { success: true, sent: result.sent, failed: result.failed };
+    return { success: true, queued: result.queued };
   } catch (error) {
     console.error('Failed to send invites:', error);
     return { success: false, error: 'Failed to send invites' };
@@ -70,7 +70,7 @@ export default async function SendInvitesSuccess({
     redirect(`/${locale}/dashboard`);
   }
 
-  let result: { success: boolean; sent?: number; failed?: number; error?: string } = { success: false };
+  let result: { success: boolean; queued?: number; error?: string } = { success: false };
 
   try {
     // Retrieve the session from Stripe
@@ -126,13 +126,13 @@ export default async function SendInvitesSuccess({
         </div>
 
         <h1 className="text-2xl font-semibold text-stone-900 mb-3">
-          {locale === 'ar' ? 'تم إرسال الدعوات بنجاح!' : 'Invites Sent Successfully!'}
+          {locale === 'ar' ? 'تمت جدولة إرسال الدعوات بنجاح!' : 'Invites Queued Successfully!'}
         </h1>
 
         <p className="text-stone-600 mb-4">
           {locale === 'ar' 
-            ? `تم إرسال ${result.sent || 0} دعوة بنجاح${result.failed ? ` وفشل إرسال ${result.failed}` : ''}.`
-            : `${result.sent || 0} invite(s) sent successfully${result.failed ? ` and ${result.failed} failed` : ''}.`
+            ? `تمت إضافة ${result.queued || 0} دعوة إلى قائمة الإرسال عبر واتساب.`
+            : `${result.queued || 0} invite(s) were added to the WhatsApp send queue.`
           }
         </p>
 

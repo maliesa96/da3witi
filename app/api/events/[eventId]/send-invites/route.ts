@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
-import { sendInviteTemplate, type MediaType } from "@/lib/whatsapp";
+import { buildInviteTemplatePayload, type MediaType } from "@/lib/whatsapp";
+import { enqueueWhatsAppOutboxBatch, RedisConfigError } from "@/lib/queue/whatsappOutbox";
+import { shouldEnqueueWhatsAppInvite } from "@/lib/whatsappSendEligibility";
 
 export async function POST(request: NextRequest, context: { params: Promise<{ eventId: string }> }) {
   try {
@@ -35,59 +37,55 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ev
       return NextResponse.json({ error: "Payment required to send invites" }, { status: 402 });
     }
 
-    const guestsToSend = event.guests.filter(
-      (g) => (g.status === "pending" || g.status === "failed") && !g.whatsappMessageId
-    );
+    const guestsToSend = event.guests.filter((g) => shouldEnqueueWhatsAppInvite(g));
 
     if (guestsToSend.length === 0) {
-      return NextResponse.json({ success: true, sent: 0, failed: 0 });
+      return NextResponse.json({ success: true, queued: 0 });
     }
 
-    const results = await Promise.all(
-      guestsToSend.map(async (guest) => {
-        const result = await sendInviteTemplate({
-          to: guest.phone,
-          locale,
-          qrEnabled: event.qrEnabled,
-          guestsEnabled: event.guestsEnabled ?? false,
-          inviteCount: guest.inviteCount,
-          invitee: guest.name,
-          greetingText: event.message || "",
-          date: event.date,
-          time: event.time,
-          locationName: event.locationName || "See invitation",
-          location: event.location || "",
-          mediaUrl: event.imageUrl || "",
-          mediaType: (event.mediaType as MediaType) || "image",
-          mediaFilename: event.mediaFilename || undefined,
-        });
+    const now = new Date();
+    const jobs = guestsToSend.map((guest) => ({
+      payload: buildInviteTemplatePayload({
+        to: guest.phone,
+        locale,
+        qrEnabled: event.qrEnabled,
+        guestsEnabled: event.guestsEnabled ?? false,
+        inviteCount: guest.inviteCount,
+        invitee: guest.name,
+        greetingText: event.message || "",
+        date: event.date,
+        time: event.time,
+        locationName: event.locationName || "See invitation",
+        location: event.location || "",
+        mediaUrl: event.imageUrl || "",
+        mediaType: (event.mediaType as MediaType) || "image",
+        mediaFilename: event.mediaFilename || undefined,
+      }),
+      meta: { kind: "invite" as const, guestId: guest.id, eventId, locale },
+    }));
 
-        if (result.success && result.messageId) {
-          await prisma.guest.update({
-            where: { id: guest.id },
-            data: {
-              whatsappMessageId: result.messageId,
-              status: "sent",
-            },
-          });
-          return { ok: true };
-        }
+    // Enqueue first; only mark as enqueued if Redis enqueue succeeded.
+    await enqueueWhatsAppOutboxBatch(jobs);
+    await prisma.guest.updateMany({
+      where: { id: { in: guestsToSend.map((g) => g.id) } },
+      data: {
+        whatsappSendEnqueuedAt: now,
+        whatsappSendLastError: null,
+      },
+    });
 
-        await prisma.guest.update({
-          where: { id: guest.id },
-          data: { status: "failed" },
-        });
-
-        return { ok: false };
-      })
-    );
-
-    const sent = results.filter((r) => r.ok).length;
-    const failed = results.length - sent;
-
-    return NextResponse.json({ success: true, sent, failed });
+    return NextResponse.json({ success: true, queued: guestsToSend.length });
   } catch (error) {
     console.error("POST /api/events/[eventId]/send-invites failed:", error);
+    if (error instanceof RedisConfigError) {
+      return NextResponse.json(
+        {
+          error: "Invite queue is not configured",
+          details: error.message,
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ error: "Failed to send invites" }, { status: 500 });
   }
 }

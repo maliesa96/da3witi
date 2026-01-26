@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sendWhatsAppText, sendWhatsAppImage } from '@/lib/whatsapp';
+import { buildWhatsAppImagePayload, buildWhatsAppTextPayload } from '@/lib/whatsapp';
+import { enqueueWhatsAppOutbox } from '@/lib/queue/whatsappOutbox';
 
 const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
 
@@ -168,10 +169,11 @@ export async function POST(request: Request) {
                         ? `شكراً لتأكيد حضوركم! نترقب رؤيتكم في المناسبة.`
                         : `Thank you for confirming your attendance! We look forward to seeing you at the event.`;
                       
-                      const textResult = await sendWhatsAppText(from, thankYouMsg);
-                      if (!textResult.success) {
-                        console.error(`❌ Failed to send thank you text to ${from}:`, textResult.error);
-                      }
+                      await enqueueWhatsAppOutbox(buildWhatsAppTextPayload(from, thankYouMsg), {
+                        kind: 'webhook_followup',
+                        guestId: guest.id,
+                        repliedMessageId,
+                      });
 
                       // Handle QR code if enabled
                       if (guest.event.qrEnabled) {
@@ -187,10 +189,11 @@ export async function POST(request: Request) {
                         // Send QR code
                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrCodeId}`;
                         const qrCaption = isArabic ? "رمز الدخول الخاص بك" : "Your Entry QR Code";
-                        const imageResult = await sendWhatsAppImage(from, qrUrl, qrCaption);
-                        if (!imageResult.success) {
-                          console.error(`❌ Failed to send QR image to ${from}:`, imageResult.error);
-                        }
+                        await enqueueWhatsAppOutbox(buildWhatsAppImagePayload(from, qrUrl, qrCaption), {
+                          kind: 'webhook_followup',
+                          guestId: guest.id,
+                          repliedMessageId,
+                        });
                       }
                       
                       console.log(`✅ Successfully processed confirmation for ${guest.name}`);
@@ -204,10 +207,11 @@ export async function POST(request: Request) {
                         ? `شكراً لإبلاغنا. يؤسفنا عدم تمكنكم من الحضور. سنفتقدكم!`
                         : `Thank you for letting us know. We're sorry you can't make it. You will be missed!`;
                       
-                      const textResult = await sendWhatsAppText(from, declineMsg);
-                      if (!textResult.success) {
-                        console.error(`❌ Failed to send decline text to ${from}:`, textResult.error);
-                      }
+                      await enqueueWhatsAppOutbox(buildWhatsAppTextPayload(from, declineMsg), {
+                        kind: 'webhook_followup',
+                        guestId: guest.id,
+                        repliedMessageId,
+                      });
                       
                       console.log(`✅ Successfully processed decline for ${guest.name}`);
                     }

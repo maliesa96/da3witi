@@ -2,8 +2,10 @@
 
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
-import { sendInviteTemplate, type MediaType } from '@/lib/whatsapp';
+import { buildInviteTemplatePayload, type MediaType } from '@/lib/whatsapp';
 import { normalizePhoneToE164 } from '@/lib/phone';
+import { enqueueWhatsAppOutboxBatch } from '@/lib/queue/whatsappOutbox';
+import { shouldEnqueueWhatsAppInvite } from '@/lib/whatsappSendEligibility';
 
 async function getAuthedUser() {
   const supabase = await createClient();
@@ -177,56 +179,45 @@ export async function sendInvitesForEvent(eventId: string, locale: 'en' | 'ar') 
   // Only send to guests that haven't been successfully sent yet.
   // - pending: never sent
   // - failed: previously attempted but failed
-  const guestsToSend = event.guests.filter(
-    (g) => (g.status === 'pending' || g.status === 'failed') && !g.whatsappMessageId
-  );
+  const guestsToSend = event.guests.filter((g) => shouldEnqueueWhatsAppInvite(g));
 
   if (guestsToSend.length === 0) {
-    return { success: true, sent: 0, failed: 0 };
+    return { success: true, queued: 0 };
   }
 
-  const results = await Promise.all(
-    guestsToSend.map(async (guest) => {
-      const result = await sendInviteTemplate({
-        to: guest.phone,
-        locale,
-        qrEnabled: event.qrEnabled,
-        guestsEnabled: event.guestsEnabled ?? false,
-        inviteCount: guest.inviteCount,
-        invitee: guest.name,
-        greetingText: event.message || '',
-        date: event.date,
-        time: event.time,
-        locationName: event.locationName || 'See invitation',
-        location: event.location || '',
-        mediaUrl: event.imageUrl || '',
-        mediaType: (event.mediaType as MediaType) || 'image',
-        mediaFilename: event.mediaFilename || undefined,
-      });
+  const now = new Date();
+  const jobs = guestsToSend.map((guest) => ({
+    payload: buildInviteTemplatePayload({
+      to: guest.phone,
+      locale,
+      qrEnabled: event.qrEnabled,
+      guestsEnabled: event.guestsEnabled ?? false,
+      inviteCount: guest.inviteCount,
+      invitee: guest.name,
+      greetingText: event.message || '',
+      date: event.date,
+      time: event.time,
+      locationName: event.locationName || 'See invitation',
+      location: event.location || '',
+      mediaUrl: event.imageUrl || '',
+      mediaType: (event.mediaType as MediaType) || 'image',
+      mediaFilename: event.mediaFilename || undefined,
+    }),
+    meta: { kind: 'invite' as const, guestId: guest.id, eventId, locale },
+  }));
 
-      if (result.success && result.messageId) {
-        await prisma.guest.update({
-          where: { id: guest.id },
-          data: {
-            whatsappMessageId: result.messageId,
-            status: 'sent',
-          },
-        });
-        return { ok: true };
-      }
+  await Promise.all([
+    enqueueWhatsAppOutboxBatch(jobs),
+    prisma.guest.updateMany({
+      where: { id: { in: guestsToSend.map((g) => g.id) } },
+      data: {
+        whatsappSendEnqueuedAt: now,
+        whatsappSendLastError: null,
+      },
+    }),
+  ]);
 
-      await prisma.guest.update({
-        where: { id: guest.id },
-        data: { status: 'failed' },
-      });
-      return { ok: false };
-    })
-  );
-
-  const sent = results.filter(r => r.ok).length;
-  const failed = results.length - sent;
-
-  return { success: true, sent, failed };
+  return { success: true, queued: guestsToSend.length };
 }
 
 export async function getGuestsPaginated(

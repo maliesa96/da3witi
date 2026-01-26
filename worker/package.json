@@ -1,0 +1,19 @@
+{
+  "name": "da3witi-whatsapp-worker",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.36.1",
+    "pg": "^8.16.0",
+    "pino": "^10.3.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/pg": "^8.16.0",
+    "typescript": "^5"
+  }
+}
