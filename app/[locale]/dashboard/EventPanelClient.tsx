@@ -27,6 +27,18 @@ type EventForClient = {
   reminderEnabled: boolean;
   imageUrl: string | null;
   paidAt: string | null; // ISO
+
+  // Denormalized counters from `GET /api/events`
+  guestCountTotal?: number;
+  inviteCountTotal?: number;
+  inviteCountPending?: number;
+  inviteCountSent?: number;
+  inviteCountDelivered?: number;
+  inviteCountRead?: number;
+  inviteCountConfirmed?: number;
+  inviteCountDeclined?: number;
+  inviteCountFailed?: number;
+  inviteCountNoReply?: number;
 };
 
 type PaginationInfo = {
@@ -109,18 +121,62 @@ export default function EventPanelClient({
   initialInviteTotals,
 }: {
   event: EventForClient;
-  initialGuests: GuestRowData[];
-  initialPagination: PaginationInfo;
-  initialStats: GuestStats;
-  initialInviteTotals: InviteTotals;
+  initialGuests?: GuestRowData[];
+  initialPagination?: PaginationInfo;
+  initialStats?: GuestStats;
+  initialInviteTotals?: InviteTotals;
 }) {
   const t = useTranslations("Dashboard");
   const locale = useLocale();
 
   // Threshold: use client-side filtering for small lists, server-side for large
   const CLIENT_SIDE_THRESHOLD = 500;
-  const useClientSide = initialPagination.totalCount <= CLIENT_SIDE_THRESHOLD;
-  const pageSize = initialPagination.pageSize;
+  const pageSize = initialPagination?.pageSize ?? 50;
+  const [totalCountForMode, setTotalCountForMode] = useState<number | null>(
+    initialPagination?.totalCount ?? (typeof event.guestCountTotal === "number" ? event.guestCountTotal : null)
+  );
+  const useClientSide = (totalCountForMode ?? Number.POSITIVE_INFINITY) <= CLIENT_SIDE_THRESHOLD;
+
+  const statsFromEvent: GuestStats = useMemo(
+    () => ({
+      total: event.inviteCountTotal ?? 0,
+      pending: event.inviteCountPending ?? 0,
+      sent: event.inviteCountSent ?? 0,
+      delivered: event.inviteCountDelivered ?? 0,
+      read: event.inviteCountRead ?? 0,
+      confirmed: event.inviteCountConfirmed ?? 0,
+      declined: event.inviteCountDeclined ?? 0,
+      failed: event.inviteCountFailed ?? 0,
+    }),
+    [
+      event.inviteCountTotal,
+      event.inviteCountPending,
+      event.inviteCountSent,
+      event.inviteCountDelivered,
+      event.inviteCountRead,
+      event.inviteCountConfirmed,
+      event.inviteCountDeclined,
+      event.inviteCountFailed,
+    ]
+  );
+  const inviteTotalsFromEvent: InviteTotals = useMemo(
+    () => ({
+      all: event.inviteCountTotal ?? 0,
+      filtered: event.inviteCountTotal ?? 0,
+    }),
+    [event.inviteCountTotal]
+  );
+  const emptyPagination: PaginationInfo = useMemo(
+    () => ({
+      page: 1,
+      pageSize,
+      totalCount: 0,
+      totalPages: 0,
+      hasNextPage: false,
+      hasPrevPage: false,
+    }),
+    [pageSize]
+  );
 
   const fetchGuestsFromApi = useCallback(
     async (options: { page?: number; pageSize?: number; search?: string; statuses?: string[] }) => {
@@ -156,12 +212,14 @@ export default function EventPanelClient({
   );
 
   // Shared state
-  const [serverStats, setServerStats] = useState<GuestStats>(initialStats);
-  const [serverInviteTotals, setServerInviteTotals] = useState<InviteTotals>(initialInviteTotals);
+  const [serverStats, setServerStats] = useState<GuestStats>(initialStats ?? statsFromEvent);
+  const [serverInviteTotals, setServerInviteTotals] = useState<InviteTotals>(
+    initialInviteTotals ?? inviteTotalsFromEvent
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!initialPagination);
   const [showPreview, setShowPreview] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -183,12 +241,19 @@ export default function EventPanelClient({
   }, [showPreview]);
 
   // === CLIENT-SIDE MODE (for small lists) ===
-  const [allGuests, setAllGuests] = useState<GuestRowData[]>(initialGuests);
+  const [allGuests, setAllGuests] = useState<GuestRowData[]>(initialGuests ?? []);
+
+  const clientTotalsReady = useMemo(() => {
+    if (!useClientSide) return true;
+    if (totalCountForMode == null) return false;
+    return allGuests.length >= totalCountForMode;
+  }, [useClientSide, totalCountForMode, allGuests.length]);
 
   // Load all guests for client-side filtering (only if under threshold)
   useEffect(() => {
     if (!useClientSide) return;
-    if (initialPagination.totalCount <= initialGuests.length) return;
+    if (totalCountForMode == null) return;
+    if (totalCountForMode <= allGuests.length) return;
 
     let cancelled = false;
     setIsLoading(true);
@@ -196,11 +261,13 @@ export default function EventPanelClient({
       try {
         const result = await fetchGuestsFromApi({
           page: 1,
-          pageSize: initialPagination.totalCount,
+          pageSize: totalCountForMode,
         });
         if (!cancelled) {
           setAllGuests(result.guests);
           setServerStats(result.stats);
+          setServerInviteTotals(result.inviteTotals);
+          setTotalCountForMode(result.pagination.totalCount);
         }
       } catch (error) {
         console.error("Failed to fetch all guests:", error);
@@ -209,7 +276,7 @@ export default function EventPanelClient({
       }
     })();
     return () => { cancelled = true; };
-  }, [useClientSide, fetchGuestsFromApi, initialPagination.totalCount, initialGuests.length]);
+  }, [useClientSide, fetchGuestsFromApi, totalCountForMode, allGuests.length]);
 
   // Client-side filtering (instant)
   const clientFilteredGuests = useMemo(() => {
@@ -235,9 +302,9 @@ export default function EventPanelClient({
 
   // === SERVER-SIDE MODE (for large lists) ===
   const [serverGuests, setServerGuests] = useState<GuestRowData[]>(
-    useClientSide ? [] : initialGuests
+    useClientSide ? [] : (initialGuests ?? [])
   );
-  const [serverPagination, setServerPagination] = useState(initialPagination);
+  const [serverPagination, setServerPagination] = useState<PaginationInfo>(initialPagination ?? emptyPagination);
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   // Debounce search for server-side mode
@@ -284,6 +351,33 @@ export default function EventPanelClient({
       setCurrentPage(1);
     }
   }, [useClientSide, debouncedSearch, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initial guests fetch (when parent only provides the event object)
+  useEffect(() => {
+    if (initialPagination) return;
+    let cancelled = false;
+    setIsLoading(true);
+    (async () => {
+      try {
+        const result = await fetchGuestsFromApi({ page: 1, pageSize });
+        if (cancelled) return;
+        setServerGuests(result.guests);
+        setServerPagination(result.pagination);
+        setServerStats(result.stats);
+        setServerInviteTotals(result.inviteTotals);
+        setTotalCountForMode(result.pagination.totalCount);
+        // Seed client-side store with the first page (full sync will happen if under threshold).
+        setAllGuests(result.guests);
+      } catch (error) {
+        console.error("Failed to fetch initial guests:", error);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchGuestsFromApi, initialPagination, pageSize]);
 
   // === UNIFIED OUTPUT ===
   const displayGuests = useMemo(() => {
@@ -344,13 +438,23 @@ export default function EventPanelClient({
 
   const invitedCountDisplay = useMemo(() => {
     if (!event.guestsEnabled) return stats.invited;
+    // Avoid "jumping" totals in client-side mode while we're still loading all guests.
+    if (useClientSide && !clientTotalsReady) return serverInviteTotals.all;
     return useClientSide ? clientInviteTotals.all : serverInviteTotals.all;
-  }, [event.guestsEnabled, stats.invited, useClientSide, clientInviteTotals.all, serverInviteTotals.all]);
+  }, [event.guestsEnabled, stats.invited, useClientSide, clientTotalsReady, clientInviteTotals.all, serverInviteTotals.all]);
 
   const listTotalDisplay = useMemo(() => {
     if (!event.guestsEnabled) return pagination.totalCount;
+    if (useClientSide && !clientTotalsReady) return serverInviteTotals.filtered;
     return useClientSide ? clientInviteTotals.filtered : serverInviteTotals.filtered;
-  }, [event.guestsEnabled, pagination.totalCount, useClientSide, clientInviteTotals.filtered, serverInviteTotals.filtered]);
+  }, [
+    event.guestsEnabled,
+    pagination.totalCount,
+    useClientSide,
+    clientTotalsReady,
+    clientInviteTotals.filtered,
+    serverInviteTotals.filtered,
+  ]);
 
   const pendingToSend = useMemo(() => {
     // Count from server stats since we need the full count

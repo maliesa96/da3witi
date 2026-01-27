@@ -30,6 +30,19 @@ model Event {
   paidAt           DateTime? @map("paid_at") @db.Timestamptz(6)
   guests           Guest[]
 
+  // Denormalized counters (maintained via DB triggers on "guests")
+  guestCountTotal      Int @default(0) @map("guest_count_total")
+
+  inviteCountTotal     Int @default(0) @map("invite_count_total")
+  inviteCountPending   Int @default(0) @map("invite_count_pending")
+  inviteCountSent      Int @default(0) @map("invite_count_sent")
+  inviteCountDelivered Int @default(0) @map("invite_count_delivered")
+  inviteCountRead      Int @default(0) @map("invite_count_read")
+  inviteCountConfirmed Int @default(0) @map("invite_count_confirmed")
+  inviteCountDeclined  Int @default(0) @map("invite_count_declined")
+  inviteCountFailed    Int @default(0) @map("invite_count_failed")
+  inviteCountNoReply   Int @default(0) @map("invite_count_no_reply")
+
   @@map("events")
 }
 

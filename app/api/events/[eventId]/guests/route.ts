@@ -40,7 +40,21 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, userId: true },
+      select: {
+        id: true,
+        userId: true,
+        guestsEnabled: true,
+        guestCountTotal: true,
+        inviteCountTotal: true,
+        inviteCountPending: true,
+        inviteCountSent: true,
+        inviteCountDelivered: true,
+        inviteCountRead: true,
+        inviteCountConfirmed: true,
+        inviteCountDeclined: true,
+        inviteCountFailed: true,
+        inviteCountNoReply: true,
+      },
     });
 
     if (!event) {
@@ -54,6 +68,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
     const skip = (page - 1) * pageSize;
 
     const normalizedStatuses = (statuses || []).map((s) => String(s || "").trim()).filter(Boolean);
+    const hasSearch = Boolean(search);
+    const hasStatusFilter = normalizedStatuses.length > 0;
 
     const whereClause = {
       eventId,
@@ -68,58 +84,83 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
         : {}),
     };
 
-    const [guests, totalCount, statusCounts, filteredInviteAgg, allInviteAgg] = await Promise.all([
-      prisma.guest.findMany({
-        where: whereClause,
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          inviteCount: true,
-          status: true,
-          checkedIn: true,
-          whatsappMessageId: true,
-        },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: pageSize,
-      }),
-      prisma.guest.count({ where: whereClause }),
-      prisma.guest.groupBy({
-        by: ["status"],
-        where: { eventId },
-        _count: { status: true },
-      }),
-      prisma.guest.aggregate({
-        where: whereClause,
-        _sum: { inviteCount: true },
-      }),
-      prisma.guest.aggregate({
-        where: { eventId },
-        _sum: { inviteCount: true },
-      }),
+    const guestsPromise = prisma.guest.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        inviteCount: true,
+        status: true,
+        checkedIn: true,
+        whatsappMessageId: true,
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: pageSize,
+    });
+
+    // Pagination totalCount:
+    // - search: must count
+    // - statuses-only: count
+    // - no filters: use event.guestCountTotal
+    const totalCountPromise = hasSearch || hasStatusFilter
+      ? prisma.guest.count({ where: whereClause })
+      : Promise.resolve<number | null>(null);
+
+    // Filtered invite totals:
+    // - search: must aggregate
+    // - statuses-only: sum per-status invite counters
+    // - no filters: equals all
+    const filteredInviteAggPromise =
+      event.guestsEnabled && hasSearch
+        ? prisma.guest.aggregate({ where: whereClause, _sum: { inviteCount: true } })
+        : Promise.resolve<{ _sum: { inviteCount: number | null } } | null>(null);
+
+    const [guests, totalCountFromCountOrNull, filteredInviteAggOrNull] = await Promise.all([
+      guestsPromise,
+      totalCountPromise,
+      filteredInviteAggPromise,
     ]);
+
+    const stats = {
+      // Stat cards should reflect invite totals by status (invite_count sum),
+      // which equals guest counts when invite_count=1.
+      total: event.inviteCountTotal,
+      pending: event.inviteCountPending,
+      sent: event.inviteCountSent,
+      delivered: event.inviteCountDelivered,
+      read: event.inviteCountRead,
+      confirmed: event.inviteCountConfirmed,
+      declined: event.inviteCountDeclined,
+      failed: event.inviteCountFailed,
+    };
+
+    const inviteCountMap: Record<string, number> = {
+      pending: event.inviteCountPending,
+      sent: event.inviteCountSent,
+      delivered: event.inviteCountDelivered,
+      read: event.inviteCountRead,
+      confirmed: event.inviteCountConfirmed,
+      declined: event.inviteCountDeclined,
+      failed: event.inviteCountFailed,
+      no_reply: event.inviteCountNoReply,
+    };
+
+    const totalCount =
+      totalCountFromCountOrNull ??
+      event.guestCountTotal;
 
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    const stats = {
-      total: 0,
-      pending: 0,
-      sent: 0,
-      delivered: 0,
-      read: 0,
-      confirmed: 0,
-      declined: 0,
-      failed: 0,
-    };
-
-    for (const sc of statusCounts) {
-      const count = sc._count.status;
-      stats.total += count;
-      if (sc.status in stats) {
-        stats[sc.status as keyof typeof stats] = count;
-      }
-    }
+    const inviteAll = event.guestsEnabled ? event.inviteCountTotal : 0;
+    const inviteFiltered = event.guestsEnabled
+      ? hasSearch
+        ? filteredInviteAggOrNull?._sum.inviteCount ?? 0
+        : hasStatusFilter
+          ? normalizedStatuses.reduce((acc, s) => acc + (inviteCountMap[s] ?? 0), 0)
+          : inviteAll
+      : 0;
 
     return NextResponse.json({
       guests: guests.map((g) => ({
@@ -136,8 +177,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
       },
       stats,
       inviteTotals: {
-        filtered: filteredInviteAgg._sum.inviteCount ?? 0,
-        all: allInviteAgg._sum.inviteCount ?? 0,
+        filtered: inviteFiltered,
+        all: inviteAll,
       },
     });
   } catch (error) {

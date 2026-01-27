@@ -596,18 +596,38 @@ export function GuestListClient({
   hasFilters?: boolean;
 }) {
   const t = useTranslations("Dashboard");
-  const [showEmpty, setShowEmpty] = useState(guests.length === 0);
   const isSearching = searchQuery.trim() !== "" || hasFilters;
+  const showSkeleton = Boolean(isLoading) && guests.length === 0;
 
   return (
     <>
       {/* Mobile */}
       <div className="md:hidden divide-y divide-stone-100">
+        {showSkeleton && (
+          <div className="divide-y divide-stone-100">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} className="p-4 space-y-3 animate-pulse" aria-hidden="true">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-1/2 bg-stone-200 rounded" />
+                    <div className="h-3 w-1/3 bg-stone-200 rounded" />
+                  </div>
+                  <div className="h-6 w-20 bg-stone-200 rounded-full" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="h-3 w-24 bg-stone-200 rounded" />
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 bg-stone-200 rounded-md" />
+                    <div className="h-8 w-8 bg-stone-200 rounded-md" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <AnimatePresence
           initial={false}
-          onExitComplete={() => {
-            if (guests.length === 0) setShowEmpty(true);
-          }}
         >
           {guests.map((guest) => {
             const statusBadge = getStatusBadge(t, guest.status);
@@ -676,7 +696,7 @@ export function GuestListClient({
           })}
         </AnimatePresence>
 
-        {guests.length === 0 && showEmpty && (
+        {!showSkeleton && guests.length === 0 && (
           isSearching ? (
             <NoResultsState t={t} searchQuery={searchQuery} />
           ) : (
@@ -699,11 +719,42 @@ export function GuestListClient({
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100 text-sm text-stone-700">
+            {showSkeleton && (
+              <>
+                {Array.from({ length: 8 }).map((_, idx) => (
+                  <tr key={`sk-${idx}`} className="animate-pulse" aria-hidden="true">
+                    <td className="px-6 py-4">
+                      <div className="h-4 w-40 bg-stone-200 rounded" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-3 w-36 bg-stone-200 rounded" />
+                    </td>
+                    {guestsEnabled && (
+                      <td className="px-6 py-4">
+                        <div className="h-3 w-12 bg-stone-200 rounded" />
+                      </td>
+                    )}
+                    <td className="px-6 py-4">
+                      <div className="h-6 w-20 bg-stone-200 rounded-full" />
+                    </td>
+                    {qrEnabled && (
+                      <td className="px-6 py-4">
+                        <div className="h-3 w-24 bg-stone-200 rounded" />
+                      </td>
+                    )}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="h-8 w-8 bg-stone-200 rounded-md" />
+                        <div className="h-8 w-8 bg-stone-200 rounded-md" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </>
+            )}
+
             <AnimatePresence
               initial={false}
-              onExitComplete={() => {
-                if (guests.length === 0) setShowEmpty(true);
-              }}
             >
               {guests.map((guest) => {
                 const statusBadge = getStatusBadge(t, guest.status);
@@ -771,7 +822,7 @@ export function GuestListClient({
               })}
             </AnimatePresence>
 
-            {guests.length === 0 && showEmpty && (
+            {!showSkeleton && guests.length === 0 && (
               <tr>
                 <td colSpan={4 + (guestsEnabled ? 1 : 0) + (qrEnabled ? 1 : 0)}>
                   {isSearching ? (

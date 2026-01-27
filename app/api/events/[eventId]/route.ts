@@ -17,6 +17,22 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
+      select: {
+        id: true,
+        title: true,
+        isScheduled: true,
+        date: true,
+        time: true,
+        location: true,
+        locationName: true,
+        message: true,
+        qrEnabled: true,
+        guestsEnabled: true,
+        reminderEnabled: true,
+        imageUrl: true,
+        paidAt: true,
+        userId: true,
+      },
     });
 
     if (!event) {

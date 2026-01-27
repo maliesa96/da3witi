@@ -34,6 +34,20 @@ model Event {
   paidAt           DateTime? @map("paid_at") @db.Timestamptz(6)
   guests           Guest[]
 
+  // Denormalized counters (maintained via DB triggers on "guests")
+  guestCountTotal      Int @default(0) @map("guest_count_total")
+
+  inviteCountTotal     Int @default(0) @map("invite_count_total")
+  inviteCountPending   Int @default(0) @map("invite_count_pending")
+  inviteCountSent      Int @default(0) @map("invite_count_sent")
+  inviteCountDelivered Int @default(0) @map("invite_count_delivered")
+  inviteCountRead      Int @default(0) @map("invite_count_read")
+  inviteCountConfirmed Int @default(0) @map("invite_count_confirmed")
+  inviteCountDeclined  Int @default(0) @map("invite_count_declined")
+  inviteCountFailed    Int @default(0) @map("invite_count_failed")
+  inviteCountNoReply   Int @default(0) @map("invite_count_no_reply")
+
+  @@index([userId, createdAt])
   @@map("events")
 }
 
@@ -54,5 +68,12 @@ model Guest {
   checkedInAt        DateTime? @map("checked_in_at") @db.Timestamptz(6)
   qrCodeId           String?  @unique @map("qr_code_id")
 
+  // Query hot-paths:
+  // - listing guests by eventId ordered by createdAt
+  // - grouping/counting by status within an event
+  // - counting guests per event (pagination + stats)
+  @@index([eventId])
+  @@index([eventId, status])
+  @@index([eventId, createdAt])
   @@map("guests")
 }

@@ -7,7 +7,6 @@ import { Calendar } from "lucide-react";
 
 import EventPanelClient from "./EventPanelClient";
 import { Link } from "@/navigation";
-import type { GuestRowData } from "@/app/components/AnimatedGuestRows";
 
 type EventSidebarItem = {
   id: string;
@@ -29,42 +28,6 @@ type EventForClient = {
   reminderEnabled: boolean;
   imageUrl: string | null;
   paidAt: string | null;
-};
-
-type PaginationInfo = {
-  page: number;
-  pageSize: number;
-  totalCount: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-};
-
-type GuestStats = {
-  total: number;
-  pending: number;
-  sent: number;
-  delivered: number;
-  read: number;
-  confirmed: number;
-  declined: number;
-  failed: number;
-};
-
-type InviteTotals = {
-  filtered: number;
-  all: number;
-};
-
-type GuestsResponse = {
-  guests: GuestRowData[];
-  pagination: PaginationInfo;
-  stats: GuestStats;
-  inviteTotals: InviteTotals;
-};
-
-type GuestsResponseFromApi = Omit<GuestsResponse, "guests"> & {
-  guests: Array<Omit<GuestRowData, "inviteCount"> & { inviteCount?: number | null }>;
 };
 
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
@@ -102,7 +65,6 @@ export default function DashboardClient() {
 
   const [events, setEvents] = useState<EventSidebarItem[]>([]);
   const [currentEvent, setCurrentEvent] = useState<EventForClient | null>(null);
-  const [guestsPayload, setGuestsPayload] = useState<GuestsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -115,14 +77,13 @@ export default function DashboardClient() {
       setIsLoading(true);
       setLoadError(null);
       setCurrentEvent(null);
-      setGuestsPayload(null);
 
       try {
-        const eventsRes = await fetchJson<{ events: EventSidebarItem[]; defaultEventId: string | null }>("/api/events");
+        const eventsRes = await fetchJson<{ events: EventForClient[]; defaultEventId: string | null }>("/api/events");
         if (cancelled) return;
 
         const list = eventsRes.events || [];
-        setEvents(list);
+        setEvents(list.map((e) => ({ id: e.id, title: e.title, date: e.date })));
 
         if (list.length === 0) {
           router.replace(`/${locale}/wizard`);
@@ -136,22 +97,9 @@ export default function DashboardClient() {
           router.replace(`/${locale}/dashboard?eventId=${encodeURIComponent(selectedEventId)}`);
         }
 
-        const [eventRes, guestsRes] = await Promise.all([
-          fetchJson<EventForClient>(`/api/events/${encodeURIComponent(selectedEventId)}`),
-          fetchJson<GuestsResponseFromApi>(
-            `/api/events/${encodeURIComponent(selectedEventId)}/guests?page=1&pageSize=50`
-          ),
-        ]);
-
-        if (cancelled) return;
-        setCurrentEvent(eventRes);
-        setGuestsPayload({
-          ...guestsRes,
-          guests: (guestsRes.guests || []).map((g) => ({
-            ...g,
-            inviteCount: g.inviteCount ?? undefined,
-          })),
-        });
+        const selected = list.find((e) => e.id === selectedEventId) || list[0];
+        setCurrentEvent(selected);
+        setIsLoading(false);
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
@@ -163,7 +111,9 @@ export default function DashboardClient() {
           return;
         }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     })();
 
@@ -230,7 +180,7 @@ export default function DashboardClient() {
 
         {/* Main Content: Selected Event Details */}
         <div className="lg:col-span-3">
-          {isLoading && (
+          {isLoading && !currentEvent && (
             <div className="space-y-8" aria-busy="true" aria-label="Loading">
               {/* Header skeleton */}
               <div className="rounded-2xl border border-stone-200 bg-white shadow-sm overflow-hidden animate-pulse">
@@ -289,14 +239,10 @@ export default function DashboardClient() {
             </div>
           )}
 
-          {!isLoading && !loadError && currentEvent && guestsPayload && (
+          {!isLoading && !loadError && currentEvent && (
             <EventPanelClient
               key={currentEvent.id}
               event={currentEvent}
-              initialGuests={guestsPayload.guests}
-              initialPagination={guestsPayload.pagination}
-              initialStats={guestsPayload.stats}
-              initialInviteTotals={guestsPayload.inviteTotals}
             />
           )}
         </div>
