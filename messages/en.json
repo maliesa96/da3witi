@@ -49,7 +49,7 @@
       "subtitle": "No subscriptions, no hidden fees. Pay once per event.",
       "standard": {
         "title": "Standard Invite",
-        "price": "50 KWD / 595 AED",
+        "price": "50 KWD",
         "features": [
           "Unlimited Guests",
           "WhatsApp Automation",
@@ -61,7 +61,7 @@
       },
       "plus": {
         "title": "Plus QR Code",
-        "price": "+10 KWD / 119 AED",
+        "price": "+10 KWD",
         "desc": "Add check-in capabilities",
         "features": [
           "Unique QR for each guest",
