@@ -16,22 +16,20 @@ async function main() {
 
   const log = pino({
     level: config.logLevel,
-    formatters: {
-      level: (label) => ({ level: label }),
+    transport: {
+      target: "pino-pretty",
+      options: {
+        colorize: true,
+        ignore: "pid,hostname",
+        translateTime: "HH:MM:ss",
+        messageFormat: "{entryId} {kind} {msg}",
+      },
     },
   });
 
   log.info(
-    {
-      stream: config.streamKey,
-      dlq: config.dlqKey,
-      group: config.group,
-      consumer: config.consumer,
-      concurrency: config.concurrency,
-      rps: config.rps,
-      maxRetries: config.maxRetries,
-    },
-    "Starting WhatsApp worker"
+    { stream: config.streamKey, group: config.group, consumer: config.consumer },
+    `Starting worker: concurrency=${config.concurrency} rps=${config.rps}`
   );
 
   const redis = Redis.fromEnv();
@@ -43,14 +41,14 @@ async function main() {
   const guests = createGuestRepository(pool);
 
   await stream.ensureGroup();
+  log.info("Consumer group ready");
 
   const queue: StreamEntry[] = [];
   const inFlight = new Set<Promise<void>>();
   let autoClaimCursor = "0-0";
-  let lastHeartbeat = 0;
 
   async function fillQueue() {
-    // Try to reclaim stuck entries first
+    // Try to auto-claim entries
     try {
       const claimed = await stream.autoClaim(autoClaimCursor);
       autoClaimCursor = claimed.cursor;
@@ -62,8 +60,7 @@ async function main() {
     } catch (err) {
       log.warn({ error: String(err) }, "XAUTOCLAIM failed");
     }
-
-    // Read pending, then new entries
+    // Read entries from stream
     let batch = await stream.read("0");
     if (batch.length === 0) batch = await stream.read(">");
     if (batch.length > 0) {
@@ -72,15 +69,7 @@ async function main() {
     }
   }
 
-  // Main loop
   while (true) {
-    // Heartbeat
-    const now = Date.now();
-    if (config.heartbeatMs > 0 && now - lastHeartbeat >= config.heartbeatMs) {
-      lastHeartbeat = now;
-      log.info({ queueSize: queue.length, inFlight: inFlight.size }, "Heartbeat");
-    }
-
     // Fill queue if empty
     if (queue.length === 0) {
       await fillQueue();
@@ -93,9 +82,11 @@ async function main() {
     // Process entries up to concurrency limit
     while (inFlight.size < config.concurrency && queue.length > 0) {
       const entry = queue.shift()!;
-      const promise = processEntry(entry, { config, log, whatsapp, guests, stream, limiter }).catch((err) => {
-        log.error({ entryId: entry.id, error: String(err) }, "Unhandled error");
-      });
+      const promise = processEntry(entry, { config, log, whatsapp, guests, stream, limiter }).catch(
+        (err) => {
+          log.error({ entryId: entry.id, error: String(err) }, "Unhandled error");
+        }
+      );
       inFlight.add(promise);
       promise.finally(() => inFlight.delete(promise));
     }

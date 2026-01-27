@@ -21,17 +21,10 @@ export async function processEntry(entry: StreamEntry, deps: ProcessorDeps): Pro
   const { kind, guestId, eventId } = entry.meta;
   const isInvite = kind === "invite" && guestId;
 
-  const entryLog = log.child({
-    entryId: entry.id,
-    kind: kind ?? "unknown",
-    guestId,
-    eventId,
-  });
+  const entryLog = log.child({ entryId: entry.id, kind: kind ?? "unknown", guestId, eventId });
 
-  entryLog.info(
-    { payload: config.logPayloads ? entry.payload : summarizePayload(entry.payload) },
-    "Processing entry"
-  );
+  const summary = summarizePayload(entry.payload);
+  entryLog.info({ to: summary.to, template: summary.templateName }, "Processing");
 
   let attempt = isInvite ? await guests.incrementAttempts(guestId!) : 1;
 
@@ -43,12 +36,12 @@ export async function processEntry(entry: StreamEntry, deps: ProcessorDeps): Pro
       const messageId = whatsapp.extractMessageId(res.data);
       if (isInvite) await guests.markSent(guestId!, messageId ?? null);
       await stream.ack(entry.id);
-      entryLog.info({ messageId }, "Entry sent successfully");
+      entryLog.info({ messageId }, "Sent successfully");
       return;
     }
 
     const errorStr = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
-    entryLog.warn({ httpStatus: res.status, attempt, error: errorStr }, "WhatsApp API failed");
+    entryLog.warn({ status: res.status, attempt, error: errorStr }, "API failed");
 
     if (isInvite) await guests.setError(guestId!, errorStr);
 
@@ -58,12 +51,12 @@ export async function processEntry(entry: StreamEntry, deps: ProcessorDeps): Pro
       if (isInvite) await guests.markFailed(guestId!, errorStr);
       await stream.moveToDlq(entry, { error: errorStr, httpStatus: res.status, attempt });
       await stream.ack(entry.id);
-      entryLog.error({ httpStatus: res.status, attempt }, "Entry moved to DLQ");
+      entryLog.error({ status: res.status, attempt }, "Moved to DLQ");
       return;
     }
 
     const wait = backoffMs(attempt);
-    entryLog.warn({ waitMs: wait, attempt }, "Retrying after backoff");
+    entryLog.warn({ waitMs: wait, attempt, maxRetries: config.maxRetries }, "Retrying after backoff");
     await sleep(wait);
 
     attempt = isInvite ? await guests.incrementAttempts(guestId!) : attempt + 1;
