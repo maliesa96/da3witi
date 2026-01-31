@@ -12,6 +12,12 @@ import AddGuestForm from "@/app/components/AddGuestForm";
 import ConfirmSendInvitesButton from "@/app/components/ConfirmSendInvitesButton";
 import DeleteAllGuestsButton from "@/app/components/DeleteAllGuestsButton";
 import { GuestListClient, type GuestRowData } from "@/app/components/AnimatedGuestRows";
+import {
+  useGuestRealtimeUpdates,
+  toClientGuest,
+  type RealtimeGuestPayload,
+  type RealtimeEventPayload,
+} from "@/lib/supabase/realtime";
 
 type EventForClient = {
   id: string;
@@ -671,6 +677,165 @@ export default function EventPanelClient({
   const isDeclinedQuickActive = useMemo(
     () => sameStatuses(activeQuickFilter, ["declined"]),
     [activeQuickFilter, sameStatuses]
+  );
+
+  // === REALTIME SUBSCRIPTIONS ===
+  // Subscribe to live guest status updates from Supabase
+  const handleRealtimeGuestUpdate = useCallback(
+    (payload: RealtimeGuestPayload, oldPayload: RealtimeGuestPayload | null) => {
+      const guest = toClientGuest(payload);
+      const oldStatus = oldPayload?.status;
+      const newStatus = guest.status;
+
+      // Update the guest in the appropriate list
+      if (useClientSide) {
+        setAllGuests((prev) =>
+          prev.map((g) => (g.id === guest.id ? { ...g, ...guest } : g))
+        );
+      } else {
+        setServerGuests((prev) =>
+          prev.map((g) => (g.id === guest.id ? { ...g, ...guest } : g))
+        );
+      }
+
+      // Update stats if status changed
+      if (oldStatus && oldStatus !== newStatus) {
+        setServerStats((prev) => {
+          const updated = { ...prev };
+          // Decrement old status count
+          if (oldStatus === "pending") updated.pending = Math.max(0, updated.pending - 1);
+          else if (oldStatus === "sent") updated.sent = Math.max(0, updated.sent - 1);
+          else if (oldStatus === "delivered") updated.delivered = Math.max(0, updated.delivered - 1);
+          else if (oldStatus === "read") updated.read = Math.max(0, updated.read - 1);
+          else if (oldStatus === "confirmed") updated.confirmed = Math.max(0, updated.confirmed - 1);
+          else if (oldStatus === "declined") updated.declined = Math.max(0, updated.declined - 1);
+          else if (oldStatus === "failed") updated.failed = Math.max(0, updated.failed - 1);
+
+          // Increment new status count
+          if (newStatus === "pending") updated.pending += 1;
+          else if (newStatus === "sent") updated.sent += 1;
+          else if (newStatus === "delivered") updated.delivered += 1;
+          else if (newStatus === "read") updated.read += 1;
+          else if (newStatus === "confirmed") updated.confirmed += 1;
+          else if (newStatus === "declined") updated.declined += 1;
+          else if (newStatus === "failed") updated.failed += 1;
+
+          return updated;
+        });
+      }
+    },
+    [useClientSide]
+  );
+
+  const handleRealtimeGuestInsert = useCallback(
+    (payload: RealtimeGuestPayload) => {
+      const guest = toClientGuest(payload);
+
+      // Check if this guest already exists (avoid duplicates from local adds)
+      if (useClientSide) {
+        setAllGuests((prev) => {
+          if (prev.some((g) => g.id === guest.id)) return prev;
+          return [guest, ...prev];
+        });
+      } else {
+        setServerGuests((prev) => {
+          if (prev.some((g) => g.id === guest.id)) return prev;
+          return [guest, ...prev].slice(0, pageSize);
+        });
+        setServerPagination((prev) => ({
+          ...prev,
+          totalCount: prev.totalCount + 1,
+          totalPages: Math.ceil((prev.totalCount + 1) / prev.pageSize),
+        }));
+      }
+
+      // Update stats
+      setServerStats((prev) => ({
+        ...prev,
+        total: prev.total + 1,
+        pending: prev.pending + 1,
+      }));
+
+      // Update invite totals
+      const invites = guest.inviteCount ?? 1;
+      setServerInviteTotals((prev) => ({
+        all: prev.all + invites,
+        filtered: prev.filtered + invites,
+      }));
+    },
+    [useClientSide, pageSize]
+  );
+
+  const handleRealtimeGuestDelete = useCallback(
+    (payload: RealtimeGuestPayload) => {
+      const guestId = payload.id;
+      const status = payload.status;
+      const invites = payload.invite_count ?? 1;
+
+      if (useClientSide) {
+        setAllGuests((prev) => prev.filter((g) => g.id !== guestId));
+      } else {
+        setServerGuests((prev) => prev.filter((g) => g.id !== guestId));
+        setServerPagination((prev) => ({
+          ...prev,
+          totalCount: Math.max(0, prev.totalCount - 1),
+          totalPages: Math.ceil(Math.max(0, prev.totalCount - 1) / prev.pageSize),
+        }));
+      }
+
+      // Update stats
+      setServerStats((prev) => {
+        const updated = { ...prev, total: Math.max(0, prev.total - 1) };
+        if (status === "pending") updated.pending = Math.max(0, updated.pending - 1);
+        else if (status === "sent") updated.sent = Math.max(0, updated.sent - 1);
+        else if (status === "delivered") updated.delivered = Math.max(0, updated.delivered - 1);
+        else if (status === "read") updated.read = Math.max(0, updated.read - 1);
+        else if (status === "confirmed") updated.confirmed = Math.max(0, updated.confirmed - 1);
+        else if (status === "declined") updated.declined = Math.max(0, updated.declined - 1);
+        else if (status === "failed") updated.failed = Math.max(0, updated.failed - 1);
+        return updated;
+      });
+
+      // Update invite totals
+      setServerInviteTotals((prev) => ({
+        all: Math.max(0, prev.all - invites),
+        filtered: Math.max(0, prev.filtered - invites),
+      }));
+    },
+    [useClientSide]
+  );
+
+  const handleRealtimeEventUpdate = useCallback((payload: RealtimeEventPayload) => {
+    // Update stats from the denormalized event counters (maintained by DB triggers)
+    setServerStats({
+      total: payload.guest_count_total,
+      pending: payload.invite_count_pending,
+      sent: payload.invite_count_sent,
+      delivered: payload.invite_count_delivered,
+      read: payload.invite_count_read,
+      confirmed: payload.invite_count_confirmed,
+      declined: payload.invite_count_declined,
+      failed: payload.invite_count_failed,
+    });
+
+    setServerInviteTotals((prev) => ({
+      ...prev,
+      all: payload.invite_count_total,
+    }));
+  }, []);
+
+  // Only enable realtime when the event has been paid for (invites are being sent)
+  const realtimeEnabled = !!event.paidAt;
+
+  useGuestRealtimeUpdates(
+    event.id,
+    {
+      onGuestUpdate: handleRealtimeGuestUpdate,
+      onGuestInsert: handleRealtimeGuestInsert,
+      onGuestDelete: handleRealtimeGuestDelete,
+      onEventUpdate: handleRealtimeEventUpdate,
+    },
+    realtimeEnabled
   );
 
   return (

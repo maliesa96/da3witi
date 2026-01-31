@@ -156,8 +156,15 @@ export async function POST(request: Request) {
 
                   if (guest) {
                     console.log(`👤 Found guest: ${guest.name} (ID: ${guest.id}) for event: ${guest.event.title}`);
+                    
                     if (isConfirm) {
-                      // ... existing confirmation logic ...
+                      // Idempotency check: skip if already confirmed to prevent duplicate messages
+                      // (Meta webhooks use at-least-once delivery and may send the same event multiple times)
+                      // But allow changing from declined → confirmed
+                      if (guest.status === 'confirmed') {
+                        console.log(`ℹ️ Skipping confirm for ${guest.name}: already confirmed`);
+                        continue;
+                      }
                       // Update guest status to confirmed
                       await prisma.guest.update({
                         where: { id: guest.id },
@@ -198,6 +205,13 @@ export async function POST(request: Request) {
                       
                       console.log(`✅ Successfully processed confirmation for ${guest.name}`);
                     } else if (isDecline) {
+                      // Idempotency check: skip if already declined to prevent duplicate messages
+                      // But allow changing from confirmed → declined
+                      if (guest.status === 'declined') {
+                        console.log(`ℹ️ Skipping decline for ${guest.name}: already declined`);
+                        continue;
+                      }
+                      
                       await prisma.guest.update({
                         where: { id: guest.id },
                         data: { status: 'declined' }
