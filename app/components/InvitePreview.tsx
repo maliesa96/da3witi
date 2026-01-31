@@ -92,13 +92,13 @@ function InvitePreviewContent({
 
   return (
     <div className="flex justify-center h-full items-start pt-4 w-full">
-      <div className="w-full max-w-[400px] aspect-1/2 bg-black rounded-[2.5rem] sm:rounded-[3.5rem] border-[6px] sm:border-8 border-[#1c1c1e] shadow-2xl overflow-hidden relative ring-1 ring-white/10 mx-auto">
+      <div className="w-full max-w-[400px] aspect-1/2 bg-black rounded-[2.5rem] sm:rounded-[3.5rem] border-[6px] sm:border-8 border-[#1c1c1e] shadow-xl overflow-hidden relative ring-1 ring-white/10 mx-auto">
         
         {/* Screen Content - Dark Mode Background */}
         <div className="w-full h-full bg-[#0b141a] whatsapp-bg-dark flex flex-col relative font-sans">
           
           {/* Status Bar - Padded to avoid notch */}
-          <div className="absolute top-0 w-full h-12 flex items-end justify-between px-6 pb-2 z-50 text-white bg-[#161f25]/90 backdrop-blur-md">
+          <div className="absolute top-0 w-full h-12 flex items-end justify-between px-6 pb-2 z-50 text-white bg-[#161f25]">
              <span className="text-[14px] font-semibold ml-2">9:41</span>
              <div className="flex gap-1.5 items-center mr-1">
                <Signal size={14} className="fill-white" />
@@ -108,7 +108,7 @@ function InvitePreviewContent({
           </div>
 
           {/* iOS WhatsApp Header - Dark Mode */}
-          <div className="h-14 bg-[#161f25]/90 backdrop-blur-md border-b border-white/10 flex items-center px-3 z-30 relative mt-12">
+          <div className="h-14 bg-[#161f25] border-b border-white/10 flex items-center px-3 z-30 relative mt-12">
              <div className="flex items-center gap-1 text-[#007AFF]">
                 <ChevronRight size={26} strokeWidth={2.5} className="-mr-1 hidden rtl:block" />
                 <ChevronLeft size={26} strokeWidth={2.5} className="-ml-1 block rtl:hidden" />
@@ -270,7 +270,7 @@ function InvitePreviewContent({
           </div>
           
           {/* iOS Footer Input Area - Dark Mode */}
-          <div className="h-[80px] bg-[#161f25]/90 backdrop-blur-md border-t border-white/10 px-2 flex items-start pt-3 gap-3 shrink-0 pb-8 z-30">
+          <div className="h-[80px] bg-[#161f25] border-t border-white/10 px-2 flex items-start pt-3 gap-3 shrink-0 pb-8 z-30">
              <div className="text-[#007AFF] mt-1 ml-1">
                 <Plus size={24} />
              </div>

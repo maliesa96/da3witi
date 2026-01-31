@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowRight,
   UploadCloud,
@@ -10,6 +11,7 @@ import {
   Trash2,
   FileSpreadsheet,
   Info,
+  X,
 } from "lucide-react";
 
 import InvitePreview from "../../components/InvitePreview";
@@ -42,7 +44,7 @@ export default function Wizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isMobilePreviewOpen, setIsMobilePreviewOpen] = useState(false);
-  const [mobilePreviewTab, setMobilePreviewTab] = useState<"preview" | "text">("preview");
+  const [mounted, setMounted] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [step1ValidationError, setStep1ValidationError] = useState<string | null>(null);
@@ -219,6 +221,11 @@ export default function Wizard() {
     setDetails(prev => ({ ...prev, messageLocale: locale }));
   }, [locale]);
 
+  // For SSR safety with portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Mobile preview: lock scroll + esc to close
   useEffect(() => {
     if (!isMobilePreviewOpen) return;
@@ -233,6 +240,13 @@ export default function Wizard() {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [isMobilePreviewOpen]);
+
+  // If user navigates to another step while preview is open, close it
+  useEffect(() => {
+    if (step !== 1 && isMobilePreviewOpen) {
+      setIsMobilePreviewOpen(false);
+    }
+  }, [step, isMobilePreviewOpen]);
 
   useEffect(() => {
     if (step1ValidationError && Object.keys(errors).length === 0) {
@@ -494,7 +508,7 @@ export default function Wizard() {
 
       {/* STEP 1: OPTIONS */}
       {step === 1 && (
-        <div className="animate-slide-up">
+        <div className="animate-slide-up pb-32 lg:pb-0">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-display font-semibold text-stone-900 tracking-tight">
               {t('step2.title')}
@@ -1086,7 +1100,7 @@ export default function Wizard() {
               </div>
 
               <div className="pt-4">
-                <div className="flex justify-end">
+                <div className="hidden lg:flex justify-end">
                   <button
                     onClick={() => {
                       const ok = validateStep2();
@@ -1114,7 +1128,7 @@ export default function Wizard() {
 
             {/* Sidebar Info - Live Preview */}
             <div className="hidden lg:block lg:col-span-2 sticky top-24 h-fit">
-               <div className="scale-90 xl:scale-100 origin-top flex justify-center">
+               <div className="flex justify-center">
                  <InvitePreview 
                     date={details.date}
                     time={details.time}
@@ -1136,131 +1150,96 @@ export default function Wizard() {
             </div>
           </div>
 
-          {/* Mobile: sticky preview button */}
-          <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pb-6 pt-4 bg-linear-to-t from-stone-50 via-stone-50/95 to-transparent">
-            <button
-              type="button"
-              onClick={() => {
-                setMobilePreviewTab("preview");
-                setIsMobilePreviewOpen(true);
-              }}
-              className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium text-sm hover:bg-stone-800 transition-colors shadow-lg"
-            >
-              {t('step2.open_preview')}
-            </button>
-          </div>
-
-          {/* Mobile: preview bottom sheet */}
-          {isMobilePreviewOpen && (
-            <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Mobile: sticky actions (Preview + Next) */}
+          <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] bg-linear-to-t from-stone-50 via-stone-50/95 to-transparent">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                aria-label={t('step2.close_preview')}
-                onClick={() => setIsMobilePreviewOpen(false)}
-                className="absolute inset-0 bg-black/40"
-              />
-              <div className="absolute inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl bg-stone-50 border-t border-stone-200 shadow-2xl overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-white">
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-10 rounded-full bg-stone-200 mx-auto absolute left-1/2 -translate-x-1/2 -top-2 hidden" />
-                    <span className="text-sm font-semibold text-stone-900">
-                      {t('step2.preview_sheet_title')}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsMobilePreviewOpen(false)}
-                    className="text-xs font-semibold text-stone-600 hover:text-stone-900"
-                  >
-                    {t('step2.close_preview')}
-                  </button>
-                </div>
+                onClick={() => {
+                  setIsMobilePreviewOpen(true);
+                }}
+                className="w-full bg-white text-stone-900 py-3 rounded-xl font-medium text-sm border border-stone-200 hover:bg-stone-50 transition-colors shadow-sm"
+              >
+                {t('step2.open_preview')}
+              </button>
 
-                <div className="px-4 pt-3">
-                  <div className="inline-flex bg-stone-100 rounded-lg p-0.5 w-full">
-                    <button
-                      type="button"
-                      onClick={() => setMobilePreviewTab("preview")}
-                      className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-all ${
-                        mobilePreviewTab === "preview"
-                          ? "bg-white text-stone-900 shadow-sm"
-                          : "text-stone-600 hover:text-stone-900"
-                      }`}
-                    >
-                      {t('step2.preview_tab')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMobilePreviewTab("text")}
-                      className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-all ${
-                        mobilePreviewTab === "text"
-                          ? "bg-white text-stone-900 shadow-sm"
-                          : "text-stone-600 hover:text-stone-900"
-                      }`}
-                    >
-                      {t('step2.text_tab')}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="overflow-y-auto max-h-[calc(92vh-112px)] px-4 pb-6 pt-4">
-                  {mobilePreviewTab === "preview" ? (
-                    <div className="flex justify-center">
-                      <div className="w-full max-w-[420px] scale-[0.92] origin-top">
-                        <InvitePreview
-                          date={details.date}
-                          time={details.time}
-                          locationName={details.locationName}
-                          location={details.location}
-                          message={details.message}
-                          imageUrl={details.imageUrl}
-                          mediaType={details.mediaType}
-                          mediaFilename={details.mediaFilename}
-                          mediaSize={details.mediaSize}
-                          showQr={details.qrEnabled}
-                          guestsEnabled={details.guestsEnabled}
-                          locale={details.messageLocale}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 flex items-start gap-2">
-                        <span className="mt-0.5 text-stone-500">
-                          <Info size={14} />
-                        </span>
-                        <div className="leading-relaxed">
-                          <div className="font-semibold text-stone-800">
-                            {t('step2.auto_adds_title')}
-                          </div>
-                          <div className="text-[11px] text-stone-600">
-                            {t('step2.auto_adds_desc')}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-stone-200 bg-white px-3 py-2">
-                        <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">
-                          {t('step2.full_message_title')}
-                        </div>
-                        <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-800 whitespace-pre-wrap wrap-break-word" dir="auto">
-                          {renderedFullMessageHighlighted.before}
-                          {renderedFullMessageHighlighted.hasMatch && (
-                            <mark className="rounded px-1 bg-yellow-200/70 text-stone-900">
-                              {renderedFullMessageHighlighted.match}
-                            </mark>
-                          )}
-                          {renderedFullMessageHighlighted.hasMatch ? renderedFullMessageHighlighted.after : ""}
-                        </div>
-                        <div className="mt-2 text-[10px] text-stone-500">
-                          {t('step2.full_message_hint')}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const ok = validateStep2();
+                  if (ok) {
+                    setStep1ValidationError(null);
+                    setStep(2);
+                  } else {
+                    setStep1ValidationError(t("errors.fix_above"));
+                  }
+                }}
+                className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium text-sm hover:bg-stone-800 transition-colors shadow-lg flex items-center justify-center gap-2"
+              >
+                <span>{t('step1.next')}</span>
+                <ArrowRight size={16} className="rtl:rotate-180" />
+              </button>
             </div>
-          )}
+          </div>
+
+          {/* Mobile: preview modal (portal to avoid fixed+transform issues) */}
+          {mounted &&
+            isMobilePreviewOpen &&
+            createPortal(
+              <div className="fixed inset-0 z-9999 lg:hidden">
+                <button
+                  type="button"
+                  aria-label={t('step2.close_preview')}
+                  onClick={() => setIsMobilePreviewOpen(false)}
+                  className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+                />
+                <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    className="pointer-events-auto relative z-10 w-full max-w-[560px] max-h-[90vh] rounded-2xl bg-stone-50 border border-stone-200 shadow-2xl overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-white">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-stone-900">
+                          {t('step2.preview_sheet_title')}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsMobilePreviewOpen(false)}
+                        className="p-2 -m-2 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                        aria-label={t('step2.close_preview')}
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    <div className="overflow-y-auto max-h-[calc(90vh-56px)] px-4 pb-6 pt-4">
+                      <div className="flex justify-center">
+                        <div className="w-full max-w-[400px]">
+                          <InvitePreview
+                            date={details.date}
+                            time={details.time}
+                            locationName={details.locationName}
+                            location={details.location}
+                            message={details.message}
+                            imageUrl={details.imageUrl}
+                            mediaType={details.mediaType}
+                            mediaFilename={details.mediaFilename}
+                            mediaSize={details.mediaSize}
+                            showQr={details.qrEnabled}
+                            guestsEnabled={details.guestsEnabled}
+                            locale={details.messageLocale}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>,
+              document.body
+            )}
         </div>
       )}
 

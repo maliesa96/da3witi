@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 
-const connectionString = process.env.DATABASE_URL!
+const connectionString = process.env.NODE_ENV === 'production' ? process.env.DATABASE_URL! : process.env.DIRECT_URL!
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
