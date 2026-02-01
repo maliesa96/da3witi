@@ -266,7 +266,8 @@ export default function Wizard() {
   const updateManualInvite = (index: number, field: "name" | "phone" | "inviteCount", value: string | number) => {
     const newInvites = [...invites];
     if (field === "inviteCount") {
-      newInvites[index][field] = typeof value === "number" ? value : parseInt(value, 10) || 1;
+      // Allow empty string during editing, store as-is (will be validated on blur)
+      newInvites[index][field] = value as unknown as number;
     } else {
       newInvites[index][field] = value as string;
     }
@@ -1223,7 +1224,7 @@ export default function Wizard() {
               </button>
             </div>
 
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               {inviteMode === "file" ? (
                 <>
                   <ContactImport 
@@ -1300,8 +1301,8 @@ export default function Wizard() {
                 <div className="animate-fade-in">
                   <div className="space-y-4">
                     {invites.map((invite, index) => (
-                      <div key={index} className="flex gap-4 items-start">
-                        <div className="flex-1">
+                      <div key={index} className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start">
+                        <div className="flex-1 w-full">
                           <label className="block text-xs font-medium text-stone-700 mb-1.5">
                             {t('step1.manual_name')}
                           </label>
@@ -1310,10 +1311,10 @@ export default function Wizard() {
                             value={invite.name}
                             onChange={(e) => updateManualInvite(index, "name", e.target.value)}
                             placeholder={t('step1.manual_name')}
-                            className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm"
+                            className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm text-start"
                           />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 w-full">
                           <label className="block text-xs font-medium text-stone-700 mb-1.5">
                             {t('step1.manual_phone')}
                           </label>
@@ -1322,27 +1323,45 @@ export default function Wizard() {
                             value={invite.phone}
                             onChange={(e) => updateManualInvite(index, "phone", e.target.value)}
                             placeholder="+96512345678"
-                            className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm dir-ltr text-right"
+                            className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm dir-ltr text-left"
                           />
                         </div>
                         {details.guestsEnabled && (
-                          <div className="w-24">
+                          <div className="w-full sm:w-24">
                             <label className="block text-xs font-medium text-stone-700 mb-1.5">
                               {t('step1.invite_count')}
                             </label>
                             <input
-                              type="number"
-                              min="1"
+                              type="text"
+                              inputMode="numeric"
                               value={invite.inviteCount}
-                              onChange={(e) => updateManualInvite(index, "inviteCount", parseInt(e.target.value, 10) || 1)}
-                              className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm text-center"
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                // Allow empty or numeric values while typing
+                                if (value === '' || /^\d+$/.test(value)) {
+                                  updateManualInvite(index, "inviteCount", value);
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const value = e.target.value;
+                                // On blur, ensure we have a valid number between 1-50
+                                const num = parseInt(value, 10);
+                                if (isNaN(num) || num < 1) {
+                                  updateManualInvite(index, "inviteCount", 1);
+                                } else if (num > 50) {
+                                  updateManualInvite(index, "inviteCount", 50);
+                                } else {
+                                  updateManualInvite(index, "inviteCount", num);
+                                }
+                              }}
+                              className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm text-start"
                             />
                           </div>
                         )}
                         {invites.length > 1 && (
                           <button
                             onClick={() => removeManualInvite(index)}
-                            className="mt-7 p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            className="sm:mt-7 p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors self-start"
                           >
                             <Trash2 size={18} />
                           </button>
@@ -1361,14 +1380,14 @@ export default function Wizard() {
                 </div>
               )}
             </div>
-            <div className="bg-stone-50 px-6 py-4 border-t border-stone-100 flex justify-between items-center">
-              <span className="text-xs text-stone-500">
+            <div className="bg-stone-50 px-4 sm:px-6 py-4 border-t border-stone-100 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+              <span className="text-xs text-stone-500 text-center sm:text-left">
                 {t('step1.added_contacts', {count: invites.filter(i => i.name || i.phone).length})}
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setStep(1)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all flex items-center gap-2"
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all flex items-center justify-center gap-2"
                 >
                   <ArrowLeft size={16} className="rtl:rotate-180" />
                   <span>{t('step1.back')}</span>
@@ -1378,7 +1397,7 @@ export default function Wizard() {
                     const normalized = validateAndNormalizeInvites();
                     if (normalized.ok) setStep(3);
                   }}
-                  className="bg-stone-900 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-all flex items-center gap-2"
+                  className="flex-1 sm:flex-none bg-stone-900 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-stone-800 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   <span>{t('step1.next')}</span>
                   <ArrowRight size={16} className="rtl:rotate-180" />

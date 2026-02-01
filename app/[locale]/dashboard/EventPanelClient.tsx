@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect, memo } from "react";
+import { useMemo, useState, useCallback, useEffect, memo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Send, Filter } from "lucide-react";
+import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Filter } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import InvitePreview from "@/app/components/InvitePreview";
 import { useLocale, useTranslations } from "next-intl";
@@ -311,6 +311,15 @@ export default function EventPanelClient({
   const [serverGuests, setServerGuests] = useState<GuestRowData[]>(
     useClientSide ? [] : (initialGuests ?? [])
   );
+  // Track guest IDs in a ref so we can dedupe inserts without relying on
+  // state-updater purity (React StrictMode can invoke updaters more than once).
+  const guestIdsRef = useRef<Set<string>>(new Set((initialGuests ?? []).map((g) => g.id)));
+
+  // Keep the ref in sync as the backing list changes.
+  useEffect(() => {
+    const source = useClientSide ? allGuests : serverGuests;
+    guestIdsRef.current = new Set(source.map((g) => g.id));
+  }, [useClientSide, allGuests, serverGuests]);
   const [serverPagination, setServerPagination] = useState<PaginationInfo>(initialPagination ?? emptyPagination);
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -473,32 +482,41 @@ export default function EventPanelClient({
   // Handle local state updates when guests are added
   const handleGuestsAdded = useCallback(
     (newGuests: GuestRowData[]) => {
-      if (useClientSide) {
-        // Client-side: add to local array
-        setAllGuests((prev) => [...newGuests, ...prev]);
-      } else {
-        // Server-side: prepend to current page and update pagination
-        setServerGuests((prev) => [...newGuests, ...prev].slice(0, pageSize));
-        setServerPagination((prev) => ({
-          ...prev,
-          totalCount: prev.totalCount + newGuests.length,
-          totalPages: Math.ceil((prev.totalCount + newGuests.length) / prev.pageSize),
-        }));
-      }
-      // Update invite totals locally (best-effort; server refresh will correct as needed)
+      // Dedup against any already-present guest IDs (e.g. from realtime insert arriving first).
+      const uniqueNewGuests = newGuests.filter((g) => !guestIdsRef.current.has(g.id));
+      if (uniqueNewGuests.length === 0) return;
+      uniqueNewGuests.forEach((g) => guestIdsRef.current.add(g.id));
+
+      const addedInvites = uniqueNewGuests.reduce(
+        (acc, g) => acc + (Number.isFinite(g.inviteCount) ? (g.inviteCount as number) : 1),
+        0
+      );
+
+      // Update totals/stats (invite-based) outside of list updaters to avoid double-running side effects.
       if (event.guestsEnabled) {
-        const addedInvites = newGuests.reduce((acc, g) => acc + (Number.isFinite(g.inviteCount) ? (g.inviteCount as number) : 1), 0);
-        setServerInviteTotals((prev) => ({
-          all: prev.all + addedInvites,
-          filtered: prev.filtered + addedInvites,
+        setServerInviteTotals((totalsPrev) => ({
+          all: totalsPrev.all + addedInvites,
+          filtered: totalsPrev.filtered + addedInvites,
         }));
       }
-      // Update stats locally
-      setServerStats((prev) => ({
-        ...prev,
-        total: prev.total + newGuests.length,
-        pending: prev.pending + newGuests.length,
+      setServerStats((statsPrev) => ({
+        ...statsPrev,
+        total: statsPrev.total + addedInvites,
+        pending: statsPrev.pending + addedInvites,
       }));
+
+      if (useClientSide) {
+        // Client-side: add to local array.
+        setAllGuests((prev) => [...uniqueNewGuests, ...prev]);
+      } else {
+        // Server-side: prepend to current page and update pagination.
+        setServerGuests((prev) => [...uniqueNewGuests, ...prev].slice(0, pageSize));
+        setServerPagination((pagPrev) => ({
+          ...pagPrev,
+          totalCount: pagPrev.totalCount + uniqueNewGuests.length,
+          totalPages: Math.ceil((pagPrev.totalCount + uniqueNewGuests.length) / pagPrev.pageSize),
+        }));
+      }
     },
     [useClientSide, pageSize, event.guestsEnabled]
   );
@@ -506,32 +524,54 @@ export default function EventPanelClient({
   // Handle local state updates when a guest is deleted
   const handleGuestDeleted = useCallback(
     (guestId: string) => {
+      // Find the guest first so we know its status and invite count
+      const guestList = useClientSide ? allGuests : serverGuests;
+      const removed = guestList.find((g) => g.id === guestId);
+      
+      if (!removed) {
+        // Guest already removed (likely by realtime handler), skip
+        return;
+      }
+
+      const status = removed.status;
+      const removedInvites = Number.isFinite(removed.inviteCount) ? (removed.inviteCount as number) : 1;
+      // Keep insert-dedupe set in sync
+      guestIdsRef.current.delete(guestId);
+
       if (useClientSide) {
         setAllGuests((prev) => prev.filter((g) => g.id !== guestId));
       } else {
-        const removed = serverGuests.find((g) => g.id === guestId);
         setServerGuests((prev) => prev.filter((g) => g.id !== guestId));
         setServerPagination((prev) => ({
           ...prev,
           totalCount: Math.max(0, prev.totalCount - 1),
           totalPages: Math.ceil(Math.max(0, prev.totalCount - 1) / prev.pageSize),
         }));
-        if (event.guestsEnabled && removed) {
-          const removedInvites = Number.isFinite(removed.inviteCount) ? (removed.inviteCount as number) : 1;
-          setServerInviteTotals((prev) => ({
-            all: Math.max(0, prev.all - removedInvites),
-            filtered: Math.max(0, prev.filtered - removedInvites),
-          }));
-        }
       }
-      // Update stats locally
-      setServerStats((prev) => ({
-        ...prev,
-        total: Math.max(0, prev.total - 1),
-        pending: Math.max(0, prev.pending - 1),
-      }));
+
+      // Update invite totals (for both client-side and server-side)
+      if (event.guestsEnabled) {
+        setServerInviteTotals((prev) => ({
+          all: Math.max(0, prev.all - removedInvites),
+          filtered: Math.max(0, prev.filtered - removedInvites),
+        }));
+      }
+
+      // Update stats based on the guest's actual status
+      setServerStats((prev) => {
+        // Stat cards reflect invite totals by status (invite_count sum)
+        const updated = { ...prev, total: Math.max(0, prev.total - removedInvites) };
+        if (status === "pending") updated.pending = Math.max(0, updated.pending - removedInvites);
+        else if (status === "sent") updated.sent = Math.max(0, updated.sent - removedInvites);
+        else if (status === "delivered") updated.delivered = Math.max(0, updated.delivered - removedInvites);
+        else if (status === "read") updated.read = Math.max(0, updated.read - removedInvites);
+        else if (status === "confirmed") updated.confirmed = Math.max(0, updated.confirmed - removedInvites);
+        else if (status === "declined") updated.declined = Math.max(0, updated.declined - removedInvites);
+        else if (status === "failed") updated.failed = Math.max(0, updated.failed - removedInvites);
+        return updated;
+      });
     },
-    [useClientSide, event.guestsEnabled, serverGuests]
+    [useClientSide, event.guestsEnabled, allGuests, serverGuests]
   );
 
   const handleGuestUpdated = useCallback(
@@ -687,6 +727,7 @@ export default function EventPanelClient({
       const guest = toClientGuest(payload);
       const oldStatus = payload.oldStatus;
       const newStatus = guest.status;
+      const invites = Number.isFinite(guest.inviteCount) ? (guest.inviteCount as number) : 1;
 
       // Update the guest in the appropriate list
       if (useClientSide) {
@@ -704,22 +745,22 @@ export default function EventPanelClient({
         setServerStats((prev) => {
           const updated = { ...prev };
           // Decrement old status count
-          if (oldStatus === "pending") updated.pending = Math.max(0, updated.pending - 1);
-          else if (oldStatus === "sent") updated.sent = Math.max(0, updated.sent - 1);
-          else if (oldStatus === "delivered") updated.delivered = Math.max(0, updated.delivered - 1);
-          else if (oldStatus === "read") updated.read = Math.max(0, updated.read - 1);
-          else if (oldStatus === "confirmed") updated.confirmed = Math.max(0, updated.confirmed - 1);
-          else if (oldStatus === "declined") updated.declined = Math.max(0, updated.declined - 1);
-          else if (oldStatus === "failed") updated.failed = Math.max(0, updated.failed - 1);
+          if (oldStatus === "pending") updated.pending = Math.max(0, updated.pending - invites);
+          else if (oldStatus === "sent") updated.sent = Math.max(0, updated.sent - invites);
+          else if (oldStatus === "delivered") updated.delivered = Math.max(0, updated.delivered - invites);
+          else if (oldStatus === "read") updated.read = Math.max(0, updated.read - invites);
+          else if (oldStatus === "confirmed") updated.confirmed = Math.max(0, updated.confirmed - invites);
+          else if (oldStatus === "declined") updated.declined = Math.max(0, updated.declined - invites);
+          else if (oldStatus === "failed") updated.failed = Math.max(0, updated.failed - invites);
 
           // Increment new status count
-          if (newStatus === "pending") updated.pending += 1;
-          else if (newStatus === "sent") updated.sent += 1;
-          else if (newStatus === "delivered") updated.delivered += 1;
-          else if (newStatus === "read") updated.read += 1;
-          else if (newStatus === "confirmed") updated.confirmed += 1;
-          else if (newStatus === "declined") updated.declined += 1;
-          else if (newStatus === "failed") updated.failed += 1;
+          if (newStatus === "pending") updated.pending += invites;
+          else if (newStatus === "sent") updated.sent += invites;
+          else if (newStatus === "delivered") updated.delivered += invites;
+          else if (newStatus === "read") updated.read += invites;
+          else if (newStatus === "confirmed") updated.confirmed += invites;
+          else if (newStatus === "declined") updated.declined += invites;
+          else if (newStatus === "failed") updated.failed += invites;
 
           return updated;
         });
@@ -732,37 +773,35 @@ export default function EventPanelClient({
     (payload: RealtimeGuestPayload) => {
       const guest = toClientGuest(payload);
 
-      // Check if this guest already exists (avoid duplicates from local adds)
+      // Dedupe using a ref (safe across StrictMode and async state scheduling)
+      if (guestIdsRef.current.has(guest.id)) {
+        return;
+      }
+      guestIdsRef.current.add(guest.id);
+
+      const invites = Number.isFinite(guest.inviteCount) ? (guest.inviteCount as number) : 1;
+
+      // Update stats/totals outside list state updaters (avoid double-running side effects)
+      setServerStats((statsPrev) => ({
+        ...statsPrev,
+        total: statsPrev.total + invites,
+        pending: statsPrev.pending + invites,
+      }));
+      setServerInviteTotals((totalsPrev) => ({
+        all: totalsPrev.all + invites,
+        filtered: totalsPrev.filtered + invites,
+      }));
+
       if (useClientSide) {
-        setAllGuests((prev) => {
-          if (prev.some((g) => g.id === guest.id)) return prev;
-          return [guest, ...prev];
-        });
+        setAllGuests((prev) => [guest, ...prev]);
       } else {
-        setServerGuests((prev) => {
-          if (prev.some((g) => g.id === guest.id)) return prev;
-          return [guest, ...prev].slice(0, pageSize);
-        });
-        setServerPagination((prev) => ({
-          ...prev,
-          totalCount: prev.totalCount + 1,
-          totalPages: Math.ceil((prev.totalCount + 1) / prev.pageSize),
+        setServerGuests((prev) => [guest, ...prev].slice(0, pageSize));
+        setServerPagination((pagPrev) => ({
+          ...pagPrev,
+          totalCount: pagPrev.totalCount + 1,
+          totalPages: Math.ceil((pagPrev.totalCount + 1) / pagPrev.pageSize),
         }));
       }
-
-      // Update stats
-      setServerStats((prev) => ({
-        ...prev,
-        total: prev.total + 1,
-        pending: prev.pending + 1,
-      }));
-
-      // Update invite totals
-      const invites = guest.inviteCount ?? 1;
-      setServerInviteTotals((prev) => ({
-        all: prev.all + invites,
-        filtered: prev.filtered + invites,
-      }));
     },
     [useClientSide, pageSize]
   );
@@ -772,6 +811,18 @@ export default function EventPanelClient({
       const guestId = payload.id;
       const status = payload.status;
       const invites = payload.inviteCount ?? 1;
+
+      // Check if guest exists before removing (to avoid double-decrementing stats)
+      const guestList = useClientSide ? allGuests : serverGuests;
+      const guestExists = guestList.some((g) => g.id === guestId);
+      
+      if (!guestExists) {
+        // Guest already removed (likely by local handler), skip
+        return;
+      }
+
+      // Keep insert-dedupe set in sync
+      guestIdsRef.current.delete(guestId);
 
       if (useClientSide) {
         setAllGuests((prev) => prev.filter((g) => g.id !== guestId));
@@ -786,14 +837,15 @@ export default function EventPanelClient({
 
       // Update stats
       setServerStats((prev) => {
-        const updated = { ...prev, total: Math.max(0, prev.total - 1) };
-        if (status === "pending") updated.pending = Math.max(0, updated.pending - 1);
-        else if (status === "sent") updated.sent = Math.max(0, updated.sent - 1);
-        else if (status === "delivered") updated.delivered = Math.max(0, updated.delivered - 1);
-        else if (status === "read") updated.read = Math.max(0, updated.read - 1);
-        else if (status === "confirmed") updated.confirmed = Math.max(0, updated.confirmed - 1);
-        else if (status === "declined") updated.declined = Math.max(0, updated.declined - 1);
-        else if (status === "failed") updated.failed = Math.max(0, updated.failed - 1);
+        // Stat cards reflect invite totals by status (invite_count sum)
+        const updated = { ...prev, total: Math.max(0, prev.total - invites) };
+        if (status === "pending") updated.pending = Math.max(0, updated.pending - invites);
+        else if (status === "sent") updated.sent = Math.max(0, updated.sent - invites);
+        else if (status === "delivered") updated.delivered = Math.max(0, updated.delivered - invites);
+        else if (status === "read") updated.read = Math.max(0, updated.read - invites);
+        else if (status === "confirmed") updated.confirmed = Math.max(0, updated.confirmed - invites);
+        else if (status === "declined") updated.declined = Math.max(0, updated.declined - invites);
+        else if (status === "failed") updated.failed = Math.max(0, updated.failed - invites);
         return updated;
       });
 
@@ -803,13 +855,14 @@ export default function EventPanelClient({
         filtered: Math.max(0, prev.filtered - invites),
       }));
     },
-    [useClientSide]
+    [useClientSide, allGuests, serverGuests]
   );
 
   const handleRealtimeEventUpdate = useCallback((payload: RealtimeEventPayload) => {
     // Update stats from the broadcast payload
     setServerStats({
-      total: payload.guestCountTotal,
+      // Stat cards reflect invite totals by status (invite_count sum).
+      total: payload.inviteCountTotal,
       pending: payload.inviteCountPending,
       sent: payload.inviteCountSent,
       delivered: payload.inviteCountDelivered,

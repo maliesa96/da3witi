@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X, Loader2, Trash2, Upload, FileSpreadsheet } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -36,6 +36,8 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
   const [mode, setMode] = useState<'file' | 'manual'>('manual');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // Synchronous guard against accidental double-click / double submit
+  const submitLockRef = useRef(false);
 
   // For SSR safety with portal
   useEffect(() => {
@@ -78,6 +80,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
   const closeAndReset = () => {
     setIsOpen(false);
     setIsSubmitting(false);
+    submitLockRef.current = false;
     setMode('manual');
     setManualInvites([{ name: '', phone: '', inviteCountInput: '1' }]);
     setImportData([]);
@@ -91,6 +94,9 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
 
   const submitGuests = async (guests: Array<{ name: string; phone: string; inviteCount?: number }>) => {
     if (!eventId) return;
+    if (submitLockRef.current) {
+      return;
+    }
     const cleaned = (guests || [])
       .map(g => ({
         name: String(g.name || '').trim(),
@@ -128,6 +134,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
       });
     }
 
+    submitLockRef.current = true;
     setIsSubmitting(true);
     try {
       const res = await addGuests(eventId, normalized);
@@ -148,6 +155,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
         alert('Failed to add guests. Please try again.');
       }
     } finally {
+      submitLockRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -185,16 +193,16 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
               exit={{ opacity: 0, y: 10, scale: 0.98 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
             >
-            <div className="px-6 py-5 border-b border-stone-100 bg-linear-to-b from-white to-stone-50/60">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-stone-900">{t('add_guest_title')}</h3>
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-100 bg-linear-to-b from-white to-stone-50/60">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-stone-900">{t('add_guest_title')}</h3>
                   <p className="text-xs text-stone-500 mt-1">{tw('desc')}</p>
                 </div>
                 <button
                   type="button"
                   onClick={closeAndReset}
-                  className="p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
+                  className="p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer shrink-0"
                   aria-label={t('cancel')}
                 >
                   <X size={18} />
@@ -202,7 +210,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
               </div>
             </div>
 
-            <div className="px-6 py-6 overflow-y-auto">
+            <div className="px-4 sm:px-6 py-4 sm:py-6 overflow-y-auto">
               <div className="bg-stone-50 border border-stone-200 rounded-xl overflow-hidden">
                 <div className="flex border-b border-stone-200">
                   <button
@@ -229,7 +237,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                   </button>
                 </div>
 
-                <div className="p-6 bg-white">
+                <div className="p-4 sm:p-6 bg-white">
                   {mode === 'file' ? (
                     <div className="space-y-4">
                       {fileContacts.length === 0 ? (
@@ -359,8 +367,8 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                   ) : (
                     <div className="space-y-4">
                       {manualInvites.map((invite, index) => (
-                        <div key={index} className="flex gap-4 items-start">
-                          <div className="flex-1">
+                        <div key={index} className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start">
+                          <div className="flex-1 w-full">
                             <label className="block text-xs font-medium text-stone-700 mb-1.5">
                               {tw('manual_name')}
                             </label>
@@ -373,10 +381,10 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                                 setManualInvites(next);
                               }}
                               placeholder={tw('manual_name')}
-                              className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm"
+                              className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm text-start"
                             />
                           </div>
-                          <div className="flex-1">
+                          <div className="flex-1 w-full">
                             <label className="block text-xs font-medium text-stone-700 mb-1.5">
                               {tw('manual_phone')}
                             </label>
@@ -389,18 +397,16 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                                 setManualInvites(next);
                               }}
                               placeholder="+96512345678"
-                              className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm dir-ltr"
+                              className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm dir-ltr text-left"
                             />
                           </div>
                           {guestsEnabled && (
-                            <div className="w-32">
+                            <div className="w-full sm:w-32">
                               <label className="block text-xs font-medium text-stone-700 mb-1.5">
                                 {tw('invite_count')}
                               </label>
                               <input
-                                type="number"
-                                min={1}
-                                max={50}
+                                type="text"
                                 inputMode="numeric"
                                 value={invite.inviteCountInput ?? '1'}
                                 onChange={(e) => {
@@ -412,18 +418,22 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                                   const current = manualInvites[index]?.inviteCountInput ?? '';
                                   const trimmed = String(current).trim();
                                   const next = [...manualInvites];
-                                  if (trimmed === '') {
+                                  if (trimmed === '' || trimmed === '0') {
                                     next[index] = { ...next[index], inviteCountInput: '1' };
                                     setManualInvites(next);
                                     return;
                                   }
                                   const n = Number(trimmed);
-                                  if (!Number.isFinite(n) || !Number.isInteger(n)) return;
+                                  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
+                                    next[index] = { ...next[index], inviteCountInput: '1' };
+                                    setManualInvites(next);
+                                    return;
+                                  }
                                   const clamped = Math.max(1, Math.min(50, n));
                                   next[index] = { ...next[index], inviteCountInput: String(clamped) };
                                   setManualInvites(next);
                                 }}
-                                className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm"
+                                className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm text-start"
                               />
                             </div>
                           )}
@@ -431,7 +441,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                             <button
                               type="button"
                               onClick={() => setManualInvites(manualInvites.filter((_, i) => i !== index))}
-                              className="mt-7 p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              className="sm:mt-7 p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer self-start"
                             >
                               <Trash2 size={18} />
                             </button>
@@ -451,15 +461,15 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                   )}
                 </div>
 
-                <div className="bg-stone-50 px-6 py-4 border-t border-stone-200 flex items-center justify-between gap-3">
-                  <span className="text-xs text-stone-600">
+                <div className="bg-stone-50 px-4 sm:px-6 py-4 border-t border-stone-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <span className="text-xs text-stone-600 text-center sm:text-left">
                     {tw('added_contacts', { count: totalCount })}
                   </span>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={closeAndReset}
-                      className="px-4 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all cursor-pointer"
+                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all cursor-pointer"
                     >
                       {t('cancel')}
                     </button>
@@ -482,7 +492,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                                 });
                         submitGuests(guests);
                       }}
-                      className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                      className={`flex-1 sm:flex-none px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
                         isSubmitting || totalCount === 0 || !eventId
                           ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
                           : 'bg-stone-900 text-white hover:bg-stone-800 cursor-pointer'
