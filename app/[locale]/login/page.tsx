@@ -42,8 +42,8 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8] px-6">
-      <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-sm border border-stone-200">
+    <div className="min-h-dvh flex items-center justify-center bg-[#FDFCF8] px-4 py-6">
+      <div className="w-full max-w-md space-y-6 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-stone-200">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-stone-900">{t('login')}</h1>
           <p className="text-stone-500 mt-2">{t('magic_link_desc')}</p>
@@ -88,7 +88,7 @@ async function AuthMessages({ searchParams }: { searchParams: Promise<{ [key: st
   if (params.sent) {
     return (
       <div className="mt-4 p-3 bg-green-50 text-green-700 text-sm rounded-lg text-center">
-        Check your email for the magic link!
+        Check your email for the sign-in link!
       </div>
     );
   }
@@ -96,7 +96,7 @@ async function AuthMessages({ searchParams }: { searchParams: Promise<{ [key: st
   if (params.error) {
     return (
       <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg text-center">
-        Error sending magic link. Please try again.
+        Error sending sign-in link. Please try again.
       </div>
     );
   }

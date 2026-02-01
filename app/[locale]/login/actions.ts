@@ -20,7 +20,7 @@ export async function signInWithMagicLink(formData: FormData) {
   })
 
   if (error) {
-    console.error('Magic link error:', error.message)
+    console.error('Sign-in link error:', error.message)
     redirect(`/${locale}/login?error=true`)
   }
 
