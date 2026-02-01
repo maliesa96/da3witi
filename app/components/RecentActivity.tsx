@@ -101,44 +101,23 @@ const ActivityRow = memo(function ActivityRow({
   const isAr = locale === "ar";
 
   const getActivityText = (item: ActivityItem) => {
-    if (isAr) {
-      switch (item.type) {
-        case "confirmed":
-          return `${item.guestName} أكد الحضور`;
-        case "declined":
-          return `${item.guestName} اعتذر عن الحضور`;
-        case "guest_added":
-          return `تم إضافة ${item.guestName}`;
-        case "invite_sent":
-          return `تم إرسال الدعوة لـ ${item.guestName}`;
-        case "invite_delivered":
-          return `تم تسليم الدعوة لـ ${item.guestName}`;
-        case "invite_read":
-          return `${item.guestName} قرأ الدعوة`;
-        case "checked_in":
-          return `${item.guestName} سجل الدخول`;
-        default:
-          return "تحديث جديد";
-      }
-    }
-
     switch (item.type) {
       case "confirmed":
-        return `${item.guestName} ${t("activity_confirmed")}`;
+        return <><span className="font-semibold">{item.guestName}</span> {t("activity_confirmed")}</>;
       case "declined":
-        return `${item.guestName} ${t("activity_declined")}`;
+        return <><span className="font-semibold">{item.guestName}</span> {t("activity_declined")}</>;
       case "guest_added":
-        return `${t("activity_added")} ${item.guestName}`;
+        return <>{t("activity_added")} <span className="font-semibold">{item.guestName}</span></>;
       case "invite_sent":
-        return `${t("activity_sent")} ${item.guestName}`;
+        return <>{t("activity_sent")} <span className="font-semibold">{item.guestName}</span></>;
       case "invite_delivered":
-        return `${t("activity_delivered")} ${item.guestName}`;
+        return <>{t("activity_delivered")} <span className="font-semibold">{item.guestName}</span></>;
       case "invite_read":
-        return `${item.guestName} ${t("activity_read")}`;
+        return <><span className="font-semibold">{item.guestName}</span> {t("activity_read")}</>;
       case "checked_in":
-        return `${item.guestName} ${t("activity_checked_in")}`;
+        return <><span className="font-semibold">{item.guestName}</span> {t("activity_checked_in")}</>;
       default:
-        return t("activity_update");
+        return <>{t("activity_update")}</>;
     }
   };
 

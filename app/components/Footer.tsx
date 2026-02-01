@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail } from "lucide-react";
+import { MailOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { Link } from "@/navigation";
@@ -12,11 +12,11 @@ export function Footer() {
 
   return (
     <footer className="border-t border-stone-200 bg-white py-8 mt-auto">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-stone-900 rounded flex items-center justify-center text-white">
-              <Mail size={14} />
+            <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white">
+              <MailOpen size={18} />
             </div>
             <span className="text-lg font-display font-semibold tracking-tight text-stone-900">
               Da3witi

@@ -966,7 +966,7 @@ export default function EventPanelClient({
       {/* Two-column layout: Activity on left (desktop), Stats + Guest List on right */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left Column: Recent Activity (desktop only) */}
-        <div className="hidden lg:block w-80 shrink-0">
+        <div className="hidden lg:block w-96 shrink-0">
           <div className="sticky top-24">
             <RecentActivity 
               eventId={event.id} 

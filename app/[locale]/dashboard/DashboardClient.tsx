@@ -53,16 +53,16 @@ function EventCard({ event }: { event: EventCardData }) {
   const t = useTranslations("Dashboard");
   const isPdf = event.imageUrl?.toLowerCase().endsWith(".pdf");
   const hasImage = !!event.imageUrl && !isPdf;
-  const guestCount = event.guestCountTotal ?? event.inviteCountTotal ?? 0;
+  const guestCount = event.inviteCountTotal ?? 0;
   const confirmedCount = event.inviteCountConfirmed ?? 0;
 
   return (
     <Link
       href={`/events/${event.id}`}
-      className="group block bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-stone-300 hover:-translate-y-1"
+      className="group block bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-stone-300 hover:-translate-y-1"
     >
       {/* Image/Media Section */}
-      <div className="relative aspect-4/3 bg-stone-100 overflow-hidden">
+      <div className="relative aspect-video bg-stone-100 overflow-hidden">
         {hasImage ? (
           <Image
             src={event.imageUrl!}
@@ -85,53 +85,53 @@ function EventCard({ event }: { event: EventCardData }) {
         )}
         
         {/* Status Badges */}
-        <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+        <div className="absolute top-2 left-2 flex flex-wrap gap-1.5">
           {event.isScheduled && (
-            <span className="px-2.5 py-1 rounded-full bg-amber-500/90 backdrop-blur-sm text-xs font-medium text-white shadow-sm">
+            <span className="px-2 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm">
               {t("scheduled")}
             </span>
           )}
           {event.qrEnabled && (
-            <span className="px-2.5 py-1 rounded-full bg-stone-900/80 backdrop-blur-sm text-xs font-medium text-white shadow-sm flex items-center gap-1">
-              <QrCode size={12} />
+            <span className="px-2 py-0.5 rounded-full bg-stone-900/80 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm flex items-center gap-1">
+              <QrCode size={10} />
               QR
             </span>
           )}
         </div>
 
         {/* Guest Count Pill */}
-        <div className="absolute bottom-3 right-3">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-sm">
-            <Users size={14} className="text-stone-600" />
-            <span className="text-sm font-semibold text-stone-900 tabular-nums">{guestCount}</span>
+        <div className="absolute bottom-2 right-2">
+          <div className="flex items-center gap-1 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full shadow-sm">
+            <Users size={12} className="text-stone-600" />
+            <span className="text-xs font-semibold text-stone-900 tabular-nums">{guestCount}</span>
           </div>
         </div>
       </div>
 
       {/* Content Section */}
-      <div className="p-4 md:p-5">
-        <h3 className="text-lg font-semibold text-stone-900 truncate group-hover:text-stone-700 transition-colors">
+      <div className="p-3">
+        <h3 className="text-base font-semibold text-stone-900 truncate group-hover:text-stone-700 transition-colors">
           {event.title}
         </h3>
         
         {/* Event Details */}
-        <div className="mt-3 space-y-2">
+        <div className="mt-2 space-y-1.5">
           {event.date && (
-            <div className="flex items-center gap-2 text-sm text-stone-600">
-              <Calendar size={14} className="text-stone-400 shrink-0" />
+            <div className="flex items-center gap-1.5 text-xs text-stone-600">
+              <Calendar size={12} className="text-stone-400 shrink-0" />
               <span className="truncate">{event.date}</span>
               {event.time && (
                 <>
                   <span className="text-stone-300">•</span>
-                  <Clock size={14} className="text-stone-400 shrink-0" />
+                  <Clock size={12} className="text-stone-400 shrink-0" />
                   <span>{event.time}</span>
                 </>
               )}
             </div>
           )}
           {event.locationName && (
-            <div className="flex items-center gap-2 text-sm text-stone-600">
-              <MapPin size={14} className="text-stone-400 shrink-0" />
+            <div className="flex items-center gap-1.5 text-xs text-stone-600">
+              <MapPin size={12} className="text-stone-400 shrink-0" />
               <span className="truncate">{event.locationName}</span>
             </div>
           )}
@@ -139,13 +139,13 @@ function EventCard({ event }: { event: EventCardData }) {
 
         {/* Stats Row */}
         {guestCount > 0 && (
-          <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-sm text-stone-500">
-              <CheckCircle2 size={14} className="text-green-500" />
+          <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between">
+            <div className="flex items-center gap-1 text-xs text-stone-500">
+              <CheckCircle2 size={12} className="text-green-500" />
               <span className="tabular-nums">{confirmedCount}</span>
               <span>{t("confirmed")}</span>
             </div>
-            <div className="text-xs text-stone-400">
+            <div className="text-[10px] text-stone-400">
               {guestCount > 0 && `${Math.round((confirmedCount / guestCount) * 100)}%`}
             </div>
           </div>
@@ -157,12 +157,12 @@ function EventCard({ event }: { event: EventCardData }) {
 
 function EventCardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden animate-pulse">
-      <div className="aspect-4/3 bg-stone-200" />
-      <div className="p-4 md:p-5 space-y-3">
-        <div className="h-5 w-3/4 bg-stone-200 rounded" />
-        <div className="h-4 w-1/2 bg-stone-200 rounded" />
-        <div className="h-4 w-2/3 bg-stone-200 rounded" />
+    <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden animate-pulse">
+      <div className="aspect-video bg-stone-200" />
+      <div className="p-3 space-y-2">
+        <div className="h-4 w-3/4 bg-stone-200 rounded" />
+        <div className="h-3 w-1/2 bg-stone-200 rounded" />
+        <div className="h-3 w-2/3 bg-stone-200 rounded" />
       </div>
     </div>
   );
@@ -219,23 +219,13 @@ export default function DashboardClient() {
   return (
     <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pb-24 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-stone-900">
-            {t("my_events")}
-          </h1>
-          <p className="mt-1 text-sm text-stone-500">
-            {t("select_event_to_manage")}
-          </p>
-        </div>
-        <Link
-          href="/wizard"
-          prefetch={false}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors shadow-sm"
-        >
-          <Plus size={18} />
-          {t("create_event")}
-        </Link>
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-display font-bold text-stone-900">
+          {t("my_events")}
+        </h1>
+        <p className="mt-1 text-sm text-stone-500">
+          {t("select_event_to_manage")}
+        </p>
       </div>
 
       {/* Error State */}

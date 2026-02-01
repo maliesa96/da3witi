@@ -6,6 +6,7 @@ import { buildInviteTemplatePayload, type MediaType } from '@/lib/whatsapp';
 import { normalizePhoneToE164 } from '@/lib/phone';
 import { enqueueWhatsAppOutboxBatch } from '@/lib/queue/whatsappOutbox';
 import { shouldEnqueueWhatsAppInvite } from '@/lib/whatsappSendEligibility';
+import { broadcastGuestInsert } from '@/lib/supabase/broadcast';
 
 async function getAuthedUser() {
   const supabase = await createClient();
@@ -18,59 +19,6 @@ async function getAuthedUser() {
   }
 
   return user;
-}
-
-export async function addGuest(
-  eventId: string,
-  guestData: { name: string; phone: string; inviteCount?: number | string }
-) {
-  const user = await getAuthedUser();
-
-  const event = await prisma.event.findUnique({
-    where: { id: eventId }
-  });
-
-  if (!event) {
-    throw new Error('Event not found');
-  }
-
-  if (event.userId !== user.id) {
-    throw new Error('Forbidden');
-  }
-
-  const name = String(guestData.name || '').trim();
-  const phoneRaw = String(guestData.phone || '').trim();
-  if (name.length > 0 && name.length < 2) {
-    throw new Error('NAME_TOO_SHORT');
-  }
-  const phoneRes = normalizePhoneToE164(phoneRaw);
-  if (!name || !phoneRaw || !phoneRes.ok) {
-    throw new Error('INVALID_PHONE');
-  }
-
-  let inviteCount: number | undefined = undefined;
-  if (typeof guestData.inviteCount !== 'undefined') {
-    const n =
-      typeof guestData.inviteCount === 'string' ? Number(guestData.inviteCount) : guestData.inviteCount;
-    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 50) {
-      throw new Error('INVALID_INVITE_COUNT');
-    }
-    inviteCount = n;
-  }
-
-  // 1. Create guest
-  const guest = await prisma.guest.create({
-    data: {
-      eventId,
-      name,
-      phone: phoneRes.phone,
-      status: 'pending',
-      ...(event.guestsEnabled ? { inviteCount: inviteCount ?? 1 } : {}),
-    }
-  });
-
-  // Note: Not calling revalidatePath - client state handles updates
-  return { success: true, guestId: guest.id };
 }
 
 export async function addGuests(
@@ -151,6 +99,22 @@ export async function addGuests(
       whatsappMessageId: true,
     },
   });
+
+  // Broadcast guest insert events for realtime updates
+  await Promise.all(
+    createdGuests.map((guest) =>
+      broadcastGuestInsert(eventId, {
+        id: guest.id,
+        eventId,
+        name: guest.name,
+        phone: guest.phone,
+        status: guest.status,
+        inviteCount: guest.inviteCount,
+        checkedIn: guest.checkedIn,
+        whatsappMessageId: guest.whatsappMessageId,
+      })
+    )
+  );
 
   return { success: true, created: createdGuests.length, guests: createdGuests };
 }

@@ -198,14 +198,24 @@ export async function POST(request: Request) {
 
                       const oldStatus = guest.status;
 
-                      // Update guest status to confirmed
-                      await prisma.guest.update({
-                        where: { id: guest.id },
+                      // Update guest status to confirmed with optimistic locking
+                      // Only update if status hasn't changed to 'confirmed' already (prevents race condition)
+                      const updateResult = await prisma.guest.updateMany({
+                        where: { 
+                          id: guest.id,
+                          status: { not: 'confirmed' }  // Only update if not already confirmed
+                        },
                         data: { 
                           status: 'confirmed',
                           confirmedAt: new Date(),
                         }
                       });
+
+                      // If no rows were updated, another request already confirmed this guest
+                      if (updateResult.count === 0) {
+                        console.log(`ℹ️ Skipping confirm for ${guest.name}: already confirmed by concurrent request`);
+                        continue;
+                      }
 
                       // Broadcast the update to connected clients
                       await broadcastGuestUpdate(guest.eventId, {
@@ -261,13 +271,24 @@ export async function POST(request: Request) {
 
                       const oldStatus = guest.status;
                       
-                      await prisma.guest.update({
-                        where: { id: guest.id },
+                      // Update guest status to declined with optimistic locking
+                      // Only update if status hasn't changed to 'declined' already (prevents race condition)
+                      const updateResult = await prisma.guest.updateMany({
+                        where: { 
+                          id: guest.id,
+                          status: { not: 'declined' }  // Only update if not already declined
+                        },
                         data: { 
                           status: 'declined',
                           declinedAt: new Date(),
                         }
                       });
+
+                      // If no rows were updated, another request already declined this guest
+                      if (updateResult.count === 0) {
+                        console.log(`ℹ️ Skipping decline for ${guest.name}: already declined by concurrent request`);
+                        continue;
+                      }
 
                       // Broadcast the update to connected clients
                       await broadcastGuestUpdate(guest.eventId, {
