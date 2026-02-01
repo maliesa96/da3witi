@@ -11,13 +11,14 @@ import { Link } from "@/navigation";
 import AddGuestForm from "@/app/components/AddGuestForm";
 import ConfirmSendInvitesButton from "@/app/components/ConfirmSendInvitesButton";
 import DeleteAllGuestsButton from "@/app/components/DeleteAllGuestsButton";
+import RecentActivity from "@/app/components/RecentActivity";
 import { GuestListClient, type GuestRowData } from "@/app/components/AnimatedGuestRows";
 import {
-  useGuestRealtimeUpdates,
+  useRealtimeSubscription,
   toClientGuest,
-  type RealtimeGuestPayload,
-  type RealtimeEventPayload,
-} from "@/lib/supabase/realtime";
+  type BroadcastGuestPayload as RealtimeGuestPayload,
+  type BroadcastEventPayload as RealtimeEventPayload,
+} from "@/lib/supabase/RealtimeProvider";
 
 type EventForClient = {
   id: string;
@@ -680,11 +681,11 @@ export default function EventPanelClient({
   );
 
   // === REALTIME SUBSCRIPTIONS ===
-  // Subscribe to live guest status updates from Supabase
+  // Subscribe to live guest status updates via Broadcast
   const handleRealtimeGuestUpdate = useCallback(
-    (payload: RealtimeGuestPayload, oldPayload: RealtimeGuestPayload | null) => {
+    (payload: RealtimeGuestPayload) => {
       const guest = toClientGuest(payload);
-      const oldStatus = oldPayload?.status;
+      const oldStatus = payload.oldStatus;
       const newStatus = guest.status;
 
       // Update the guest in the appropriate list
@@ -770,7 +771,7 @@ export default function EventPanelClient({
     (payload: RealtimeGuestPayload) => {
       const guestId = payload.id;
       const status = payload.status;
-      const invites = payload.invite_count ?? 1;
+      const invites = payload.inviteCount ?? 1;
 
       if (useClientSide) {
         setAllGuests((prev) => prev.filter((g) => g.id !== guestId));
@@ -806,37 +807,46 @@ export default function EventPanelClient({
   );
 
   const handleRealtimeEventUpdate = useCallback((payload: RealtimeEventPayload) => {
-    // Update stats from the denormalized event counters (maintained by DB triggers)
+    // Update stats from the broadcast payload
     setServerStats({
-      total: payload.guest_count_total,
-      pending: payload.invite_count_pending,
-      sent: payload.invite_count_sent,
-      delivered: payload.invite_count_delivered,
-      read: payload.invite_count_read,
-      confirmed: payload.invite_count_confirmed,
-      declined: payload.invite_count_declined,
-      failed: payload.invite_count_failed,
+      total: payload.guestCountTotal,
+      pending: payload.inviteCountPending,
+      sent: payload.inviteCountSent,
+      delivered: payload.inviteCountDelivered,
+      read: payload.inviteCountRead,
+      confirmed: payload.inviteCountConfirmed,
+      declined: payload.inviteCountDeclined,
+      failed: payload.inviteCountFailed,
     });
 
     setServerInviteTotals((prev) => ({
       ...prev,
-      all: payload.invite_count_total,
+      all: payload.inviteCountTotal,
     }));
   }, []);
 
-  // Only enable realtime when the event has been paid for (invites are being sent)
-  const realtimeEnabled = !!event.paidAt;
+  // Subscribe to shared realtime channel (managed by RealtimeProvider)
+  useRealtimeSubscription({
+    onGuestUpdate: handleRealtimeGuestUpdate,
+    onGuestInsert: handleRealtimeGuestInsert,
+    onGuestDelete: handleRealtimeGuestDelete,
+    onEventUpdate: handleRealtimeEventUpdate,
+  });
 
-  useGuestRealtimeUpdates(
-    event.id,
-    {
-      onGuestUpdate: handleRealtimeGuestUpdate,
-      onGuestInsert: handleRealtimeGuestInsert,
-      onGuestDelete: handleRealtimeGuestDelete,
-      onEventUpdate: handleRealtimeEventUpdate,
-    },
-    realtimeEnabled
-  );
+  // Mobile activity sheet state
+  const [showMobileActivity, setShowMobileActivity] = useState(false);
+
+  // Prevent body scroll when mobile activity sheet is open
+  useEffect(() => {
+    if (showMobileActivity) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showMobileActivity]);
 
   return (
     <div className="space-y-8">
@@ -953,163 +963,248 @@ export default function EventPanelClient({
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-8">
-        <StatCard
-          label={t("pending")}
-          value={stats.pending}
-          icon={<Clock size={16} />}
-          iconBgClassName="bg-amber-50 border border-amber-100 text-amber-600"
-          onClick={() => toggleStatusFilter(["pending", "failed"])}
-          isActive={isPendingQuickActive}
-          activeTintClassName="bg-amber-50/70"
-        />
-        <StatCard
-          label={t("sent")}
-          value={stats.sent}
-          icon={<Send size={16} />}
-          iconBgClassName="bg-violet-50 border border-violet-100 text-violet-600"
-          onClick={() => toggleStatusFilter(["sent"])}
-          isActive={isSentQuickActive}
-          activeTintClassName="bg-violet-50/70"
-        />
-        <StatCard
-          label={t("delivered")}
-          value={stats.delivered}
-          icon={<Check size={16} />}
-          iconBgClassName="bg-sky-50 border border-sky-100 text-sky-600"
-          onClick={() => toggleStatusFilter(["delivered"])}
-          isActive={isDeliveredQuickActive}
-          activeTintClassName="bg-sky-50/70"
-        />
-        <StatCard
-          label={t("read")}
-          value={stats.read}
-          icon={<CheckCheck size={16} />}
-          iconBgClassName="bg-blue-50 border border-blue-100 text-blue-600"
-          onClick={() => toggleStatusFilter(["read"])}
-          isActive={isReadQuickActive}
-          activeTintClassName="bg-blue-50/70"
-        />
-        <StatCard
-          label={t("confirmed")}
-          value={stats.confirmed}
-          icon={<CheckCircle2 size={16} />}
-          iconBgClassName="bg-green-50 border border-green-100 text-green-600"
-          onClick={() => toggleStatusFilter(["confirmed"])}
-          isActive={isConfirmedQuickActive}
-          activeTintClassName="bg-green-50/70"
-        />
-        <StatCard
-          label={t("declined")}
-          value={stats.declined}
-          icon={<XCircle size={16} />}
-          iconBgClassName="bg-red-50 border border-red-100 text-red-600"
-          onClick={() => toggleStatusFilter(["declined"])}
-          isActive={isDeclinedQuickActive}
-          activeTintClassName="bg-red-50/70"
-        />
-      </div>
-
-      {/* Guest List Container */}
-      <div className="bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 md:px-6 py-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h3 className="font-medium text-stone-900">{t("guest_list")}</h3>
-            {isLoading && <Loader2 size={14} className="animate-spin text-stone-400" />}
-            <span className="text-xs text-stone-400">
-              ({listTotalDisplay} {t("total_guests") || "total"})
-            </span>
-            <DeleteAllGuestsButton
-              eventId={event.id}
-              pendingCount={serverStats.pending + serverStats.failed}
-              onDeleted={handleAllGuestsDeleted}
+      {/* Two-column layout: Activity on left (desktop), Stats + Guest List on right */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Column: Recent Activity (desktop only) */}
+        <div className="hidden lg:block w-80 shrink-0">
+          <div className="sticky top-24">
+            <RecentActivity 
+              eventId={event.id} 
+              isPaid={!!event.paidAt}
+              maxItems={15}
             />
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <details className="relative group">
-              <summary className="list-none cursor-pointer select-none px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-xs text-stone-700 hover:bg-stone-100 transition-colors inline-flex items-center gap-2 whitespace-nowrap">
-                <Filter size={14} className="text-stone-400" />
-                <span>
-                  {selectedStatuses.length === 0
-                    ? `${t("status_filter")} · ${t("status_filter_all")}`
-                    : `${t("status_filter")} · ${selectedStatuses.length}`}
-                </span>
-              </summary>
-              <div className="absolute z-50 mt-2 right-0 rtl:right-auto rtl:left-0 w-60 bg-white border border-stone-200 rounded-xl shadow-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs font-medium text-stone-700">{t("status_filter")}</div>
-                  <button
-                    type="button"
-                    className="text-xs text-stone-500 hover:text-stone-900 cursor-pointer disabled:cursor-not-allowed"
-                    onClick={() => setSelectedStatuses([])}
-                    disabled={selectedStatuses.length === 0}
-                  >
-                    {t("status_filter_clear")}
-                  </button>
-                </div>
-                <div className="space-y-1">
-                  {statusOptions.map((opt) => {
-                    const checked = selectedStatuses.includes(opt.value);
-                    return (
-                      <label
-                        key={opt.value}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-stone-50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => {
-                            setSelectedStatuses((prev) =>
-                              prev.includes(opt.value)
-                                ? prev.filter((s) => s !== opt.value)
-                                : [...prev, opt.value]
-                            );
-                          }}
-                          className="accent-stone-900"
-                        />
-                        <span className="text-xs text-stone-700">{opt.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            </details>
-
-            <div className="relative w-full sm:w-auto">
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 rtl:right-auto rtl:left-3">
-                {isSearching ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Search size={14} />
-                )}
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t("search_placeholder")}
-                className="pr-8 pl-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-xs focus:outline-none focus:border-stone-400 w-full sm:w-48 rtl:pr-4 rtl:pl-8"
-              />
-            </div>
           </div>
         </div>
 
-        <GuestListClient
-          eventId={event.id}
-          guests={displayGuests}
-          guestsEnabled={event.guestsEnabled}
-          qrEnabled={event.qrEnabled}
-          onGuestsAdded={handleGuestsAdded}
-          onGuestDeleted={handleGuestDeleted}
-          onGuestUpdated={handleGuestUpdated}
-          pagination={pagination}
-          onPageChange={handlePageChange}
-          isLoading={isLoading}
-          searchQuery={searchQuery}
-          hasFilters={hasFilters}
-        />
+        {/* Right Column: Stats + Guest List */}
+        <div className="flex-1 min-w-0 space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+            <StatCard
+              label={t("pending")}
+              value={stats.pending}
+              icon={<Clock size={16} />}
+              iconBgClassName="bg-amber-50 border border-amber-100 text-amber-600"
+              onClick={() => toggleStatusFilter(["pending", "failed"])}
+              isActive={isPendingQuickActive}
+              activeTintClassName="bg-amber-50/70"
+            />
+            <StatCard
+              label={t("sent")}
+              value={stats.sent}
+              icon={<Send size={16} />}
+              iconBgClassName="bg-violet-50 border border-violet-100 text-violet-600"
+              onClick={() => toggleStatusFilter(["sent"])}
+              isActive={isSentQuickActive}
+              activeTintClassName="bg-violet-50/70"
+            />
+            <StatCard
+              label={t("delivered")}
+              value={stats.delivered}
+              icon={<Check size={16} />}
+              iconBgClassName="bg-sky-50 border border-sky-100 text-sky-600"
+              onClick={() => toggleStatusFilter(["delivered"])}
+              isActive={isDeliveredQuickActive}
+              activeTintClassName="bg-sky-50/70"
+            />
+            <StatCard
+              label={t("read")}
+              value={stats.read}
+              icon={<CheckCheck size={16} />}
+              iconBgClassName="bg-blue-50 border border-blue-100 text-blue-600"
+              onClick={() => toggleStatusFilter(["read"])}
+              isActive={isReadQuickActive}
+              activeTintClassName="bg-blue-50/70"
+            />
+            <StatCard
+              label={t("confirmed")}
+              value={stats.confirmed}
+              icon={<CheckCircle2 size={16} />}
+              iconBgClassName="bg-green-50 border border-green-100 text-green-600"
+              onClick={() => toggleStatusFilter(["confirmed"])}
+              isActive={isConfirmedQuickActive}
+              activeTintClassName="bg-green-50/70"
+            />
+            <StatCard
+              label={t("declined")}
+              value={stats.declined}
+              icon={<XCircle size={16} />}
+              iconBgClassName="bg-red-50 border border-red-100 text-red-600"
+              onClick={() => toggleStatusFilter(["declined"])}
+              isActive={isDeclinedQuickActive}
+              activeTintClassName="bg-red-50/70"
+            />
+          </div>
+
+          {/* Guest List Container */}
+          <div className="bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 md:px-6 py-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <h3 className="font-medium text-stone-900">{t("guest_list")}</h3>
+                {isLoading && <Loader2 size={14} className="animate-spin text-stone-400" />}
+                <span className="text-xs text-stone-400">
+                  ({listTotalDisplay} {t("total_guests") || "total"})
+                </span>
+                <DeleteAllGuestsButton
+                  eventId={event.id}
+                  pendingCount={serverStats.pending + serverStats.failed}
+                  onDeleted={handleAllGuestsDeleted}
+                />
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <details className="relative group">
+                  <summary className="list-none cursor-pointer select-none px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-xs text-stone-700 hover:bg-stone-100 transition-colors inline-flex items-center gap-2 whitespace-nowrap">
+                    <Filter size={14} className="text-stone-400" />
+                    <span>
+                      {selectedStatuses.length === 0
+                        ? `${t("status_filter")} · ${t("status_filter_all")}`
+                        : `${t("status_filter")} · ${selectedStatuses.length}`}
+                    </span>
+                  </summary>
+                  <div className="absolute z-50 mt-2 right-0 rtl:right-auto rtl:left-0 w-60 bg-white border border-stone-200 rounded-xl shadow-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs font-medium text-stone-700">{t("status_filter")}</div>
+                      <button
+                        type="button"
+                        className="text-xs text-stone-500 hover:text-stone-900 cursor-pointer disabled:cursor-not-allowed"
+                        onClick={() => setSelectedStatuses([])}
+                        disabled={selectedStatuses.length === 0}
+                      >
+                        {t("status_filter_clear")}
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {statusOptions.map((opt) => {
+                        const checked = selectedStatuses.includes(opt.value);
+                        return (
+                          <label
+                            key={opt.value}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-stone-50 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedStatuses((prev) =>
+                                  prev.includes(opt.value)
+                                    ? prev.filter((s) => s !== opt.value)
+                                    : [...prev, opt.value]
+                                );
+                              }}
+                              className="accent-stone-900"
+                            />
+                            <span className="text-xs text-stone-700">{opt.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </details>
+
+                <div className="relative w-full sm:w-auto">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 rtl:right-auto rtl:left-3">
+                    {isSearching ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Search size={14} />
+                    )}
+                  </span>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t("search_placeholder")}
+                    className="pr-8 pl-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-xs focus:outline-none focus:border-stone-400 w-full sm:w-48 rtl:pr-4 rtl:pl-8"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <GuestListClient
+              eventId={event.id}
+              guests={displayGuests}
+              guestsEnabled={event.guestsEnabled}
+              qrEnabled={event.qrEnabled}
+              onGuestsAdded={handleGuestsAdded}
+              onGuestDeleted={handleGuestDeleted}
+              onGuestUpdated={handleGuestUpdated}
+              pagination={pagination}
+              onPageChange={handlePageChange}
+              isLoading={isLoading}
+              searchQuery={searchQuery}
+              hasFilters={hasFilters}
+            />
+          </div>
+        </div>
       </div>
+
+      {/* Mobile Activity FAB - shows on smaller screens */}
+      <div className="lg:hidden fixed bottom-6 right-6 rtl:right-auto rtl:left-6 z-40">
+        <button
+          type="button"
+          onClick={() => setShowMobileActivity(true)}
+          className="w-14 h-14 rounded-full bg-stone-900 text-white shadow-lg flex items-center justify-center hover:bg-stone-800 transition-colors cursor-pointer"
+        >
+          <Bell size={22} />
+        </button>
+      </div>
+
+      {/* Mobile Activity Sheet */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {showMobileActivity && (
+            <motion.div
+              className="fixed inset-0 z-9999 lg:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {/* Backdrop */}
+              <motion.div
+                className="absolute inset-0 bg-stone-900/50 backdrop-blur-sm"
+                onClick={() => setShowMobileActivity(false)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+              
+              {/* Sheet */}
+              <motion.div
+                className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              >
+                {/* Handle */}
+                <div className="flex justify-center pt-3 pb-2">
+                  <div className="w-10 h-1 rounded-full bg-stone-300" />
+                </div>
+                
+                {/* Close button */}
+                <button
+                  type="button"
+                  onClick={() => setShowMobileActivity(false)}
+                  className="absolute top-4 right-4 rtl:right-auto rtl:left-4 p-2 rounded-full hover:bg-stone-100 text-stone-500 cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+                
+                {/* Activity Content */}
+                <div className="flex-1 overflow-hidden">
+                  <RecentActivity 
+                    eventId={event.id} 
+                    isPaid={!!event.paidAt}
+                    maxItems={20}
+                  />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Invite Preview Modal */}
       {mounted && createPortal(

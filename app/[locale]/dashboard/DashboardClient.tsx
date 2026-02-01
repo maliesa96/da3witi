@@ -1,20 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar } from "lucide-react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Calendar, Clock, MapPin, Users, Plus, QrCode, CheckCircle2, Image as ImageIcon } from "lucide-react";
 
-import EventPanelClient from "./EventPanelClient";
 import { Link } from "@/navigation";
 
-type EventSidebarItem = {
-  id: string;
-  title: string;
-  date: string | null;
-};
-
-type EventForClient = {
+type EventCardData = {
   id: string;
   title: string;
   isScheduled: boolean;
@@ -22,12 +16,12 @@ type EventForClient = {
   time: string | null;
   location: string | null;
   locationName: string | null;
-  message: string | null;
   qrEnabled: boolean;
-  guestsEnabled: boolean;
-  reminderEnabled: boolean;
   imageUrl: string | null;
   paidAt: string | null;
+  guestCountTotal?: number;
+  inviteCountTotal?: number;
+  inviteCountConfirmed?: number;
 };
 
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
@@ -55,20 +49,133 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promi
   return (await res.json()) as T;
 }
 
+function EventCard({ event }: { event: EventCardData }) {
+  const t = useTranslations("Dashboard");
+  const isPdf = event.imageUrl?.toLowerCase().endsWith(".pdf");
+  const hasImage = !!event.imageUrl && !isPdf;
+  const guestCount = event.guestCountTotal ?? event.inviteCountTotal ?? 0;
+  const confirmedCount = event.inviteCountConfirmed ?? 0;
+
+  return (
+    <Link
+      href={`/events/${event.id}`}
+      className="group block bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-stone-300 hover:-translate-y-1"
+    >
+      {/* Image/Media Section */}
+      <div className="relative aspect-4/3 bg-stone-100 overflow-hidden">
+        {hasImage ? (
+          <Image
+            src={event.imageUrl!}
+            alt={event.title}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : isPdf ? (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-linear-to-br from-red-50 to-red-100">
+            <div className="w-16 h-20 bg-white rounded-lg shadow-md flex items-center justify-center border border-red-100">
+              <span className="text-xs font-bold text-red-500">PDF</span>
+            </div>
+            <span className="mt-3 text-xs text-red-400 font-medium">{t("pdf_document")}</span>
+          </div>
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-linear-to-br from-stone-50 to-stone-100">
+            <ImageIcon size={40} className="text-stone-300" />
+            <span className="mt-2 text-xs text-stone-400">{t("no_image")}</span>
+          </div>
+        )}
+        
+        {/* Status Badges */}
+        <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+          {event.isScheduled && (
+            <span className="px-2.5 py-1 rounded-full bg-amber-500/90 backdrop-blur-sm text-xs font-medium text-white shadow-sm">
+              {t("scheduled")}
+            </span>
+          )}
+          {event.qrEnabled && (
+            <span className="px-2.5 py-1 rounded-full bg-stone-900/80 backdrop-blur-sm text-xs font-medium text-white shadow-sm flex items-center gap-1">
+              <QrCode size={12} />
+              QR
+            </span>
+          )}
+        </div>
+
+        {/* Guest Count Pill */}
+        <div className="absolute bottom-3 right-3">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-sm">
+            <Users size={14} className="text-stone-600" />
+            <span className="text-sm font-semibold text-stone-900 tabular-nums">{guestCount}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Section */}
+      <div className="p-4 md:p-5">
+        <h3 className="text-lg font-semibold text-stone-900 truncate group-hover:text-stone-700 transition-colors">
+          {event.title}
+        </h3>
+        
+        {/* Event Details */}
+        <div className="mt-3 space-y-2">
+          {event.date && (
+            <div className="flex items-center gap-2 text-sm text-stone-600">
+              <Calendar size={14} className="text-stone-400 shrink-0" />
+              <span className="truncate">{event.date}</span>
+              {event.time && (
+                <>
+                  <span className="text-stone-300">•</span>
+                  <Clock size={14} className="text-stone-400 shrink-0" />
+                  <span>{event.time}</span>
+                </>
+              )}
+            </div>
+          )}
+          {event.locationName && (
+            <div className="flex items-center gap-2 text-sm text-stone-600">
+              <MapPin size={14} className="text-stone-400 shrink-0" />
+              <span className="truncate">{event.locationName}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Stats Row */}
+        {guestCount > 0 && (
+          <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-sm text-stone-500">
+              <CheckCircle2 size={14} className="text-green-500" />
+              <span className="tabular-nums">{confirmedCount}</span>
+              <span>{t("confirmed")}</span>
+            </div>
+            <div className="text-xs text-stone-400">
+              {guestCount > 0 && `${Math.round((confirmedCount / guestCount) * 100)}%`}
+            </div>
+          </div>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function EventCardSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden animate-pulse">
+      <div className="aspect-4/3 bg-stone-200" />
+      <div className="p-4 md:p-5 space-y-3">
+        <div className="h-5 w-3/4 bg-stone-200 rounded" />
+        <div className="h-4 w-1/2 bg-stone-200 rounded" />
+        <div className="h-4 w-2/3 bg-stone-200 rounded" />
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardClient() {
   const t = useTranslations("Dashboard");
   const locale = useLocale();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  const eventIdFromUrl = searchParams.get("eventId") || undefined;
-
-  const [events, setEvents] = useState<EventSidebarItem[]>([]);
-  const [currentEvent, setCurrentEvent] = useState<EventForClient | null>(null);
+  const [events, setEvents] = useState<EventCardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-
-  const currentEventId = useMemo(() => currentEvent?.id ?? eventIdFromUrl, [currentEvent?.id, eventIdFromUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,36 +183,23 @@ export default function DashboardClient() {
     (async () => {
       setIsLoading(true);
       setLoadError(null);
-      setCurrentEvent(null);
 
       try {
-        const eventsRes = await fetchJson<{ events: EventForClient[]; defaultEventId: string | null }>("/api/events");
+        const eventsRes = await fetchJson<{ events: EventCardData[]; defaultEventId: string | null }>("/api/events");
         if (cancelled) return;
 
-        const list = eventsRes.events || [];
-        setEvents(list.map((e) => ({ id: e.id, title: e.title, date: e.date })));
-
-        if (list.length === 0) {
+        if (eventsRes.events.length === 0) {
           router.replace(`/${locale}/wizard`);
           return;
         }
 
-        const selectedEventId = eventIdFromUrl || eventsRes.defaultEventId || list[0].id;
-
-        // Normalize the URL so refreshes keep the selected event
-        if (!eventIdFromUrl) {
-          router.replace(`/${locale}/dashboard?eventId=${encodeURIComponent(selectedEventId)}`);
-        }
-
-        const selected = list.find((e) => e.id === selectedEventId) || list[0];
-        setCurrentEvent(selected);
+        setEvents(eventsRes.events);
         setIsLoading(false);
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
         setLoadError(msg);
 
-        // If auth expired, middleware should handle dashboard access, but API can still return 401
         if (msg.toLowerCase().includes("unauthorized")) {
           router.replace(`/${locale}/login`);
           return;
@@ -120,133 +214,73 @@ export default function DashboardClient() {
     return () => {
       cancelled = true;
     };
-  }, [eventIdFromUrl, locale, router]);
+  }, [locale, router]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 pb-24 animate-fade-in">
-      <div className="flex flex-col lg:grid lg:grid-cols-4 gap-8">
-        {/* Sidebar: Event List */}
-        <aside className="lg:col-span-1 space-y-4">
-          <div className="flex items-center justify-between mb-2 lg:mb-4">
-            <h2 className="text-sm font-display font-bold text-stone-400 uppercase tracking-wider">
-              {t("my_events") || "My Events"}
-            </h2>
-            <Link
-              href="/wizard"
-              prefetch={false}
-              className="p-1.5 bg-stone-100 text-stone-600 rounded-md hover:bg-stone-200 transition-colors"
-              title="Create New Event"
-            >
-              <Calendar size={16} />
-            </Link>
-          </div>
-
-          <div className="flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0">
-            {isLoading && events.length === 0 ? (
-              // Sidebar skeletons
-              <>
-                {Array.from({ length: 3 }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className="flex-none w-[240px] lg:w-full p-4 rounded-xl border border-stone-200 bg-white shadow-sm animate-pulse"
-                    aria-hidden="true"
-                  >
-                    <div className="h-4 w-3/4 bg-stone-200 rounded" />
-                    <div className="mt-3 h-3 w-1/2 bg-stone-200 rounded" />
-                  </div>
-                ))}
-              </>
-            ) : (
-              events.map((event) => (
-                <Link
-                  key={event.id}
-                  href={`/dashboard?eventId=${event.id}`}
-                  className={`flex-none w-[240px] lg:w-full p-4 rounded-xl border transition-all ${
-                    currentEventId === event.id
-                      ? "bg-white border-stone-900 shadow-sm"
-                      : "bg-stone-50 border-stone-100 hover:border-stone-200 text-stone-500"
-                  }`}
-                >
-                  <div className="font-semibold text-stone-900 truncate">{event.title}</div>
-                  <div className="text-[10px] mt-1 flex items-center gap-1">
-                    <Calendar size={10} />
-                    {event.date}
-                  </div>
-                </Link>
-              ))
-            )}
-          </div>
-        </aside>
-
-        {/* Main Content: Selected Event Details */}
-        <div className="lg:col-span-3">
-          {isLoading && !currentEvent && (
-            <div className="space-y-8" aria-busy="true" aria-label="Loading">
-              {/* Header skeleton */}
-              <div className="rounded-2xl border border-stone-200 bg-white shadow-sm overflow-hidden animate-pulse">
-                <div className="p-6 md:p-8 space-y-4">
-                  <div className="h-7 w-2/3 bg-stone-200 rounded" />
-                  <div className="flex flex-wrap gap-3">
-                    <div className="h-4 w-40 bg-stone-200 rounded" />
-                    <div className="h-4 w-32 bg-stone-200 rounded" />
-                    <div className="h-4 w-52 bg-stone-200 rounded" />
-                  </div>
-                  <div className="flex gap-3 pt-2">
-                    <div className="h-10 w-36 bg-stone-200 rounded-lg" />
-                    <div className="h-10 w-32 bg-stone-200 rounded-lg" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats skeleton */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-                {Array.from({ length: 6 }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-xl border border-stone-200 bg-white shadow-sm animate-pulse"
-                    aria-hidden="true"
-                  >
-                    <div className="h-3 w-2/3 bg-stone-200 rounded" />
-                    <div className="mt-4 h-7 w-1/2 bg-stone-200 rounded" />
-                  </div>
-                ))}
-              </div>
-
-              {/* List skeleton */}
-              <div className="bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden animate-pulse">
-                <div className="px-4 md:px-6 py-4 border-b border-stone-100 flex items-center justify-between gap-4">
-                  <div className="h-4 w-40 bg-stone-200 rounded" />
-                  <div className="h-9 w-56 bg-stone-200 rounded-lg" />
-                </div>
-                <div className="divide-y divide-stone-100">
-                  {Array.from({ length: 6 }).map((_, idx) => (
-                    <div key={idx} className="px-4 md:px-6 py-4 flex items-center justify-between gap-4">
-                      <div className="space-y-2 w-full">
-                        <div className="h-4 w-1/3 bg-stone-200 rounded" />
-                        <div className="h-3 w-1/4 bg-stone-200 rounded" />
-                      </div>
-                      <div className="h-7 w-20 bg-stone-200 rounded-lg shrink-0" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!isLoading && loadError && (
-            <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">
-              {loadError}
-            </div>
-          )}
-
-          {!isLoading && !loadError && currentEvent && (
-            <EventPanelClient
-              key={currentEvent.id}
-              event={currentEvent}
-            />
-          )}
+    <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pb-24 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-display font-bold text-stone-900">
+            {t("my_events")}
+          </h1>
+          <p className="mt-1 text-sm text-stone-500">
+            {t("select_event_to_manage")}
+          </p>
         </div>
+        <Link
+          href="/wizard"
+          prefetch={false}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors shadow-sm"
+        >
+          <Plus size={18} />
+          {t("create_event")}
+        </Link>
       </div>
+
+      {/* Error State */}
+      {!isLoading && loadError && (
+        <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">
+          {loadError}
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <EventCardSkeleton key={idx} />
+          ))}
+        </div>
+      )}
+
+      {/* Events Grid */}
+      {!isLoading && !loadError && events.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {events.map((event) => (
+            <EventCard key={event.id} event={event} />
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && !loadError && events.length === 0 && (
+        <div className="text-center py-16">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-stone-100 mb-4">
+            <Calendar size={28} className="text-stone-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-stone-900 mb-2">{t("no_events_title")}</h3>
+          <p className="text-sm text-stone-500 mb-6">{t("no_events_desc")}</p>
+          <Link
+            href="/wizard"
+            prefetch={false}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors"
+          >
+            <Plus size={18} />
+            {t("create_event")}
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

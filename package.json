@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy:worker": "fly deploy -c worker/fly.toml"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",

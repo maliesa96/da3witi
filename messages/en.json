@@ -360,7 +360,22 @@
     "showing_range": "Showing",
     "of": "of",
     "prev_page": "Previous page",
-    "next_page": "Next page"
+    "next_page": "Next page",
+    "select_event_to_manage": "Select an event to manage guests and invitations",
+    "create_event": "Create Event",
+    "no_events_title": "No Events Yet",
+    "no_events_desc": "Create your first event to start inviting guests.",
+    "pdf_document": "PDF Document",
+    "no_image": "No image",
+    "recent_activity": "Recent Activity",
+    "activity_confirmed": "confirmed attendance",
+    "activity_declined": "declined invitation",
+    "activity_added": "Added",
+    "activity_sent": "Invitation sent to",
+    "activity_delivered": "Invitation delivered to",
+    "activity_read": "read the invitation",
+    "activity_checked_in": "checked in",
+    "activity_update": "Activity update"
   },
   "Auth": {
     "login": "Login",

@@ -2,55 +2,51 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { createClient } from "./client";
-import type { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 /**
- * Shape of a Guest row as returned by Supabase realtime.
- * Uses snake_case column names from the database.
+ * Guest data as broadcast from the server.
  */
-export type RealtimeGuestPayload = {
+export type BroadcastGuestPayload = {
   id: string;
-  event_id: string;
+  eventId: string;
   name: string;
   phone: string;
   status: string;
-  invite_count: number;
-  checked_in: boolean;
-  checked_in_at: string | null;
-  qr_code_id: string | null;
-  whatsapp_message_id: string | null;
-  created_at: string;
+  inviteCount: number;
+  checkedIn?: boolean;
+  whatsappMessageId?: string | null;
+  oldStatus?: string;
 };
 
 /**
- * Shape of an Event row as returned by Supabase realtime (counters only).
+ * Event stats as broadcast from the server.
  */
-export type RealtimeEventPayload = {
+export type BroadcastEventPayload = {
   id: string;
-  guest_count_total: number;
-  invite_count_total: number;
-  invite_count_pending: number;
-  invite_count_sent: number;
-  invite_count_delivered: number;
-  invite_count_read: number;
-  invite_count_confirmed: number;
-  invite_count_declined: number;
-  invite_count_failed: number;
-  invite_count_no_reply: number;
+  guestCountTotal: number;
+  inviteCountTotal: number;
+  inviteCountPending: number;
+  inviteCountSent: number;
+  inviteCountDelivered: number;
+  inviteCountRead: number;
+  inviteCountConfirmed: number;
+  inviteCountDeclined: number;
+  inviteCountFailed: number;
 };
 
 export type GuestRealtimeCallbacks = {
-  onGuestInsert?: (guest: RealtimeGuestPayload) => void;
-  onGuestUpdate?: (guest: RealtimeGuestPayload, oldGuest: RealtimeGuestPayload | null) => void;
-  onGuestDelete?: (oldGuest: RealtimeGuestPayload) => void;
-  onEventUpdate?: (event: RealtimeEventPayload) => void;
+  onGuestInsert?: (guest: BroadcastGuestPayload) => void;
+  onGuestUpdate?: (guest: BroadcastGuestPayload) => void;
+  onGuestDelete?: (guest: BroadcastGuestPayload) => void;
+  onEventUpdate?: (event: BroadcastEventPayload) => void;
 };
 
 /**
- * Hook to subscribe to real-time guest and event updates for a specific event.
+ * Hook to subscribe to real-time guest and event updates via Broadcast.
  * 
- * @param eventId - The event ID to filter updates for
- * @param callbacks - Callbacks for different realtime events
+ * @param eventId - The event ID to subscribe to
+ * @param callbacks - Callbacks for different broadcast events
  * @param enabled - Whether to enable the subscription (default: true)
  */
 export function useGuestRealtimeUpdates(
@@ -70,80 +66,54 @@ export function useGuestRealtimeUpdates(
   useEffect(() => {
     if (!enabled || !eventId) return;
 
+    // Track if this effect instance is still active (handles React Strict Mode)
+    let isActive = true;
+
     const supabase = createClient();
 
-    // Create a unique channel name for this event
-    const channelName = `event-${eventId}-realtime`;
+    // Channel name matches what the server broadcasts to
+    const channelName = `event:${eventId}`;
 
-    // Subscribe to Guest table changes for this event
+    // Only log in development for debugging
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[Realtime] Subscribing to channel: ${channelName}`);
+    }
+
     const channel = supabase
       .channel(channelName)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "guests",
-          filter: `event_id=eq.${eventId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<RealtimeGuestPayload>) => {
-          const guest = payload.new as RealtimeGuestPayload;
-          callbacksRef.current.onGuestInsert?.(guest);
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "guests",
-          filter: `event_id=eq.${eventId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<RealtimeGuestPayload>) => {
-          const guest = payload.new as RealtimeGuestPayload;
-          const oldGuest = payload.old as RealtimeGuestPayload | null;
-          callbacksRef.current.onGuestUpdate?.(guest, oldGuest);
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "guests",
-          filter: `event_id=eq.${eventId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<RealtimeGuestPayload>) => {
-          const oldGuest = payload.old as RealtimeGuestPayload;
-          callbacksRef.current.onGuestDelete?.(oldGuest);
-        }
-      )
-      // Also listen for Event updates (for counter changes from DB triggers)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "events",
-          filter: `id=eq.${eventId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<RealtimeEventPayload>) => {
-          const event = payload.new as RealtimeEventPayload;
-          callbacksRef.current.onEventUpdate?.(event);
-        }
-      )
-      .subscribe((status: string) => {
+      .on("broadcast", { event: "guest:insert" }, (message: { payload: BroadcastGuestPayload }) => {
+        if (!isActive) return;
+        callbacksRef.current.onGuestInsert?.(message.payload);
+      })
+      .on("broadcast", { event: "guest:update" }, (message: { payload: BroadcastGuestPayload }) => {
+        if (!isActive) return;
+        callbacksRef.current.onGuestUpdate?.(message.payload);
+      })
+      .on("broadcast", { event: "guest:delete" }, (message: { payload: BroadcastGuestPayload }) => {
+        if (!isActive) return;
+        callbacksRef.current.onGuestDelete?.(message.payload);
+      })
+      .on("broadcast", { event: "event:update" }, (message: { payload: BroadcastEventPayload }) => {
+        if (!isActive) return;
+        callbacksRef.current.onEventUpdate?.(message.payload);
+      })
+      .subscribe((status: string, err?: Error) => {
+        if (!isActive) return;
+
         if (status === "SUBSCRIBED") {
-          console.log(`[Realtime] Subscribed to event ${eventId}`);
+          console.log(`[Realtime] ✅ Connected to ${channelName}`);
         } else if (status === "CHANNEL_ERROR") {
-          console.error(`[Realtime] Channel error for event ${eventId}`);
+          console.error(`[Realtime] ❌ Channel error:`, err?.message || err);
+        } else if (status === "TIMED_OUT") {
+          console.warn(`[Realtime] ⏱️ Connection timed out`);
         }
+        // Don't log CLOSED - it's normal during React Strict Mode cleanup
       });
 
     channelRef.current = channel;
 
     return () => {
-      console.log(`[Realtime] Unsubscribing from event ${eventId}`);
+      isActive = false;
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
@@ -161,39 +131,38 @@ export function useGuestRealtimeUpdates(
   return { unsubscribe };
 }
 
+// Re-export types for backward compatibility
+export type RealtimeGuestPayload = BroadcastGuestPayload;
+export type RealtimeEventPayload = BroadcastEventPayload;
+
 /**
- * Convert snake_case guest payload to camelCase for client consumption.
+ * Convert broadcast payload to client guest format compatible with GuestRowData.
  */
-export function toClientGuest(payload: RealtimeGuestPayload) {
+export function toClientGuest(payload: BroadcastGuestPayload) {
   return {
     id: payload.id,
-    eventId: payload.event_id,
     name: payload.name,
     phone: payload.phone,
     status: payload.status,
-    inviteCount: payload.invite_count,
-    checkedIn: payload.checked_in,
-    checkedInAt: payload.checked_in_at,
-    qrCodeId: payload.qr_code_id,
-    whatsappMessageId: payload.whatsapp_message_id,
-    createdAt: payload.created_at,
+    inviteCount: payload.inviteCount,
+    checkedIn: payload.checkedIn ?? false,
+    whatsappMessageId: payload.whatsappMessageId ?? null,
   };
 }
 
 /**
- * Convert snake_case event counters to camelCase stats object.
+ * Convert broadcast payload to client stats format.
  */
-export function toClientStats(payload: RealtimeEventPayload) {
+export function toClientStats(payload: BroadcastEventPayload) {
   return {
-    total: payload.guest_count_total,
-    pending: payload.invite_count_pending,
-    sent: payload.invite_count_sent,
-    delivered: payload.invite_count_delivered,
-    read: payload.invite_count_read,
-    confirmed: payload.invite_count_confirmed,
-    declined: payload.invite_count_declined,
-    failed: payload.invite_count_failed,
-    noReply: payload.invite_count_no_reply,
-    inviteTotal: payload.invite_count_total,
+    total: payload.guestCountTotal,
+    pending: payload.inviteCountPending,
+    sent: payload.inviteCountSent,
+    delivered: payload.inviteCountDelivered,
+    read: payload.inviteCountRead,
+    confirmed: payload.inviteCountConfirmed,
+    declined: payload.inviteCountDeclined,
+    failed: payload.inviteCountFailed,
+    inviteTotal: payload.inviteCountTotal,
   };
 }

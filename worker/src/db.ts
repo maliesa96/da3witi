@@ -1,31 +1,55 @@
-import type { Pool } from "pg";
+import { Prisma, PrismaClient } from "@prisma/client";
 
-export function createGuestRepository(pool: Pool) {
+function isNotFoundError(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025";
+}
+
+export function createGuestRepository(prisma: PrismaClient) {
   return {
     async incrementAttempts(guestId: string): Promise<number> {
-      const res = await pool.query<{ whatsapp_send_attempts: number }>(
-        `UPDATE guests SET whatsapp_send_attempts = whatsapp_send_attempts + 1 WHERE id = $1 RETURNING whatsapp_send_attempts`,
-        [guestId]
-      );
-      return res.rows[0]?.whatsapp_send_attempts ?? 0;
+      try {
+        const updated = await prisma.guest.update({
+          where: { id: guestId },
+          data: { whatsappSendAttempts: { increment: 1 } },
+          select: { whatsappSendAttempts: true },
+        });
+        return updated.whatsappSendAttempts;
+      } catch (err) {
+        // Keep the old behavior (no row updated => no crash).
+        if (isNotFoundError(err)) return 0;
+        throw err;
+      }
     },
 
     async setError(guestId: string, error: string): Promise<void> {
-      await pool.query(`UPDATE guests SET whatsapp_send_last_error = $2 WHERE id = $1`, [guestId, error]);
+      await prisma.guest.updateMany({
+        where: { id: guestId },
+        data: { whatsappSendLastError: error },
+      });
     },
 
     async markSent(guestId: string, messageId: string | null): Promise<void> {
-      await pool.query(
-        `UPDATE guests SET whatsapp_message_id = $2, status = 'sent', whatsapp_send_last_error = NULL, whatsapp_send_enqueued_at = NULL WHERE id = $1`,
-        [guestId, messageId]
-      );
+      await prisma.guest.updateMany({
+        where: { id: guestId },
+        data: {
+          whatsappMessageId: messageId,
+          status: "sent",
+          sentAt: new Date(),
+          whatsappSendLastError: null,
+          whatsappSendEnqueuedAt: null,
+        },
+      });
     },
 
     async markFailed(guestId: string, error: string): Promise<void> {
-      await pool.query(
-        `UPDATE guests SET status = 'failed', whatsapp_send_last_error = $2, whatsapp_send_enqueued_at = NULL WHERE id = $1`,
-        [guestId, error]
-      );
+      await prisma.guest.updateMany({
+        where: { id: guestId },
+        data: {
+          status: "failed",
+          whatsappSendLastError: error,
+          whatsappSendEnqueuedAt: null,
+        },
+      });
     },
   };
 }

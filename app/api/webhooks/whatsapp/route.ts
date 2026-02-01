@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { buildWhatsAppImagePayload, buildWhatsAppTextPayload } from '@/lib/whatsapp';
 import { enqueueWhatsAppOutbox } from '@/lib/queue/whatsappOutbox';
+import { broadcastGuestUpdate } from '@/lib/supabase/broadcast';
 
 const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
 
@@ -92,23 +93,52 @@ export async function POST(request: Request) {
               const upgradeableStatuses = getUpgradeableStatuses(messageStatus);
               
               try {
+                // First, find the guest to get their current status and event ID
+                const guest = await prisma.guest.findFirst({
+                  where: { whatsappMessageId: id },
+                  select: { id: true, eventId: true, name: true, phone: true, status: true, inviteCount: true }
+                });
+
+                if (!guest) {
+                  console.log(`No guest found for messageId ${id}`);
+                  continue;
+                }
+
+                const oldStatus = guest.status;
+
                 // Only update if current status can be upgraded to the new status
                 // This prevents out-of-order webhooks from downgrading status
-                const updateResult = await prisma.guest.updateMany({
-                  where: { 
-                    whatsappMessageId: id,
-                    status: {
-                      in: upgradeableStatuses
-                    }
-                  },
-                  data: { status: messageStatus }
-                });
-                
-                if (updateResult.count > 0) {
-                  console.log(`Updated ${updateResult.count} guest(s) to status: ${messageStatus}`);
-                } else {
-                  console.log(`No guest updated for messageId ${id} (status may already be more advanced)`);
+                if (!upgradeableStatuses.includes(oldStatus)) {
+                  console.log(`No update for messageId ${id} (status ${oldStatus} cannot upgrade to ${messageStatus})`);
+                  continue;
                 }
+
+                // Build the update data with the appropriate timestamp column
+                const updateData: { status: string; sentAt?: Date; deliveredAt?: Date; readAt?: Date } = {
+                  status: messageStatus,
+                };
+                const now = new Date();
+                if (messageStatus === 'sent') updateData.sentAt = now;
+                else if (messageStatus === 'delivered') updateData.deliveredAt = now;
+                else if (messageStatus === 'read') updateData.readAt = now;
+
+                await prisma.guest.update({
+                  where: { id: guest.id },
+                  data: updateData,
+                });
+
+                console.log(`Updated guest ${guest.name} to status: ${messageStatus}`);
+
+                // Broadcast the update to connected clients
+                await broadcastGuestUpdate(guest.eventId, {
+                  id: guest.id,
+                  eventId: guest.eventId,
+                  name: guest.name,
+                  phone: guest.phone,
+                  status: messageStatus,
+                  inviteCount: guest.inviteCount,
+                  oldStatus,
+                });
               } catch (dbError) {
                 console.error('Database update error:', dbError);
               }
@@ -165,10 +195,27 @@ export async function POST(request: Request) {
                         console.log(`ℹ️ Skipping confirm for ${guest.name}: already confirmed`);
                         continue;
                       }
+
+                      const oldStatus = guest.status;
+
                       // Update guest status to confirmed
                       await prisma.guest.update({
                         where: { id: guest.id },
-                        data: { status: 'confirmed' }
+                        data: { 
+                          status: 'confirmed',
+                          confirmedAt: new Date(),
+                        }
+                      });
+
+                      // Broadcast the update to connected clients
+                      await broadcastGuestUpdate(guest.eventId, {
+                        id: guest.id,
+                        eventId: guest.eventId,
+                        name: guest.name,
+                        phone: guest.phone,
+                        status: 'confirmed',
+                        inviteCount: guest.inviteCount,
+                        oldStatus,
                       });
 
                       // Send thank you message
@@ -211,10 +258,26 @@ export async function POST(request: Request) {
                         console.log(`ℹ️ Skipping decline for ${guest.name}: already declined`);
                         continue;
                       }
+
+                      const oldStatus = guest.status;
                       
                       await prisma.guest.update({
                         where: { id: guest.id },
-                        data: { status: 'declined' }
+                        data: { 
+                          status: 'declined',
+                          declinedAt: new Date(),
+                        }
+                      });
+
+                      // Broadcast the update to connected clients
+                      await broadcastGuestUpdate(guest.eventId, {
+                        id: guest.id,
+                        eventId: guest.eventId,
+                        name: guest.name,
+                        phone: guest.phone,
+                        status: 'declined',
+                        inviteCount: guest.inviteCount,
+                        oldStatus,
                       });
 
                       const declineMsg = isArabic

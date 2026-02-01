@@ -1,7 +1,7 @@
 import { Redis } from "@upstash/redis";
-import { Pool } from "pg";
 import pino from "pino";
-
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from '@prisma/adapter-pg'
 import { loadConfig } from "./config";
 import { RateLimiter } from "./rate-limiter";
 import { createStreamClient } from "./stream";
@@ -33,12 +33,13 @@ async function main() {
   );
 
   const redis = Redis.fromEnv();
-  const pool = new Pool({ connectionString: config.databaseUrl, connectionTimeoutMillis: 10_000 });
+  const adapter = new PrismaPg({ connectionString: config.databaseUrl })
+  const prisma = new PrismaClient({ adapter })
   const limiter = new RateLimiter(config.rps);
 
   const stream = createStreamClient(redis, config);
   const whatsapp = createWhatsAppClient(config);
-  const guests = createGuestRepository(pool);
+  const guests = createGuestRepository(prisma);
 
   await stream.ensureGroup();
   log.info("Consumer group ready");

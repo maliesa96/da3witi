@@ -60,6 +60,11 @@ model Guest {
   phone              String
   inviteCount        Int      @default(1) @map("invite_count")
   status             String   @default("no_reply")
+  sentAt             DateTime? @map("sent_at") @db.Timestamptz(6)
+  deliveredAt        DateTime? @map("delivered_at") @db.Timestamptz(6)
+  readAt             DateTime? @map("read_at") @db.Timestamptz(6)
+  confirmedAt        DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  declinedAt         DateTime? @map("declined_at") @db.Timestamptz(6)
   whatsappMessageId  String?  @unique @map("whatsapp_message_id")
   whatsappSendEnqueuedAt DateTime? @map("whatsapp_send_enqueued_at") @db.Timestamptz(6)
   whatsappSendAttempts   Int      @default(0) @map("whatsapp_send_attempts")

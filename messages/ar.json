@@ -360,7 +360,22 @@
     "showing_range": "عرض",
     "of": "من",
     "prev_page": "الصفحة السابقة",
-    "next_page": "الصفحة التالية"
+    "next_page": "الصفحة التالية",
+    "select_event_to_manage": "اختر مناسبة لإدارة الضيوف والدعوات",
+    "create_event": "إنشاء مناسبة",
+    "no_events_title": "لا توجد مناسبات بعد",
+    "no_events_desc": "أنشئ مناسبتك الأولى للبدء في دعوة ضيوفك.",
+    "pdf_document": "ملف PDF",
+    "no_image": "لا توجد صورة",
+    "recent_activity": "النشاط الحديث",
+    "activity_confirmed": "أكد الحضور",
+    "activity_declined": "اعتذر عن الحضور",
+    "activity_added": "تمت إضافة",
+    "activity_sent": "تم إرسال الدعوة لـ",
+    "activity_delivered": "تم تسليم الدعوة لـ",
+    "activity_read": "قرأ الدعوة",
+    "activity_checked_in": "سجل الدخول",
+    "activity_update": "تحديث جديد"
   },
   "Auth": {
     "login": "تسجيل الدخول",

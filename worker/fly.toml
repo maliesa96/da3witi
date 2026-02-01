@@ -8,6 +8,8 @@ primary_region = 'ams'
 
 [build]
   dockerfile = 'Dockerfile'
+  # Build context is repo root so Docker can COPY prisma/
+  context = '..'
 
 [env]
   WHATSAPP_DLQ_STREAM_KEY = 'whatsapp:dlq'

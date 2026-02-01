@@ -1,27 +1,38 @@
 FROM node:20-slim AS build
 
-WORKDIR /app
+WORKDIR /app/worker
 
-COPY package.json ./
+# Repo-root build context:
+# - copy worker files from worker/
+# - copy Prisma schema from prisma/
+COPY worker/package.json ./
+COPY worker/package-lock.json ./
 
 # Install deps
 RUN npm install
 
 # Copy source
-COPY tsconfig.json ./
-COPY src ./src
+COPY worker/tsconfig.json ./
+COPY worker/src ./src
+COPY prisma /app/prisma
 
-# Build JS
+# Symlink so prisma generate finds node_modules relative to schema location
+RUN ln -s /app/worker/node_modules /app/node_modules
+
+# Prisma requires OpenSSL
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+# Build JS (runs prisma generate + tsc)
 RUN npm run build
 
 FROM node:20-slim AS runtime
-WORKDIR /app
+WORKDIR /app/worker
 
 ENV NODE_ENV=production
 
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
+COPY --from=build /app/worker/package.json ./package.json
+COPY --from=build /app/worker/node_modules ./node_modules
+COPY --from=build /app/worker/dist ./dist
 
 CMD ["npm", "start"]
 
