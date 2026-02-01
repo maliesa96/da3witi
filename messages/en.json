@@ -186,10 +186,6 @@
       "reminder_toggle": "Send Auto Reminder",
       "reminder_desc": "WhatsApp reminder 24 hours before the event",
       "coming_soon": "Coming soon",
-      "schedule_toggle": "Schedule Send",
-      "schedule_desc": "Choose a specific date and time to send the invitations",
-      "scheduled_date": "Scheduled Date",
-      "scheduled_time": "Scheduled Time",
       "preview_send": "Preview & Send",
       "live_preview": "Live Preview",
       "media_required": "Please upload an invitation image or document to continue."
@@ -203,7 +199,6 @@
       "count_invites": "Number of Invites",
       "service_qr": "QR Code Service",
       "service_reminder": "Reminder Message",
-      "service_scheduled": "Scheduled Send",
       "enabled": "Enabled",
       "create_event": "Create Event",
       "creating": "Creating...",

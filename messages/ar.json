@@ -186,10 +186,6 @@
       "reminder_toggle": "إرسال تذكير تلقائي",
       "reminder_desc": "تذكير عبر واتساب قبل المناسبة بـ 24 ساعة",
       "coming_soon": "قريباً",
-      "schedule_toggle": "جدولة الإرسال",
-      "schedule_desc": "اختر تاريخاً ووقتاً محدداً لإرسال الدعوات",
-      "scheduled_date": "تاريخ الإرسال",
-      "scheduled_time": "وقت الإرسال",
       "preview_send": "معاينة وإرسال",
       "live_preview": "معاينة مباشرة",
       "media_required": "يرجى رفع صورة أو مستند الدعوة للمتابعة."
@@ -203,7 +199,6 @@
       "count_invites": "عدد الدعوات",
       "service_qr": "خدمة QR Code",
       "service_reminder": "رسالة تذكير",
-      "service_scheduled": "الإرسال المجدول",
       "enabled": "مفعل",
       "create_event": "إنشاء المناسبة",
       "creating": "جاري الإنشاء...",

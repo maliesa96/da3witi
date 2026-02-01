@@ -17,8 +17,6 @@ export async function createEvent(formData: {
   qrEnabled: boolean;
   guestsEnabled: boolean;
   reminderEnabled: boolean;
-  isScheduled: boolean;
-  scheduledAt?: string;
   imageUrl?: string;
   mediaType?: MediaType;
   mediaFilename?: string;
@@ -84,8 +82,6 @@ export async function createEvent(formData: {
       qrEnabled: formData.qrEnabled,
       guestsEnabled: formData.guestsEnabled,
       reminderEnabled: formData.reminderEnabled,
-      isScheduled: formData.isScheduled,
-      scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt) : null,
       imageUrl: formData.imageUrl,
       mediaType: formData.mediaType,
       mediaFilename: formData.mediaFilename,

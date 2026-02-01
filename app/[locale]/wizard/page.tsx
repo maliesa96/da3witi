@@ -64,9 +64,6 @@ export default function Wizard() {
     qrEnabled: true,
     guestsEnabled: false,
     reminderEnabled: false,
-    isScheduled: false,
-    scheduledDate: "",
-    scheduledTime: "",
     imageUrl: "",
     mediaType: undefined as MediaType | undefined,
     mediaFilename: "",
@@ -403,11 +400,6 @@ export default function Wizard() {
     } else if (!googleMapsRegex.test(details.location)) {
       newErrors.location = t('errors.invalid_map_link');
     }
-    
-    if (details.isScheduled) {
-      if (!details.scheduledDate) newErrors.scheduledDate = t('errors.required');
-      if (!details.scheduledTime) newErrors.scheduledTime = t('errors.required');
-    }
 
     // Enforce final rendered message length (template wrapper + parameters included)
     if (details.message.trim() && renderedMessageLength > MAX_INVITE_MESSAGE_CHARS) {
@@ -437,8 +429,6 @@ export default function Wizard() {
         qrEnabled: details.qrEnabled,
         guestsEnabled: details.guestsEnabled,
         reminderEnabled: details.reminderEnabled,
-        isScheduled: details.isScheduled,
-        scheduledAt: details.isScheduled ? `${details.scheduledDate}T${details.scheduledTime}` : undefined,
         imageUrl: details.imageUrl,
         mediaType: details.mediaType,
         mediaFilename: details.mediaFilename,
@@ -1027,76 +1017,6 @@ export default function Wizard() {
                     <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
                   </label>
                 </div>
-                <hr className="border-stone-100" />
-                {/* Toggle Item: Schedule Send */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-medium text-stone-900">
-                        {t('step2.schedule_toggle')}
-                      </div>
-                      <div className="text-[11px] text-stone-500">
-                        {t('step2.schedule_desc')}
-                      </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={details.isScheduled}
-                        onChange={(e) => setDetails({ ...details, isScheduled: e.target.checked })}
-                        className="sr-only peer custom-checkbox"
-                      />
-                      <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
-                    </label>
-                  </div>
-
-                  {details.isScheduled && (
-                    <div className="grid grid-cols-2 gap-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <div>
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1.5 flex justify-between">
-                          <span>{t('step2.scheduled_date')} <span className="text-red-500">*</span></span>
-                          {errors.scheduledDate && <span className="text-red-500 text-[10px] normal-case">{errors.scheduledDate}</span>}
-                        </label>
-                        <input
-                          type="date"
-                          value={details.scheduledDate}
-                          onChange={(e) => {
-                            setDetails({ ...details, scheduledDate: e.target.value });
-                            if (errors.scheduledDate) setErrors(prev => {
-                              const next = { ...prev };
-                              delete next.scheduledDate;
-                              return next;
-                            });
-                          }}
-                          className={`w-full px-4 py-2 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 focus:bg-white focus:border-stone-400 transition-all ${
-                            errors.scheduledDate ? 'border-red-300' : 'border-stone-200'
-                          }`}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1.5 flex justify-between">
-                          <span>{t('step2.scheduled_time')} <span className="text-red-500">*</span></span>
-                          {errors.scheduledTime && <span className="text-red-500 text-[10px] normal-case">{errors.scheduledTime}</span>}
-                        </label>
-                        <input
-                          type="time"
-                          value={details.scheduledTime}
-                          onChange={(e) => {
-                            setDetails({ ...details, scheduledTime: e.target.value });
-                            if (errors.scheduledTime) setErrors(prev => {
-                              const next = { ...prev };
-                              delete next.scheduledTime;
-                              return next;
-                            });
-                          }}
-                          className={`w-full px-4 py-2 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 focus:bg-white focus:border-stone-400 transition-all ${
-                            errors.scheduledTime ? 'border-red-300' : 'border-stone-200'
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="pt-4">
@@ -1536,16 +1456,6 @@ export default function Wizard() {
                   <span className="text-stone-600">{t('step3.service_reminder')}</span>
                   <span className={details.reminderEnabled ? "font-medium text-stone-900" : "text-stone-400"}>
                     {details.reminderEnabled ? t('step3.enabled') : "-"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-stone-600">{t('step3.service_scheduled')}</span>
-                  <span className={details.isScheduled ? "font-medium text-stone-900" : "text-stone-400"}>
-                    {details.isScheduled ? (
-                      <span className="text-[11px]">
-                        {details.scheduledDate} {details.scheduledTime}
-                      </span>
-                    ) : "-"}
                   </span>
                 </div>
               </div>
