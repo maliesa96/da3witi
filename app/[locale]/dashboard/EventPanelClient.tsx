@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect, memo } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle2, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Send, Filter } from "lucide-react";
+import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Send, Filter } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import InvitePreview from "@/app/components/InvitePreview";
 import { useLocale, useTranslations } from "next-intl";
@@ -992,26 +992,26 @@ export default function EventPanelClient({
             <StatCard
               label={t("sent")}
               value={stats.sent}
-              icon={<Send size={16} />}
-              iconBgClassName="bg-violet-50 border border-violet-100 text-violet-600"
+              icon={<Check size={16} />}
+              iconBgClassName="bg-stone-50 border border-stone-100 text-stone-500"
               onClick={() => toggleStatusFilter(["sent"])}
               isActive={isSentQuickActive}
-              activeTintClassName="bg-violet-50/70"
+              activeTintClassName="bg-stone-50/70"
             />
             <StatCard
               label={t("delivered")}
               value={stats.delivered}
-              icon={<Check size={16} />}
-              iconBgClassName="bg-sky-50 border border-sky-100 text-sky-600"
+              icon={<CheckCheck size={16} />}
+              iconBgClassName="bg-stone-50 border border-stone-100 text-stone-500"
               onClick={() => toggleStatusFilter(["delivered"])}
               isActive={isDeliveredQuickActive}
-              activeTintClassName="bg-sky-50/70"
+              activeTintClassName="bg-stone-50/70"
             />
             <StatCard
               label={t("read")}
               value={stats.read}
               icon={<CheckCheck size={16} />}
-              iconBgClassName="bg-blue-50 border border-blue-100 text-blue-600"
+              iconBgClassName="bg-blue-50 border border-blue-100 text-blue-500"
               onClick={() => toggleStatusFilter(["read"])}
               isActive={isReadQuickActive}
               activeTintClassName="bg-blue-50/70"
@@ -1019,7 +1019,7 @@ export default function EventPanelClient({
             <StatCard
               label={t("confirmed")}
               value={stats.confirmed}
-              icon={<CheckCircle2 size={16} />}
+              icon={<CheckCircle size={16} />}
               iconBgClassName="bg-green-50 border border-green-100 text-green-600"
               onClick={() => toggleStatusFilter(["confirmed"])}
               isActive={isConfirmedQuickActive}
