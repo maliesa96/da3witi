@@ -1,7 +1,7 @@
-import { Redis } from "@upstash/redis";
+import { Queue, Job } from "bullmq";
+import Redis from "ioredis";
 
-export const WHATSAPP_OUTBOX_STREAM_KEY = "whatsapp:outbox";
-export const WHATSAPP_DLQ_STREAM_KEY = "whatsapp:dlq";
+const QUEUE_NAME = process.env.QUEUE_NAME || "whatsapp";
 
 export class RedisConfigError extends Error {
   constructor(message: string) {
@@ -19,15 +19,50 @@ export type WhatsAppOutboxMeta =
     }
   | {
       kind: "webhook_followup";
-      // Optional correlation fields for debugging
       guestId?: string;
       repliedMessageId?: string;
     }
   | Record<string, unknown>;
 
+interface JobData {
+  payload: Record<string, unknown>;
+  meta: WhatsAppOutboxMeta;
+}
+
+// Lazy-initialized queue instance
+let queue: Queue<JobData> | null = null;
+
+function getQueue(): Queue<JobData> {
+  if (queue) return queue;
+
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    throw new RedisConfigError("REDIS_URL environment variable is not set");
+  }
+
+  // Create a new Redis connection for BullMQ
+  const connection = new Redis(redisUrl, {
+    maxRetriesPerRequest: null, // Required by BullMQ
+    enableReadyCheck: false,
+  });
+
+  queue = new Queue<JobData>(QUEUE_NAME, {
+    connection,
+    defaultJobOptions: {
+      attempts: 5,
+      backoff: {
+        type: "exponential",
+        delay: 500,
+      },
+      removeOnComplete: 1000, // Keep last 1000 completed jobs
+      removeOnFail: 5000, // Keep last 5000 failed jobs
+    },
+  });
+
+  return queue;
+}
+
 function assertValidWhatsAppPayload(payload: unknown): asserts payload is Record<string, unknown> {
-  // We only accept the raw JSON object body expected by WhatsApp Cloud API /messages.
-  // Reject strings to avoid double-encoding (which results in Meta treating it as a JSON string).
   if (typeof payload === "string") {
     throw new Error(
       "Invalid WhatsApp payload: got a string. Pass the raw object body (do not JSON.stringify before enqueueing)."
@@ -49,42 +84,33 @@ function assertValidWhatsAppPayload(payload: unknown): asserts payload is Record
   }
 }
 
-function getRedis() {
-  // Uses UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
-  return Redis.fromEnv();
-}
-
 /**
- * Enqueue a single WhatsApp request payload into the outbox stream.
- *
- * IMPORTANT: `payload` must be the exact JSON body the WhatsApp Cloud API expects for /messages.
+ * Enqueue a single WhatsApp request payload.
  */
 export async function enqueueWhatsAppOutbox(payload: unknown, meta: WhatsAppOutboxMeta = {}) {
   assertValidWhatsAppPayload(payload);
-  const redis = getRedis();
-  return await redis.xadd(WHATSAPP_OUTBOX_STREAM_KEY, "*", {
-    payload: JSON.stringify(payload),
-    meta: JSON.stringify(meta),
-  });
+  const q = getQueue();
+  const job = await q.add("send", { payload, meta });
+  return job.id;
 }
 
+/**
+ * Enqueue multiple WhatsApp request payloads in a batch.
+ */
 export async function enqueueWhatsAppOutboxBatch(
   jobs: Array<{ payload: unknown; meta?: WhatsAppOutboxMeta }>
 ) {
   if (jobs.length === 0) return [];
-  const redis = getRedis();
-  const pipeline = redis.pipeline();
 
-  for (const job of jobs) {
+  const q = getQueue();
+  const bulkJobs = jobs.map((job) => {
     assertValidWhatsAppPayload(job.payload);
-    pipeline.xadd(WHATSAPP_OUTBOX_STREAM_KEY, "*", {
-      payload: JSON.stringify(job.payload),
-      meta: JSON.stringify(job.meta ?? {}),
-    });
-  }
+    return {
+      name: "send",
+      data: { payload: job.payload, meta: job.meta ?? {} },
+    };
+  });
 
-  const res = await pipeline.exec();
-  // Pipeline returns an array of results; each item is the XADD-generated entry id.
-  return res as string[];
+  const addedJobs = await q.addBulk(bulkJobs);
+  return addedJobs.map((j: Job<JobData>) => j.id);
 }
-

@@ -12,14 +12,10 @@ primary_region = 'ams'
   context = '..'
 
 [env]
-  WHATSAPP_DLQ_STREAM_KEY = 'whatsapp:dlq'
-  WHATSAPP_OUTBOX_STREAM_KEY = 'whatsapp:outbox'
-  WHATSAPP_STREAM_GROUP = 'whatsapp-worker'
+  QUEUE_NAME = 'whatsapp'
   WORKER_CONCURRENCY = '10'
-  WORKER_IDLE_SLEEP_MS = '750'
   WORKER_MAX_RETRIES = '5'
-  WORKER_READ_COUNT = '50'
-  WORKER_RPS = '30'
+  WORKER_RPS = '40'
 
 [processes]
   worker = 'npm start'

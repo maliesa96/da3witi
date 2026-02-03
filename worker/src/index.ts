@@ -1,15 +1,12 @@
-import { Redis } from "@upstash/redis";
+import { Worker, Job } from "bullmq";
+import Redis from "ioredis";
 import pino from "pino";
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from '@prisma/adapter-pg'
+import { PrismaPg } from "@prisma/adapter-pg";
 import { loadConfig } from "./config";
-import { RateLimiter } from "./rate-limiter";
-import { createStreamClient } from "./stream";
 import { createWhatsAppClient } from "./whatsapp";
 import { createGuestRepository } from "./db";
-import { processEntry } from "./processor";
-import { sleep } from "./utils";
-import type { StreamEntry } from "./types";
+import type { JobData } from "./types";
 
 async function main() {
   const config = loadConfig();
@@ -22,81 +19,127 @@ async function main() {
         colorize: true,
         ignore: "pid,hostname",
         translateTime: "HH:MM:ss",
-        messageFormat: "{entryId} {kind} {msg}",
       },
     },
   });
 
   log.info(
-    { stream: config.streamKey, group: config.group, consumer: config.consumer },
-    `Starting worker: concurrency=${config.concurrency} rps=${config.rps}`
+    { queue: config.queueName, concurrency: config.concurrency, rps: config.rps },
+    "Starting BullMQ worker"
   );
 
-  const redis = Redis.fromEnv();
-  const adapter = new PrismaPg({ connectionString: config.databaseUrl })
-  const prisma = new PrismaClient({ adapter })
-  const limiter = new RateLimiter(config.rps);
+  // Create Redis connection for BullMQ
+  const connection = new Redis(config.redisUrl, {
+    maxRetriesPerRequest: null, // Required by BullMQ
+    enableReadyCheck: false,
+  });
 
-  const stream = createStreamClient(redis, config);
+  // Create Prisma client
+  const adapter = new PrismaPg({ connectionString: config.databaseUrl });
+  const prisma = new PrismaClient({ adapter });
+
+  // Create clients
   const whatsapp = createWhatsAppClient(config);
   const guests = createGuestRepository(prisma);
 
-  await stream.ensureGroup();
-  log.info("Consumer group ready");
+  // Create BullMQ worker
+  const worker = new Worker<JobData>(
+    config.queueName,
+    async (job: Job<JobData>) => {
+      const { payload, meta } = job.data;
+      const isInvite = meta.kind === "invite" && meta.guestId;
 
-  const queue: StreamEntry[] = [];
-  const inFlight = new Set<Promise<void>>();
-  let autoClaimCursor = "0-0";
+      const summary = {
+        to: payload.to,
+        type: payload.type,
+        template: (payload.template as Record<string, unknown>)?.name,
+      };
 
-  async function fillQueue() {
-    // Try to auto-claim entries
-    try {
-      const claimed = await stream.autoClaim(autoClaimCursor);
-      autoClaimCursor = claimed.cursor;
-      if (claimed.entries.length > 0) {
-        queue.push(...claimed.entries);
-        log.info({ count: claimed.entries.length }, "Auto-claimed entries");
-        return;
-      }
-    } catch (err) {
-      log.warn({ error: String(err) }, "XAUTOCLAIM failed");
-    }
-    // Read entries from stream
-    let batch = await stream.read("0");
-    if (batch.length === 0) batch = await stream.read(">");
-    if (batch.length > 0) {
-      queue.push(...batch);
-      log.debug({ count: batch.length }, "Fetched entries");
-    }
-  }
+      log.info({ jobId: job.id, ...summary, kind: meta.kind }, "Processing job");
 
-  while (true) {
-    // Fill queue if empty
-    if (queue.length === 0) {
-      await fillQueue();
-      if (queue.length === 0) {
-        await sleep(config.idleSleepMs);
-        continue;
-      }
-    }
+      // Send to WhatsApp
+      const res = await whatsapp.send(payload);
 
-    // Process entries up to concurrency limit
-    while (inFlight.size < config.concurrency && queue.length > 0) {
-      const entry = queue.shift()!;
-      const promise = processEntry(entry, { config, log, whatsapp, guests, stream, limiter }).catch(
-        (err) => {
-          log.error({ entryId: entry.id, error: String(err) }, "Unhandled error");
+      if (res.ok) {
+        const messageId = whatsapp.extractMessageId(res.data);
+
+        // Update guest status if this is an invite
+        if (isInvite) {
+          await guests.markSent(meta.guestId!, messageId ?? null);
         }
-      );
-      inFlight.add(promise);
-      promise.finally(() => inFlight.delete(promise));
-    }
 
-    // Wait for at least one to complete
-    if (inFlight.size > 0) {
-      await Promise.race(inFlight);
+        log.info({ jobId: job.id, messageId }, "Sent successfully");
+        return { success: true, messageId };
+      }
+
+      // Handle failure
+      const errorStr = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+      log.warn({ jobId: job.id, status: res.status, error: errorStr }, "WhatsApp API failed");
+
+      if (isInvite) {
+        await guests.setError(meta.guestId!, errorStr);
+      }
+
+      // Throw to trigger BullMQ retry
+      const error = new Error(`WhatsApp API error: ${res.status}`);
+      (error as Error & { statusCode?: number }).statusCode = res.status;
+      throw error;
+    },
+    {
+      connection,
+      concurrency: config.concurrency,
+      limiter: {
+        max: config.rps,
+        duration: 1000, // per second
+      },
+      settings: {
+        backoffStrategy: (attemptsMade: number) => {
+          // Exponential backoff: 500ms, 1s, 2s, 4s, 8s... max 30s
+          const base = 500;
+          const max = 30000;
+          return Math.min(max, base * Math.pow(2, attemptsMade));
+        },
+      },
     }
-  }
+  );
+
+  // Handle job failures (after all retries exhausted)
+  worker.on("failed", async (job: Job<JobData> | undefined, err: Error) => {
+    if (!job) return;
+
+    const meta = job.data.meta;
+    log.error(
+      { jobId: job.id, kind: meta.kind, guestId: meta.guestId, error: err.message },
+      "Job failed permanently"
+    );
+
+    // Mark invite as failed in database
+    if (meta.kind === "invite" && meta.guestId) {
+      await guests.markFailed(meta.guestId, err.message);
+    }
+  });
+
+  worker.on("completed", (job: Job<JobData>) => {
+    log.debug({ jobId: job.id }, "Job completed");
+  });
+
+  worker.on("error", (err: Error) => {
+    log.error({ error: err.message }, "Worker error");
+  });
+
+  log.info("Worker is running. Waiting for jobs...");
+
+  // Graceful shutdown
+  const shutdown = async () => {
+    log.info("Shutting down...");
+    await worker.close();
+    await connection.quit();
+    await prisma.$disconnect();
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
 
 main().catch((err) => {
