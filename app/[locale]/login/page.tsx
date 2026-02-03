@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
-import { signInWithMagicLink } from './actions';
-import MagicLinkSubmitButton from './MagicLinkSubmitButton';
 import { createClient } from '@/lib/supabase/server';
+import Link from 'next/link';
+import PasswordLoginForm from './PasswordLoginForm';
+import MagicLinkForm from './MagicLinkForm';
 
 export const metadata: Metadata = {
   robots: {
@@ -21,6 +22,8 @@ export default async function LoginPage({
 }) {
   const { locale } = await params;
   const t = await getTranslations('Auth');
+  const sp = await searchParams;
+  const mode = sp.mode === 'magic' ? 'magic' : 'password'; // default to password
 
   // If already authenticated, bounce straight to dashboard (or ?next=...).
   const supabase = await createClient();
@@ -29,7 +32,6 @@ export default async function LoginPage({
   } = await supabase.auth.getUser();
 
   if (user) {
-    const sp = await searchParams;
     const nextRaw = typeof sp.next === 'string' ? sp.next : '';
     // Prevent open redirects / cross-locale redirects:
     // only allow absolute paths that stay within this locale.
@@ -46,33 +48,38 @@ export default async function LoginPage({
       <div className="w-full max-w-md space-y-6 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-stone-200">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-stone-900">{t('login')}</h1>
-          <p className="text-stone-500 mt-2">{t('magic_link_desc')}</p>
+          <p className="text-stone-500 mt-2 text-sm">
+            {t('dont_have_account')}{' '}
+            <Link 
+              href={`/${locale}/signup`} 
+              className="text-stone-900 font-medium hover:underline"
+            >
+              {t('signup')}
+            </Link>
+          </p>
         </div>
 
-        <form className="space-y-6">
-          <input type="hidden" name="locale" value={locale} />
-          <NextParam searchParams={searchParams} />
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-stone-700 mb-2">
-              {t('email')}
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              className="w-full px-4 py-2 border border-stone-200 rounded-lg focus:ring-2 focus:ring-stone-900 focus:border-transparent outline-none transition-all"
-              placeholder="name@example.com"
-            />
-          </div>
+        {mode === 'password' ? (
+          <PasswordLoginForm 
+            locale={locale} 
+            next={typeof sp.next === 'string' ? sp.next : ''} 
+          />
+        ) : (
+          <MagicLinkForm 
+            locale={locale} 
+            next={typeof sp.next === 'string' ? sp.next : ''} 
+          />
+        )}
 
-          <MagicLinkSubmitButton
-            formAction={signInWithMagicLink}
-            className="w-full bg-stone-900 text-white font-medium py-2 rounded-lg hover:bg-stone-800 transition-all shadow-sm"
+        {/* Toggle login method */}
+        <div className="text-center">
+          <Link
+            href={`/${locale}/login?mode=${mode === 'password' ? 'magic' : 'password'}${sp.next ? `&next=${sp.next}` : ''}`}
+            className="text-sm text-stone-600 hover:text-stone-900 hover:underline"
           >
-            {t('send_magic_link')}
-          </MagicLinkSubmitButton>
-        </form>
+            {mode === 'password' ? t('login_with_magic_link') : t('login_with_password')}
+          </Link>
+        </div>
 
         {/* Success/Error Messages */}
         <AuthMessages searchParams={searchParams} />
@@ -81,22 +88,57 @@ export default async function LoginPage({
   );
 }
 
+
 async function AuthMessages({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const params = await searchParams;
-  void params;
+  const t = await getTranslations('Auth');
 
   if (params.sent) {
     return (
-      <div className="mt-4 p-3 bg-green-50 text-green-700 text-sm rounded-lg text-center">
-        Check your email for the sign-in link!
+      <div className="p-4 bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg">
+        <div className="font-medium mb-1">✓ Email sent!</div>
+        <div className="text-green-700">{t('check_email')}</div>
+      </div>
+    );
+  }
+
+  if (params.success === 'account_created') {
+    return (
+      <div className="p-4 bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg">
+        <div className="font-medium mb-1">✓ Account created!</div>
+        <div className="text-green-700">{t('check_email_confirm')}</div>
+      </div>
+    );
+  }
+
+  if (params.updated) {
+    return (
+      <div className="p-4 bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg">
+        <div className="font-medium mb-1">✓ Password updated!</div>
+        <div className="text-green-700">{t('password_updated')}</div>
       </div>
     );
   }
 
   if (params.error) {
+    let errorMessage = t('error_login');
+    
+    // Map error codes to user-friendly messages
+    const errorMap: Record<string, string> = {
+      'invalid_credentials': 'error_invalid_credentials',
+      'email_not_confirmed': 'check_email_confirm',
+      'invalid_email': 'error_invalid_email',
+      'magic_link_failed': 'error_magic_link',
+      'login_failed': 'error_login',
+    };
+    
+    const errorKey = errorMap[params.error as string] || 'error_login';
+    errorMessage = t(errorKey as any);
+
     return (
-      <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg text-center">
-        Error sending sign-in link. Please try again.
+      <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg">
+        <div className="font-medium mb-1">⚠ Unable to sign in</div>
+        <div className="text-red-700">{errorMessage}</div>
       </div>
     );
   }
@@ -104,9 +146,4 @@ async function AuthMessages({ searchParams }: { searchParams: Promise<{ [key: st
   return null;
 }
 
-async function NextParam({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
-  const params = await searchParams;
-  const next = typeof params.next === 'string' ? params.next : '';
-  return <input type="hidden" name="next" value={next} />;
-}
 

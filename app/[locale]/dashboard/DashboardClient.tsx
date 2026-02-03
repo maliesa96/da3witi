@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Calendar, Clock, MapPin, Users, Plus, QrCode, CheckCircle2, Image as ImageIcon } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Plus, QrCode, CheckCircle2, Image as ImageIcon, BadgeCheck } from "lucide-react";
 
 import { Link } from "@/navigation";
 
@@ -86,6 +86,12 @@ function EventCard({ event }: { event: EventCardData }) {
         
         {/* Status Badges */}
         <div className="absolute top-2 left-2 flex flex-wrap gap-1.5">
+          {event.paidAt && (
+            <span className="px-2 py-0.5 rounded-full bg-green-500/90 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm flex items-center gap-1">
+              <BadgeCheck size={10} />
+              {t("paid")}
+            </span>
+          )}
           {event.isScheduled && (
             <span className="px-2 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm">
               {t("scheduled")}

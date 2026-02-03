@@ -25,6 +25,7 @@ export function Navbar() {
       setUser(user);
     };
 
+    // Fetch user on mount and whenever pathname changes (e.g., after login redirect)
     void getUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -34,7 +35,7 @@ export function Navbar() {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [pathname]);
 
   const otherLocale = locale === 'ar' ? 'en' : 'ar';
   const langLabel = locale === 'ar' ? 'English' : 'العربية';

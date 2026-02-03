@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect, memo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Filter } from "lucide-react";
+import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Filter, BadgeCheck } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import InvitePreview from "@/app/components/InvitePreview";
 import { useLocale, useTranslations } from "next-intl";
@@ -913,6 +913,12 @@ export default function EventPanelClient({
           <div className="space-y-4">
             <div>
               <div className="flex items-center gap-2 text-stone-500 mb-2">
+                {event.paidAt && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-green-50 text-xs font-medium border border-green-200 text-green-700 shadow-sm flex items-center gap-1">
+                    <BadgeCheck size={12} />
+                    {t("paid") || "Paid"}
+                  </span>
+                )}
                 {event.isScheduled && (
                   <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-xs font-medium border border-amber-200 text-amber-700 shadow-sm">
                     {t("scheduled") || "Scheduled"}
