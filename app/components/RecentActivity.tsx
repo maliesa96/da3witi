@@ -2,16 +2,8 @@
 
 import { useState, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  CheckCircle, 
-  XCircle, 
-  Plus, 
-  Check, 
-  CheckCheck, 
-  Bell,
-  QrCode,
-  Loader2
-} from "lucide-react";
+import { Bell, Loader2 } from "lucide-react";
+import { getStatusConfig, type StatusKey } from "@/lib/statusConfig";
 import { useLocale, useTranslations } from "next-intl";
 import {
   useRealtimeSubscription,
@@ -23,6 +15,7 @@ export type ActivityType =
   | "invite_sent"
   | "invite_delivered"
   | "invite_read"
+  | "invite_failed"
   | "confirmed"
   | "declined"
   | "checked_in";
@@ -35,57 +28,28 @@ export type ActivityItem = {
   timestamp: string;
 };
 
+// Map activity types to status keys for icon/color lookup
+const ACTIVITY_TO_STATUS: Record<ActivityType, StatusKey> = {
+  confirmed: "confirmed",
+  declined: "declined",
+  guest_added: "guest_added",
+  invite_sent: "sent",
+  invite_delivered: "delivered",
+  invite_read: "read",
+  invite_failed: "failed",
+  checked_in: "checked_in",
+};
+
 function ActivityIcon({ type }: { type: ActivityType }) {
-  switch (type) {
-    case "confirmed":
-      return (
-        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
-          <CheckCircle size={14} />
-        </div>
-      );
-    case "declined":
-      return (
-        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
-          <XCircle size={14} />
-        </div>
-      );
-    case "guest_added":
-      return (
-        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-          <Plus size={14} />
-        </div>
-      );
-    case "invite_sent":
-      return (
-        <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 shrink-0">
-          <Check size={14} />
-        </div>
-      );
-    case "invite_delivered":
-      return (
-        <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 shrink-0">
-          <CheckCheck size={14} />
-        </div>
-      );
-    case "invite_read":
-      return (
-        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
-          <CheckCheck size={14} />
-        </div>
-      );
-    case "checked_in":
-      return (
-        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
-          <QrCode size={14} />
-        </div>
-      );
-    default:
-      return (
-        <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 shrink-0">
-          <Bell size={14} />
-        </div>
-      );
-  }
+  const statusKey = ACTIVITY_TO_STATUS[type] ?? "no_reply";
+  const config = getStatusConfig(statusKey);
+  const Icon = config.icon;
+
+  return (
+    <div className={`w-8 h-8 rounded-full ${config.bgColor} flex items-center justify-center ${config.iconColor} shrink-0`}>
+      <Icon size={14} />
+    </div>
+  );
 }
 
 const ActivityRow = memo(function ActivityRow({
@@ -114,6 +78,8 @@ const ActivityRow = memo(function ActivityRow({
         return <>{t("activity_delivered")} <span className="font-semibold">{item.guestName}</span></>;
       case "invite_read":
         return <><span className="font-semibold">{item.guestName}</span> {t("activity_read")}</>;
+      case "invite_failed":
+        return <>{t("activity_failed")} <span className="font-semibold">{item.guestName}</span></>;
       case "checked_in":
         return <><span className="font-semibold">{item.guestName}</span> {t("activity_checked_in")}</>;
       default:
@@ -248,6 +214,7 @@ export default function RecentActivity({
         else if (newStatus === "read") type = "invite_read";
         else if (newStatus === "confirmed") type = "confirmed";
         else if (newStatus === "declined") type = "declined";
+        else if (newStatus === "failed") type = "invite_failed";
 
         if (type) {
           const newActivity: ActivityItem = {

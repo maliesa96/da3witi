@@ -15,6 +15,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { StatusIcon, getStatusPillClasses } from "@/lib/statusConfig";
 import { useTranslations } from "next-intl";
 
 import {
@@ -45,38 +46,21 @@ export type PaginationInfo = {
 function StatusPill({
   status,
   label,
-  className,
   tooltip,
 }: {
   status: string;
   label: string;
-  className: string;
   tooltip: string;
 }) {
+  const pillClasses = getStatusPillClasses(status);
   return (
     <div className="relative group cursor-help inline-block">
       <span
-        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium border shadow-sm transition-colors ${className}`}
+        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium border shadow-sm transition-colors ${pillClasses}`}
       >
-        <span
-          className={`w-1.5 h-1.5 rounded-full mr-1.5 rtl:mr-0 rtl:ml-1.5 ${
-            status === "confirmed"
-              ? "bg-green-500"
-              : status === "declined"
-                ? "bg-red-500"
-                : status === "read"
-                  ? "bg-blue-600"
-                  : status === "delivered"
-                    ? "bg-teal-500"
-                    : status === "sent"
-                      ? "bg-violet-500"
-                      : status === "failed"
-                        ? "bg-red-500"
-                        : status === "pending"
-                          ? "bg-amber-500"
-                          : "bg-stone-400"
-          }`}
-        ></span>
+        <span className="mr-1.5 rtl:mr-0 rtl:ml-1.5 flex items-center">
+          <StatusIcon status={status} size={12} />
+        </span>
         {label}
       </span>
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-stone-900 text-white text-[10px] font-medium rounded-lg whitespace-nowrap opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none shadow-lg shadow-stone-900/20 z-10">
@@ -98,7 +82,6 @@ function getStatusBadge(
           status="confirmed"
           label={t("status_present")}
           tooltip={t("tooltip_confirmed")}
-          className="bg-green-50 text-green-700 border-green-100 hover:bg-green-100"
         />
       );
     case "declined":
@@ -107,7 +90,6 @@ function getStatusBadge(
           status="declined"
           label={t("status_declined")}
           tooltip={t("tooltip_declined")}
-          className="bg-red-50 text-red-700 border-red-100 hover:bg-red-100"
         />
       );
     case "sent":
@@ -116,7 +98,6 @@ function getStatusBadge(
           status="sent"
           label={t("status_sent")}
           tooltip={t("tooltip_sent")}
-          className="bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100"
         />
       );
     case "delivered":
@@ -125,7 +106,6 @@ function getStatusBadge(
           status="delivered"
           label={t("status_delivered")}
           tooltip={t("tooltip_delivered")}
-          className="bg-sky-50 text-sky-700 border-sky-100 hover:bg-sky-100"
         />
       );
     case "read":
@@ -134,7 +114,6 @@ function getStatusBadge(
           status="read"
           label={t("status_read")}
           tooltip={t("tooltip_read")}
-          className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100"
         />
       );
     case "failed":
@@ -143,7 +122,6 @@ function getStatusBadge(
           status="failed"
           label={t("status_failed")}
           tooltip={t("tooltip_failed")}
-          className="bg-red-50 text-red-700 border-red-100 hover:bg-red-100"
         />
       );
     case "pending":
@@ -152,7 +130,6 @@ function getStatusBadge(
           status="pending"
           label={t("status_pending")}
           tooltip={t("tooltip_pending")}
-          className="bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100"
         />
       );
     default:
@@ -161,7 +138,6 @@ function getStatusBadge(
           status="no_reply"
           label={t("status_no_reply")}
           tooltip={t("tooltip_no_reply")}
-          className="bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100"
         />
       );
   }

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export type ActivityItem = {
   id: string;
-  type: "guest_added" | "invite_sent" | "invite_delivered" | "invite_read" | "confirmed" | "declined" | "checked_in";
+  type: "guest_added" | "invite_sent" | "invite_delivered" | "invite_read" | "invite_failed" | "confirmed" | "declined" | "checked_in";
   guestId: string;
   guestName: string;
   timestamp: string;
@@ -51,12 +51,14 @@ export async function GET(
       select: {
         id: true,
         name: true,
+        status: true,
         createdAt: true,
         sentAt: true,
         deliveredAt: true,
         readAt: true,
         confirmedAt: true,
         declinedAt: true,
+        failedAt: true,
         checkedIn: true,
         checkedInAt: true,
       },
@@ -136,6 +138,17 @@ export async function GET(
           guestId: guest.id,
           guestName: guest.name,
           timestamp: guest.checkedInAt.toISOString(),
+        });
+      }
+
+      // Failed activity
+      if (guest.failedAt) {
+        activities.push({
+          id: `${guest.id}-failed`,
+          type: "invite_failed",
+          guestId: guest.id,
+          guestName: guest.name,
+          timestamp: guest.failedAt.toISOString(),
         });
       }
     }

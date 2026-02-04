@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useCallback, useEffect, memo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Camera, Users, Clock, Check, CheckCheck, CheckCircle, XCircle, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Filter, BadgeCheck } from "lucide-react";
+import { Calendar, Camera, Users, Clock, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Filter, BadgeCheck } from "lucide-react";
+import { getStatusConfig, StatusIcon } from "@/lib/statusConfig";
 import { AnimatePresence, motion } from "framer-motion";
 import InvitePreview from "@/app/components/InvitePreview";
 import { useLocale, useTranslations } from "next-intl";
@@ -77,20 +78,19 @@ type InviteTotals = {
 const StatCard = memo(function StatCard({
   label,
   value,
-  icon,
-  iconBgClassName,
+  status,
   onClick,
   isActive = false,
-  activeTintClassName,
 }: {
   label: string;
   value: number;
-  icon: React.ReactNode;
-  iconBgClassName: string;
+  status: string;
   onClick?: () => void;
   isActive?: boolean;
-  activeTintClassName?: string;
 }) {
+  const config = getStatusConfig(status);
+  const iconBgClassName = `${config.bgColor} border ${config.borderColor} ${config.iconColor}`;
+
   return (
     <button
       type="button"
@@ -102,7 +102,7 @@ const StatCard = memo(function StatCard({
           : "cursor-default"
       } ${
         isActive
-          ? `border-stone-900 shadow-md ${activeTintClassName || "bg-stone-50"}`
+          ? `border-stone-900 shadow-md ${config.activeTint}`
           : "border-stone-200 bg-white"
       }`}
       aria-pressed={isActive}
@@ -110,7 +110,7 @@ const StatCard = memo(function StatCard({
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] md:text-xs font-medium text-stone-500">{label}</span>
         <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${iconBgClassName}`}>
-          {icon}
+          <StatusIcon status={status} size={16} />
         </span>
       </div>
       <div className="text-xl md:text-2xl font-semibold text-stone-900 tabular-nums">
@@ -1047,65 +1047,51 @@ export default function EventPanelClient({
             <StatCard
               label={t("pending")}
               value={stats.pending}
-              icon={<Clock size={16} />}
-              iconBgClassName="bg-amber-50 border border-amber-100 text-amber-600"
+              status="pending"
               onClick={() => toggleStatusFilter(["pending"])}
               isActive={isPendingQuickActive}
-              activeTintClassName="bg-amber-50/70"
             />
             <StatCard
               label={t("sent")}
               value={stats.sent}
-              icon={<Check size={16} />}
-              iconBgClassName="bg-stone-50 border border-stone-100 text-stone-500"
+              status="sent"
               onClick={() => toggleStatusFilter(["sent"])}
               isActive={isSentQuickActive}
-              activeTintClassName="bg-stone-50/70"
             />
             <StatCard
               label={t("delivered")}
               value={stats.delivered}
-              icon={<CheckCheck size={16} />}
-              iconBgClassName="bg-stone-50 border border-stone-100 text-stone-500"
+              status="delivered"
               onClick={() => toggleStatusFilter(["delivered"])}
               isActive={isDeliveredQuickActive}
-              activeTintClassName="bg-stone-50/70"
             />
             <StatCard
               label={t("read")}
               value={stats.read}
-              icon={<CheckCheck size={16} />}
-              iconBgClassName="bg-blue-50 border border-blue-100 text-blue-500"
+              status="read"
               onClick={() => toggleStatusFilter(["read"])}
               isActive={isReadQuickActive}
-              activeTintClassName="bg-blue-50/70"
             />
             <StatCard
               label={t("confirmed")}
               value={stats.confirmed}
-              icon={<CheckCircle size={16} />}
-              iconBgClassName="bg-green-50 border border-green-100 text-green-600"
+              status="confirmed"
               onClick={() => toggleStatusFilter(["confirmed"])}
               isActive={isConfirmedQuickActive}
-              activeTintClassName="bg-green-50/70"
             />
             <StatCard
               label={t("declined")}
               value={stats.declined}
-              icon={<XCircle size={16} />}
-              iconBgClassName="bg-red-50 border border-red-100 text-red-600"
+              status="declined"
               onClick={() => toggleStatusFilter(["declined"])}
               isActive={isDeclinedQuickActive}
-              activeTintClassName="bg-red-50/70"
             />
             <StatCard
               label={t("failed")}
               value={stats.failed}
-              icon={<XCircle size={16} />}
-              iconBgClassName="bg-orange-50 border border-orange-100 text-orange-600"
+              status="failed"
               onClick={() => toggleStatusFilter(["failed"])}
               isActive={isFailedQuickActive}
-              activeTintClassName="bg-orange-50/70"
             />
           </div>
 

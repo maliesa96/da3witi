@@ -103,6 +103,7 @@ export function createGuestRepository(prisma: PrismaClient) {
         where: { id: guestId },
         data: {
           status: "failed",
+          failedAt: new Date(),
           whatsappSendLastError: error,
           whatsappSendEnqueuedAt: null,
         },

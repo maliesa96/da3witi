@@ -377,7 +377,8 @@
     "activity_delivered": "تم تسليم الدعوة لـ",
     "activity_read": "قرأ الدعوة",
     "activity_checked_in": "سجل الدخول",
-    "activity_update": "تحديث جديد"
+    "activity_update": "تحديث جديد",
+    "activity_failed": "فشل إرسال الدعوة لـ"
   },
   "Auth": {
     "login": "تسجيل الدخول",
