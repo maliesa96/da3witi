@@ -691,7 +691,7 @@ export function GuestListClient({
               {guestsEnabled && <th className="px-6 py-3 text-start">{t("col_invite_count")}</th>}
               <th className="px-6 py-3 text-start">{t("col_status")}</th>
               {qrEnabled && <th className="px-6 py-3 text-start">{t("col_qr")}</th>}
-              <th className="px-6 py-3 text-start"></th>
+              <th className="px-6 py-3 text-start w-24"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100 text-sm text-stone-700">

@@ -114,13 +114,14 @@ export async function POST(request: Request) {
                 }
 
                 // Build the update data with the appropriate timestamp column
-                const updateData: { status: string; sentAt?: Date; deliveredAt?: Date; readAt?: Date } = {
+                const updateData: { status: string; sentAt?: Date; deliveredAt?: Date; readAt?: Date; failedAt?: Date } = {
                   status: messageStatus,
                 };
                 const now = new Date();
                 if (messageStatus === 'sent') updateData.sentAt = now;
                 else if (messageStatus === 'delivered') updateData.deliveredAt = now;
                 else if (messageStatus === 'read') updateData.readAt = now;
+                else if (messageStatus === 'failed') updateData.failedAt = now;
 
                 await prisma.guest.update({
                   where: { id: guest.id },
