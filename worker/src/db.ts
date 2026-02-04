@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { broadcastGuestUpdate } from "./broadcast";
 
 function isNotFoundError(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025";
@@ -29,7 +30,28 @@ export function createGuestRepository(prisma: PrismaClient) {
     },
 
     async markSent(guestId: string, messageId: string | null): Promise<void> {
-      await prisma.guest.updateMany({
+      // Fetch the guest to get old status and details for broadcasting
+      const guest = await prisma.guest.findUnique({
+        where: { id: guestId },
+        select: {
+          id: true,
+          eventId: true,
+          name: true,
+          phone: true,
+          status: true,
+          inviteCount: true,
+          checkedIn: true,
+        },
+      });
+
+      if (!guest) {
+        console.log(`[DB] Guest ${guestId} not found, skipping markSent`);
+        return;
+      }
+
+      const oldStatus = guest.status;
+
+      await prisma.guest.update({
         where: { id: guestId },
         data: {
           whatsappMessageId: messageId,
@@ -39,16 +61,64 @@ export function createGuestRepository(prisma: PrismaClient) {
           whatsappSendEnqueuedAt: null,
         },
       });
+
+      // Broadcast the status change
+      await broadcastGuestUpdate(guest.eventId, {
+        id: guest.id,
+        eventId: guest.eventId,
+        name: guest.name,
+        phone: guest.phone,
+        status: "sent",
+        inviteCount: guest.inviteCount,
+        checkedIn: guest.checkedIn,
+        whatsappMessageId: messageId,
+        oldStatus,
+      });
     },
 
     async markFailed(guestId: string, error: string): Promise<void> {
-      await prisma.guest.updateMany({
+      // Fetch the guest to get old status and details for broadcasting
+      const guest = await prisma.guest.findUnique({
+        where: { id: guestId },
+        select: {
+          id: true,
+          eventId: true,
+          name: true,
+          phone: true,
+          status: true,
+          inviteCount: true,
+          checkedIn: true,
+          whatsappMessageId: true,
+        },
+      });
+
+      if (!guest) {
+        console.log(`[DB] Guest ${guestId} not found, skipping markFailed`);
+        return;
+      }
+
+      const oldStatus = guest.status;
+
+      await prisma.guest.update({
         where: { id: guestId },
         data: {
           status: "failed",
           whatsappSendLastError: error,
           whatsappSendEnqueuedAt: null,
         },
+      });
+
+      // Broadcast the status change
+      await broadcastGuestUpdate(guest.eventId, {
+        id: guest.id,
+        eventId: guest.eventId,
+        name: guest.name,
+        phone: guest.phone,
+        status: "failed",
+        inviteCount: guest.inviteCount,
+        checkedIn: guest.checkedIn,
+        whatsappMessageId: guest.whatsappMessageId,
+        oldStatus,
       });
     },
   };

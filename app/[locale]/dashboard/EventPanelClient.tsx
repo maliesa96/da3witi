@@ -443,12 +443,13 @@ export default function EventPanelClient({
   const stats = useMemo(() => {
     return {
       invited: serverStats.total,
-      pending: serverStats.pending + serverStats.failed,
+      pending: serverStats.pending,
       sent: serverStats.sent,
       delivered: serverStats.delivered,
       read: serverStats.read,
       confirmed: serverStats.confirmed,
       declined: serverStats.declined,
+      failed: serverStats.failed,
     };
   }, [serverStats]);
 
@@ -473,9 +474,9 @@ export default function EventPanelClient({
   ]);
 
   const pendingToSend = useMemo(() => {
-    // Count from server stats since we need the full count
+    // Count from server stats since we need the full count (pending + failed can be resent)
     return serverStats.pending + serverStats.failed;
-  }, [serverStats]);
+  }, [serverStats.pending, serverStats.failed]);
 
   const eventDate = event.date
 
@@ -702,7 +703,7 @@ export default function EventPanelClient({
 
   const activeQuickFilter = useMemo(() => normalizeStatuses(selectedStatuses), [normalizeStatuses, selectedStatuses]);
   const isPendingQuickActive = useMemo(
-    () => sameStatuses(activeQuickFilter, ["pending", "failed"]),
+    () => sameStatuses(activeQuickFilter, ["pending"]),
     [activeQuickFilter, sameStatuses]
   );
   const isSentQuickActive = useMemo(() => sameStatuses(activeQuickFilter, ["sent"]), [activeQuickFilter, sameStatuses]);
@@ -717,6 +718,10 @@ export default function EventPanelClient({
   );
   const isDeclinedQuickActive = useMemo(
     () => sameStatuses(activeQuickFilter, ["declined"]),
+    [activeQuickFilter, sameStatuses]
+  );
+  const isFailedQuickActive = useMemo(
+    () => sameStatuses(activeQuickFilter, ["failed"]),
     [activeQuickFilter, sameStatuses]
   );
 
@@ -1038,13 +1043,13 @@ export default function EventPanelClient({
         {/* Right Column: Stats + Guest List */}
         <div className="flex-1 min-w-0 space-y-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 md:gap-4">
             <StatCard
               label={t("pending")}
               value={stats.pending}
               icon={<Clock size={16} />}
               iconBgClassName="bg-amber-50 border border-amber-100 text-amber-600"
-              onClick={() => toggleStatusFilter(["pending", "failed"])}
+              onClick={() => toggleStatusFilter(["pending"])}
               isActive={isPendingQuickActive}
               activeTintClassName="bg-amber-50/70"
             />
@@ -1092,6 +1097,15 @@ export default function EventPanelClient({
               onClick={() => toggleStatusFilter(["declined"])}
               isActive={isDeclinedQuickActive}
               activeTintClassName="bg-red-50/70"
+            />
+            <StatCard
+              label={t("failed")}
+              value={stats.failed}
+              icon={<XCircle size={16} />}
+              iconBgClassName="bg-orange-50 border border-orange-100 text-orange-600"
+              onClick={() => toggleStatusFilter(["failed"])}
+              isActive={isFailedQuickActive}
+              activeTintClassName="bg-orange-50/70"
             />
           </div>
 

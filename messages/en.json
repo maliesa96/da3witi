@@ -9,6 +9,7 @@
     "cta_create": "Create New Invitation",
     "cta_example": "View Example",
     "how_it_works": {
+      "title": "How It Works",
       "subtitle": "Add details, upload guests + card, then send — we’ll track replies."
     },
     "stats": {
@@ -296,6 +297,7 @@
     "confirmed": "Confirmed",
     "confirmed_sub": "66% of guests",
     "declined": "Declined",
+    "failed": "Failed",
     "no_reply": "No Reply",
     "guest_list": "Guest List",
     "guests_label": "guests",

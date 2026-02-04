@@ -333,7 +333,7 @@ export default function HomePageClient() {
            className="text-center mb-16"
          >
             <h2 className="text-5xl md:text-7xl font-display font-bold tracking-tighter text-stone-900 uppercase leading-[0.9] mb-4">
-              {isArabic ? "كيف يعمل؟" : "How It Works"}
+              {t("how_it_works.title")}
             </h2>
             <p className="text-xl text-stone-500 font-medium">
                {t('how_it_works.subtitle')}
