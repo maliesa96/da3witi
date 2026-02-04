@@ -168,12 +168,15 @@ type RecentActivityProps = {
   eventId: string;
   isPaid: boolean;
   maxItems?: number;
+  /** Extra class for header (e.g. to add right padding when external close button exists) */
+  headerClassName?: string;
 };
 
 export default function RecentActivity({
   eventId,
   isPaid,
   maxItems = 10,
+  headerClassName = "",
 }: RecentActivityProps) {
   const t = useTranslations("Dashboard");
   const locale = useLocale();
@@ -338,7 +341,7 @@ export default function RecentActivity({
       dir={isAr ? "rtl" : "ltr"}
     >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between shrink-0">
+      <div className={`px-4 py-3 border-b border-stone-100 flex items-center justify-between shrink-0 ${headerClassName}`}>
         <h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-2">
           <Bell size={12} />
           {t("recent_activity")}

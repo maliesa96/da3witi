@@ -1244,7 +1244,7 @@ export default function EventPanelClient({
               
               {/* Sheet */}
               <motion.div
-                className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col"
+                className="absolute bottom-0 left-0 right-0 pt-3 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col"
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
@@ -1259,7 +1259,7 @@ export default function EventPanelClient({
                 <button
                   type="button"
                   onClick={() => setShowMobileActivity(false)}
-                  className="absolute top-4 right-4 rtl:right-auto rtl:left-4 p-2 rounded-full hover:bg-stone-100 text-stone-500 cursor-pointer"
+                  className="absolute top-0 right-4 rtl:right-auto rtl:left-4 pt-2 rounded-full hover:bg-stone-100 text-stone-500 cursor-pointer"
                 >
                   <X size={20} />
                 </button>
