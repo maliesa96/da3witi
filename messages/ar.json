@@ -378,7 +378,9 @@
     "activity_read": "قرأ الدعوة",
     "activity_checked_in": "سجل الدخول",
     "activity_update": "تحديث جديد",
-    "activity_failed": "فشل إرسال الدعوة لـ"
+    "activity_failed": "فشل إرسال الدعوة لـ",
+    "export_csv": "تصدير CSV",
+    "exporting": "جاري التصدير..."
   },
   "Auth": {
     "login": "تسجيل الدخول",

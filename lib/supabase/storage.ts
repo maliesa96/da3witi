@@ -40,12 +40,16 @@ export function validateFileType(file: File): { valid: boolean; error?: string }
     };
   }
 
-  // Max file size limit: 5MB for all types
-  const maxSize = 5 * 1024 * 1024;
+  // Max file size limit: 10MB for PDFs, 5MB for images
+  const maxSize = file.type === 'application/pdf' 
+    ? 10 * 1024 * 1024  // 10MB for PDFs
+    : 5 * 1024 * 1024;   // 5MB for images
+  
   if (file.size > maxSize) {
+    const maxSizeMB = file.type === 'application/pdf' ? '10MB' : '5MB';
     return {
       valid: false,
-      error: `File too large. Maximum size: 5MB`
+      error: `File too large. Maximum size: ${maxSizeMB}`
     };
   }
 

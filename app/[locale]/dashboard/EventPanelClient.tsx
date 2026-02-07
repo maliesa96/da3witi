@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect, memo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Camera, Users, Clock, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Filter, BadgeCheck } from "lucide-react";
+import { Calendar, Camera, Users, Clock, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Filter, BadgeCheck, Download } from "lucide-react";
 import { getStatusConfig, StatusIcon } from "@/lib/statusConfig";
 import { AnimatePresence, motion } from "framer-motion";
 import InvitePreview from "@/app/components/InvitePreview";
@@ -661,6 +661,71 @@ export default function EventPanelClient({
     }
   }, [fetchGuestsFromApi, useClientSide, serverStats.total, pageSize, currentPage, debouncedSearch, selectedStatuses]);
 
+  // CSV export functionality
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportCSV = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      // Fetch all guests (without pagination)
+      const result = await fetchGuestsFromApi({
+        page: 1,
+        pageSize: 10000, // Fetch all guests
+      });
+
+      const guests = result.guests;
+
+      // Create CSV content with BOM for Excel compatibility
+      const BOM = "\uFEFF";
+      const headers = [
+        t("col_name"),
+        t("col_phone"),
+        t("col_invite_count"),
+        t("col_status"),
+      ];
+
+      // Status label mapping
+      const statusLabels: Record<string, string> = {
+        pending: t("status_pending"),
+        sent: t("status_sent"),
+        delivered: t("status_delivered"),
+        read: t("status_read"),
+        confirmed: t("status_present"),
+        declined: t("status_declined"),
+        failed: t("status_failed"),
+        no_reply: t("status_no_reply"),
+      };
+
+      const csvRows = [
+        headers.join(","),
+        ...guests.map((guest) => {
+          const name = `"${(guest.name || "").replace(/"/g, '""')}"`;
+          const phone = `"${(guest.phone || "").replace(/"/g, '""')}"`;
+          const invites = guest.inviteCount ?? 1;
+          const status = `"${statusLabels[guest.status] || guest.status}"`;
+          return [name, phone, invites, status].join(",");
+        }),
+      ];
+
+      const csvContent = BOM + csvRows.join("\n");
+
+      // Create and download the file
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${event.title.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, "_")}_guests.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to export CSV:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [fetchGuestsFromApi, event.title, t]);
+
   const statusOptions = useMemo(
     () => [
       { value: "pending", label: t("status_pending") },
@@ -1104,6 +1169,19 @@ export default function EventPanelClient({
                 <span className="text-xs text-stone-400">
                   ({listTotalDisplay} {t("total_guests") || "total"})
                 </span>
+                <button
+                  type="button"
+                  onClick={handleExportCSV}
+                  disabled={isExporting || serverStats.total === 0}
+                  className="px-3 py-1.5 text-xs font-medium text-stone-600 bg-stone-50 border border-stone-200 rounded-lg hover:bg-stone-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isExporting ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Download size={14} />
+                  )}
+                  {isExporting ? t("exporting") : t("export_csv")}
+                </button>
                 <DeleteAllGuestsButton
                   eventId={event.id}
                   pendingCount={serverStats.pending + serverStats.failed}

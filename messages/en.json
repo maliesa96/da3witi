@@ -378,7 +378,9 @@
     "activity_read": "read the invitation",
     "activity_checked_in": "checked in",
     "activity_update": "Activity update",
-    "activity_failed": "Invitation failed for"
+    "activity_failed": "Invitation failed for",
+    "export_csv": "Export CSV",
+    "exporting": "Exporting..."
   },
   "Auth": {
     "login": "Login",

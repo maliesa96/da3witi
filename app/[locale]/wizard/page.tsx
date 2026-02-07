@@ -586,7 +586,7 @@ export default function Wizard() {
                       {isUploading ? 'Uploading...' : t('step2.click_upload')}
                     </p>
                     <p className="text-[10px] text-stone-500 mt-1">
-                      JPG, PNG, PDF (Max: 5MB)
+                      JPG, PNG (Max: 5MB), PDF (Max: 10MB)
                     </p>
                     {(uploadError || errors.imageUrl) && (
                       <p className="text-[10px] text-red-500 mt-2">{uploadError || errors.imageUrl}</p>
