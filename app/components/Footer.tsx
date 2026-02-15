@@ -1,9 +1,9 @@
 "use client";
 
-import { MailOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { Link } from "@/navigation";
+import Image from "next/image";
 
 export function Footer() {
   const t = useTranslations('Footer');
@@ -14,13 +14,14 @@ export function Footer() {
     <footer className="border-t border-stone-200 bg-white py-8 mt-auto">
       <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white">
-              <MailOpen size={18} />
-            </div>
-            <span className="text-lg font-display font-semibold tracking-tight text-stone-900">
-              Da3witi
-            </span>
+          <div className="h-8">
+            <Image
+              src={locale === 'ar' ? '/images/logo_ar_black.svg' : '/images/logo_en_black.svg'}
+              alt="Da3witi"
+              width={120}
+              height={32}
+              className="h-8 w-auto"
+            />
           </div>
           <div className="flex gap-6 text-sm text-stone-500 font-medium">
             <Link

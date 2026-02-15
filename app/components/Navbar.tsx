@@ -1,12 +1,13 @@
 "use client";
 
-import { MailOpen, Globe, Plus, LogOut, User, Menu, X } from "lucide-react";
+import { Globe, Plus, LogOut, User, Menu, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { AuthChangeEvent, Session, User as SupabaseUser } from "@supabase/supabase-js";
 import { signOut } from "@/app/[locale]/login/actions";
+import Image from "next/image";
 
 export function Navbar() {
   const t = useTranslations('Navbar');
@@ -57,12 +58,15 @@ export function Navbar() {
       <nav className="fixed w-full z-50 top-0 transition-all duration-300 border-b border-stone-200/50 bg-[#FDFCF8]">
         <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 cursor-pointer">
-            <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white shrink-0">
-              <MailOpen size={18} />
+            <div className="h-12 shrink-0">
+              <Image
+                src={locale === 'ar' ? '/images/logo_ar_black.svg' : '/images/logo_en_black.svg'}
+                alt={t('brand')}
+                width={240}
+                height={64}
+                className="h-12 w-auto"
+              />
             </div>
-            <span className="text-lg md:text-xl font-display font-semibold tracking-tight text-stone-900 truncate">
-              {t('brand')}
-            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -88,7 +92,7 @@ export function Navbar() {
                 <form action={signOut} className="hidden sm:block">
                   <button
                     type="submit"
-                    className="text-sm font-medium text-stone-600 hover:text-red-600 px-3 py-1.5 rounded-md hover:bg-red-50 transition-all flex items-center gap-2 cursor-pointer"
+                    className={`text-sm font-medium text-stone-600 hover:text-red-600 px-3 py-1.5 rounded-md hover:bg-red-50 transition-all flex items-center gap-2 cursor-pointer ${locale === 'ar' ? 'flex-row-reverse' : ''}`}
                   >
                     <LogOut size={16} />
                     <span className="hidden md:inline">{authT('sign_out')}</span>
@@ -167,7 +171,7 @@ export function Navbar() {
               <form action={signOut} className="w-full">
                 <button
                   type="submit"
-                  className="w-full flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 px-4 py-3 rounded-lg hover:bg-red-50 transition-all cursor-pointer"
+                  className={`w-full flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 px-4 py-3 rounded-lg hover:bg-red-50 transition-all cursor-pointer ${locale === 'ar' ? 'flex-row-reverse' : ''}`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <LogOut size={18} />
