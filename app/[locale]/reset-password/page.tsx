@@ -57,7 +57,7 @@ export default async function ResetPasswordPage({
         <div className="text-center">
           <h1 className="text-2xl font-bold text-stone-900">{t('reset_password')}</h1>
           <p className="text-stone-500 mt-2 text-sm">
-            {t('already_have_account')}{' '}
+            {t('remember_password')}{' '}
             <Link 
               href={`/${locale}/login`} 
               className="text-stone-900 font-medium hover:underline"

@@ -417,6 +417,7 @@
     "update_password": "Update Password",
     "dont_have_account": "Don't have an account?",
     "already_have_account": "Already have an account?",
+    "remember_password": "Remember your password?",
     "sign_out": "Sign Out",
     "error_login": "Invalid email or password. Please try again.",
     "error_invalid_credentials": "The email or password you entered is incorrect. Please check and try again.",
