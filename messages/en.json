@@ -100,6 +100,22 @@
       }
     }
   },
+  "ContactPage": {
+    "title": "Contact Us",
+    "conciergeEyebrow": "Da3witi Support",
+    "conciergeFastReplies": "Fast replies",
+    "conciergeWhatsappFirst": "WhatsApp-first",
+    "heading": "Let's talk",
+    "description": "Reach out anytime and our team will support you quickly. Choose the channel that works best for you.",
+    "email": {
+      "title": "Email Us",
+      "description": "For general questions, partnerships, or account support."
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "description": "Need a quick answer? Message us directly on WhatsApp."
+    }
+  },
   "Wizard": {
     "steps": {
       "guests": "Guests",
@@ -226,6 +242,7 @@
   "Navbar": {
     "brand": "Da3witi",
     "dashboard": "Dashboard",
+    "contact": "Contact Us",
     "start_now": "Start Now",
     "create_event": "Create Event"
   },

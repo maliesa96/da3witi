@@ -39,7 +39,7 @@ export function Footer() {
               {t('pricing')}
             </Link>
             <Link
-              href="/#contact"
+              href="/contact"
               locale={locale}
               className="hover:text-stone-900 cursor-pointer"
             >

@@ -80,6 +80,13 @@ export function Navbar() {
               <span className="hidden sm:inline">{langLabel}</span>
               <span className="sm:hidden uppercase">{otherLocale}</span>
             </Link>
+
+            <Link
+              href="/contact"
+              className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
+            >
+              {t('contact')}
+            </Link>
             
             {user ? (
               <>
@@ -156,6 +163,14 @@ export function Navbar() {
           >
             <Globe size={18} />
             <span>{langLabel}</span>
+          </Link>
+
+          <Link
+            href="/contact"
+            className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <span>{t('contact')}</span>
           </Link>
 
           {user ? (

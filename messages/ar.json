@@ -100,6 +100,22 @@
       }
     }
   },
+  "ContactPage": {
+    "title": "اتصل بنا",
+    "conciergeEyebrow": "دعم دعـوتـي",
+    "conciergeFastReplies": "رد سريع",
+    "conciergeWhatsappFirst": "الأولوية لواتساب",
+    "heading": "نتشرف بتواصلك",
+    "description": "تواصل معنا في أي وقت، وسنخدمك بأسرع وقت ممكن. اختر القناة الأنسب لك.",
+    "email": {
+      "title": "راسلنا بالبريد",
+      "description": "للاستفسارات العامة أو الشراكات أو دعم الحساب."
+    },
+    "whatsapp": {
+      "title": "واتساب",
+      "description": "تحتاج رداً سريعاً؟ راسلنا مباشرة عبر واتساب."
+    }
+  },
   "Wizard": {
     "steps": {
       "guests": "المدعوين",
@@ -226,6 +242,7 @@
   "Navbar": {
     "brand": "دعـوتـي",
     "dashboard": "لوحة التحكم",
+    "contact": "اتصل بنا",
     "start_now": "ابدأ الآن",
     "create_event": "إنشاء المناسبة"
   },
