@@ -78,6 +78,7 @@ model Guest {
   // - listing guests by eventId ordered by createdAt
   // - grouping/counting by status within an event
   // - counting guests per event (pagination + stats)
+  @@unique([eventId, phone])
   @@index([eventId])
   @@index([eventId, status])
   @@index([eventId, createdAt])

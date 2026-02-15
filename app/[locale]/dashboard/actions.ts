@@ -89,6 +89,28 @@ export async function addGuests(
     return { ...g, phone: res.phone, inviteCount };
   });
 
+  // Check for duplicate phone numbers within the submitted batch
+  const phonesInBatch = validated.map(g => g.phone);
+  const uniquePhones = new Set(phonesInBatch);
+  if (uniquePhones.size < phonesInBatch.length) {
+    const seen = new Set<string>();
+    const dupPhone = phonesInBatch.find(p => {
+      if (seen.has(p)) return true;
+      seen.add(p);
+      return false;
+    })!;
+    throw new Error(`DUPLICATE_PHONE:${dupPhone}`);
+  }
+
+  // Check for duplicate phone numbers against existing guests in the event
+  const existingGuests = await prisma.guest.findMany({
+    where: { eventId, phone: { in: [...uniquePhones] } },
+    select: { phone: true },
+  });
+  if (existingGuests.length > 0) {
+    throw new Error(`DUPLICATE_PHONE:${existingGuests[0].phone}`);
+  }
+
   // Bulk create guests and return the created records
   const createdGuests = await prisma.guest.createManyAndReturn({
     data: validated.map((g) => ({
@@ -391,6 +413,17 @@ export async function updateGuest(
   const phoneRes = normalizePhoneToE164(phoneRaw);
   if (!name || !phoneRaw || !phoneRes.ok) {
     throw new Error('INVALID_PHONE');
+  }
+
+  // Check for duplicate phone number against other guests in the same event
+  if (phoneRes.phone !== guest.phone) {
+    const existingWithPhone = await prisma.guest.findFirst({
+      where: { eventId: guest.eventId, phone: phoneRes.phone, id: { not: guestId } },
+      select: { id: true },
+    });
+    if (existingWithPhone) {
+      throw new Error(`DUPLICATE_PHONE:${phoneRes.phone}`);
+    }
   }
 
   let inviteCount: number | undefined = undefined;

@@ -22,7 +22,7 @@ import { uploadEventMedia, validateFileType, type MediaType } from "@/lib/supaba
 import { formatGoogleMapsLink } from "@/lib/maps";
 import { normalizePhoneToE164 } from "@/lib/phone";
 import { type InviteMediaType, MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage } from "@/lib/inviteMessage";
-import { MAX_GUESTS_PER_EVENT } from "@/lib/limits";
+import { parseGuestError, guestErrorMessage } from "@/lib/utils/guestErrors";
 
 const MapPicker = dynamic(() => import("../../components/MapPicker"), {
   ssr: false,
@@ -40,6 +40,7 @@ const MapPicker = dynamic(() => import("../../components/MapPicker"), {
 export default function Wizard() {
   const t = useTranslations('Wizard');
   const tPreview = useTranslations('InvitePreview');
+  const tErr = useTranslations('GuestErrors');
   const locale = useLocale() as 'en' | 'ar';
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -446,22 +447,7 @@ export default function Wizard() {
       }
     } catch (error) {
       console.error('Event creation failed:', error);
-      const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('GUEST_LIMIT_EXCEEDED')) {
-        const formattedMax = MAX_GUESTS_PER_EVENT.toLocaleString();
-        alert(locale === 'ar'
-          ? `تجاوزت الحد الأقصى لعدد الضيوف (${formattedMax} ضيف كحد أقصى لكل مناسبة).`
-          : `Guest limit exceeded (max ${formattedMax} guests per event).`
-        );
-      } else if (msg.includes('INVALID_PHONE')) {
-        alert(t('errors.invalid_phone'));
-      } else if (msg.includes('NAME_TOO_SHORT')) {
-        alert(t('errors.name_too_short'));
-      } else if (msg.includes('MESSAGE_TOO_LONG')) {
-        alert(t('errors.message_too_long', { max: MAX_INVITE_MESSAGE_CHARS }));
-      } else {
-        alert('Failed to create event. Please try again.');
-      }
+      alert(guestErrorMessage(parseGuestError(error), tErr));
       setIsSubmitting(false);
     }
   };

@@ -113,7 +113,8 @@
       "invalid_map_link": "Please provide a valid Google Maps link or coordinates",
       "invalid_phone": "Invalid phone number. Please include the country code (example: +966...). Spaces, dashes, and parentheses are allowed.",
       "invalid_phone_row": "Row {row}: invalid phone number ({phone}). Please include the country code (example: +966...). Spaces, dashes, and parentheses are allowed.",
-      "name_too_short": "Guest name must be at least 2 characters."
+      "name_too_short": "Guest name must be at least 2 characters.",
+      "duplicate_phone": "The phone number {phone} is already used by another guest."
     },
     "step1": {
       "title": "Guest List",
@@ -346,6 +347,7 @@
     "error_invalid_invite_count": "Invite count must be a whole number between 1 and 50.",
     "error_guest_limit_exceeded": "Guest limit reached. You can add up to {remaining} more guests (max {max, number} per event, not counting invitees).",
     "error_guest_limit_zero": "Guest limit reached. This event already has the maximum of {max, number} guests.",
+    "error_duplicate_phone": "The phone number {phone} is already used by another guest in this event.",
     "confirm_add": "Add Guests",
     "preview_invite": "Preview Invite",
     "scan_qr": "Scan QR Codes",
@@ -430,5 +432,15 @@
     "auth_error_generic": "We couldn't sign you in. Please request a new link and try again.",
     "auth_error_cta_login": "Go to login",
     "auth_error_cta_home": "Go to home"
+  },
+  "GuestErrors": {
+    "duplicate_phone": "The phone number {phone} is already used by another guest in this event.",
+    "guest_limit_exceeded": "Guest limit reached. You can add up to {remaining} more guests (max {max, number} per event, not counting invitees).",
+    "guest_limit_zero": "Guest limit reached. This event already has the maximum of {max, number} guests.",
+    "invalid_phone": "Invalid phone number. Please include the country code (example: +966...). Spaces, dashes, and parentheses are allowed.",
+    "name_too_short": "Guest name must be at least 2 characters.",
+    "invalid_invite_count": "Invite count must be a whole number between 1 and 50.",
+    "message_too_long": "The invite message is too long. Please shorten it.",
+    "unknown": "Something went wrong. Please try again."
   }
 }

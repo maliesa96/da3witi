@@ -23,6 +23,7 @@ import {
   updateGuest as updateGuestServerAction,
 } from "@/app/[locale]/dashboard/actions";
 import AddGuestForm from "@/app/components/AddGuestForm";
+import { parseGuestError, guestErrorMessage } from "@/lib/utils/guestErrors";
 
 export type GuestRowData = {
   id: string;
@@ -361,6 +362,7 @@ function EditButton({
   onUpdated: (guest: GuestRowData) => void;
 }) {
   const t = useTranslations("Dashboard");
+  const tErr = useTranslations("GuestErrors");
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -415,11 +417,7 @@ function EditButton({
         setError(t("edit_guest_save_failed"));
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("NAME_TOO_SHORT")) setError(t("error_name_too_short"));
-      else if (msg.includes("INVALID_PHONE")) setError(t("error_invalid_phone"));
-      else if (msg.includes("INVALID_INVITE_COUNT")) setError(t("error_invalid_invite_count"));
-      else setError(t("edit_guest_save_failed"));
+      setError(guestErrorMessage(parseGuestError(err), tErr));
     } finally {
       setPending(false);
     }

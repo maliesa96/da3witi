@@ -9,7 +9,7 @@ import { useLocale } from 'next-intl';
 import ContactImport from '@/app/components/ContactImport';
 import { addGuests } from '../[locale]/dashboard/actions';
 import { normalizePhoneToE164 } from '@/lib/phone';
-import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
+import { parseGuestError, guestErrorMessage } from '@/lib/utils/guestErrors';
 
 type Cell = string | number | null;
 
@@ -32,6 +32,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
   const t = useTranslations('Dashboard');
   const tw = useTranslations('Wizard.step1');
   const tWizard = useTranslations('Wizard');
+  const tErr = useTranslations('GuestErrors');
   const locale = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<'file' | 'manual'>('manual');
@@ -145,23 +146,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
       closeAndReset();
     } catch (error) {
       console.error('Failed to add guests:', error);
-      const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('GUEST_LIMIT_EXCEEDED')) {
-        const remaining = parseInt(msg.split(':')[1] || '0', 10);
-        if (remaining <= 0) {
-          alert(t('error_guest_limit_zero', { max: MAX_GUESTS_PER_EVENT }));
-        } else {
-          alert(t('error_guest_limit_exceeded', { remaining: String(remaining), max: MAX_GUESTS_PER_EVENT }));
-        }
-      } else if (msg.includes('INVALID_PHONE')) {
-        alert(tWizard('errors.invalid_phone'));
-      } else if (msg.includes('NAME_TOO_SHORT')) {
-        alert(tWizard('errors.name_too_short'));
-      } else if (msg.includes('INVALID_INVITE_COUNT')) {
-        alert(t('error_invalid_invite_count'));
-      } else {
-        alert('Failed to add guests. Please try again.');
-      }
+      alert(guestErrorMessage(parseGuestError(error), tErr));
     } finally {
       submitLockRef.current = false;
       setIsSubmitting(false);

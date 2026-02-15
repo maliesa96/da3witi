@@ -49,6 +49,19 @@ export async function createEvent(formData: {
     throw new Error(`GUEST_LIMIT_EXCEEDED:${MAX_GUESTS_PER_EVENT}`);
   }
 
+  // Check for duplicate phone numbers within the batch
+  const phonesInBatch = guestsValidated.map(g => g.phone);
+  const uniquePhones = new Set(phonesInBatch);
+  if (uniquePhones.size < phonesInBatch.length) {
+    const seen = new Set<string>();
+    const dupPhone = phonesInBatch.find(p => {
+      if (seen.has(p)) return true;
+      seen.add(p);
+      return false;
+    })!;
+    throw new Error(`DUPLICATE_PHONE:${dupPhone}`);
+  }
+
   // Validate rendered invite message length (includes template wrapper + parameters)
   const mediaType: MediaType = formData.mediaType ?? 'image';
   const inviteesToValidate =
