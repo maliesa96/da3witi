@@ -6,6 +6,7 @@ import { type MediaType } from '@/lib/whatsapp';
 import { revalidatePath } from 'next/cache';
 import { normalizePhoneToE164 } from '@/lib/phone';
 import { MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage } from '@/lib/inviteMessage';
+import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
 
 export async function createEvent(formData: {
   title: string;
@@ -42,6 +43,11 @@ export async function createEvent(formData: {
       inviteCount: guest.inviteCount || 1,
     };
   });
+
+  // Enforce max guest limit (guest rows, not invitees)
+  if (guestsValidated.length > MAX_GUESTS_PER_EVENT) {
+    throw new Error(`GUEST_LIMIT_EXCEEDED:${MAX_GUESTS_PER_EVENT}`);
+  }
 
   // Validate rendered invite message length (includes template wrapper + parameters)
   const mediaType: MediaType = formData.mediaType ?? 'image';

@@ -52,12 +52,13 @@
         "title": "Standard Invite",
         "price": "50 KWD",
         "features": [
-          "Unlimited Guests",
+          "Up to {max} Guests",
           "WhatsApp Automation",
           "RSVP Tracking",
           "Location Map",
           "Custom Design"
         ],
+        "features_note": "Guest limit ({max}) does not include their invitees (plus-ones).",
         "cta": "Get Started"
       },
       "plus": {
@@ -343,6 +344,8 @@
     "error_name_too_short": "Guest name must be at least 2 characters.",
     "error_invalid_phone": "Invalid phone number. Please include the country code (example: +966...). Spaces, dashes, and parentheses are allowed.",
     "error_invalid_invite_count": "Invite count must be a whole number between 1 and 50.",
+    "error_guest_limit_exceeded": "Guest limit reached. You can add up to {remaining} more guests (max {max, number} per event, not counting invitees).",
+    "error_guest_limit_zero": "Guest limit reached. This event already has the maximum of {max, number} guests.",
     "confirm_add": "Add Guests",
     "preview_invite": "Preview Invite",
     "scan_qr": "Scan QR Codes",

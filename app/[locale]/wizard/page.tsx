@@ -22,6 +22,7 @@ import { uploadEventMedia, validateFileType, type MediaType } from "@/lib/supaba
 import { formatGoogleMapsLink } from "@/lib/maps";
 import { normalizePhoneToE164 } from "@/lib/phone";
 import { type InviteMediaType, MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage } from "@/lib/inviteMessage";
+import { MAX_GUESTS_PER_EVENT } from "@/lib/limits";
 
 const MapPicker = dynamic(() => import("../../components/MapPicker"), {
   ssr: false,
@@ -446,7 +447,13 @@ export default function Wizard() {
     } catch (error) {
       console.error('Event creation failed:', error);
       const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('INVALID_PHONE')) {
+      if (msg.includes('GUEST_LIMIT_EXCEEDED')) {
+        const formattedMax = MAX_GUESTS_PER_EVENT.toLocaleString();
+        alert(locale === 'ar'
+          ? `تجاوزت الحد الأقصى لعدد الضيوف (${formattedMax} ضيف كحد أقصى لكل مناسبة).`
+          : `Guest limit exceeded (max ${formattedMax} guests per event).`
+        );
+      } else if (msg.includes('INVALID_PHONE')) {
         alert(t('errors.invalid_phone'));
       } else if (msg.includes('NAME_TOO_SHORT')) {
         alert(t('errors.name_too_short'));

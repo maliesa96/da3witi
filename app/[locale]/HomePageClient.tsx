@@ -19,6 +19,7 @@ import LiveDashboardDemo from "../components/LiveDashboardDemo";
 import StorySlider from "../components/StorySlider";
 import { motion } from "framer-motion";
 import { useRef } from "react";
+import { MAX_GUESTS_PER_EVENT } from "@/lib/limits";
 
 export default function HomePageClient() {
   const t = useTranslations('HomePage');
@@ -478,8 +479,8 @@ export default function HomePageClient() {
                      </div>
                   </div>
 
-                  <ul className="space-y-4 mb-10 flex-1 relative z-10">
-                     {['Unlimited Guests', 'WhatsApp Automation', 'RSVP Tracking', 'Location Map', 'Custom Design'].map((item, i) => (
+                  <ul className="space-y-4 mb-4 flex-1 relative z-10">
+                     {[0, 1, 2, 3, 4].map((i) => (
                         <motion.li 
                           key={i} 
                           initial={{ opacity: 0, x: -20 }}
@@ -491,10 +492,13 @@ export default function HomePageClient() {
                            <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center text-white shrink-0 border border-stone-700">
                               <Check size={14} strokeWidth={3} />
                            </div>
-                           <span>{t(`pricing.standard.features.${i}`)}</span>
+                           <span>{t(`pricing.standard.features.${i}`, { max: MAX_GUESTS_PER_EVENT.toLocaleString() })}</span>
                         </motion.li>
                      ))}
                   </ul>
+                  <p className="text-xs text-stone-500 mb-10 relative z-10 ps-11">
+                    {t('pricing.standard.features_note', { max: MAX_GUESTS_PER_EVENT.toLocaleString() })}
+                  </p>
 
                   <Link
                     href="/wizard"

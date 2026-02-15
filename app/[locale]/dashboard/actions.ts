@@ -7,6 +7,7 @@ import { normalizePhoneToE164 } from '@/lib/phone';
 import { enqueueWhatsAppOutboxBatch } from '@/lib/queue/whatsappOutbox';
 import { shouldEnqueueWhatsAppInvite } from '@/lib/whatsappSendEligibility';
 import { broadcastGuestInsert } from '@/lib/supabase/broadcast';
+import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
 
 async function getAuthedUser() {
   const supabase = await createClient();
@@ -39,6 +40,9 @@ export async function addGuests(
     throw new Error('Forbidden');
   }
 
+  // Enforce max guest limit (guest rows, not invitees)
+  const currentGuestCount = event.guestCountTotal;
+
   const cleaned = (guests || [])
     .map(g => ({
       name: String(g.name || '').trim(),
@@ -61,6 +65,11 @@ export async function addGuests(
         whatsappMessageId: string | null;
       }>,
     };
+  }
+
+  if (currentGuestCount + cleaned.length > MAX_GUESTS_PER_EVENT) {
+    const remaining = MAX_GUESTS_PER_EVENT - currentGuestCount;
+    throw new Error(`GUEST_LIMIT_EXCEEDED:${remaining}`);
   }
 
   const validated = cleaned.map((g) => {

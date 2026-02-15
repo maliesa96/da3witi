@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
+import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -56,8 +57,8 @@ export async function POST(request: NextRequest) {
           product_data: {
             name: locale === 'ar' ? 'دعوة رقمية' : 'Digital Invitation',
             description: locale === 'ar' 
-              ? 'باقة الدعوة الأساسية - ضيوف غير محدودين، أتمتة واتساب، تتبع الحضور'
-              : 'Standard Invite Package - Unlimited guests, WhatsApp automation, RSVP tracking',
+              ? `باقة الدعوة الأساسية - حتى ${MAX_GUESTS_PER_EVENT.toLocaleString('ar-SA')} ضيف، أتمتة واتساب، تتبع الحضور`
+              : `Standard Invite Package - Up to ${MAX_GUESTS_PER_EVENT.toLocaleString('en-US')} guests, WhatsApp automation, RSVP tracking`,
           },
           unit_amount: BASE_PRICE,
         },
