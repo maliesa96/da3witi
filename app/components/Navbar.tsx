@@ -109,7 +109,7 @@ export function Navbar() {
             ) : (
               <Link
                 href="/login"
-                className="text-sm font-medium text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all flex items-center gap-2 cursor-pointer"
+                className={`text-sm font-medium text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all flex items-center gap-2 cursor-pointer ${locale === 'ar' ? 'flex-row-reverse' : ''}`}
               >
                 <User size={16} />
                 <span className="hidden sm:inline">{authT('login')}</span>
@@ -197,7 +197,7 @@ export function Navbar() {
           ) : (
             <Link
               href="/login"
-              className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
+              className={`flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer ${locale === 'ar' ? 'flex-row-reverse' : ''}`}
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <User size={18} />

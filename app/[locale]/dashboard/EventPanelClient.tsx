@@ -1163,30 +1163,34 @@ export default function EventPanelClient({
           {/* Guest List Container */}
           <div className="bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden">
             <div className="px-4 md:px-6 py-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <h3 className="font-medium text-stone-900">{t("guest_list")}</h3>
-                {isLoading && <Loader2 size={14} className="animate-spin text-stone-400" />}
-                <span className="text-xs text-stone-400">
-                  ({listTotalDisplay} {t("total_guests") || "total"})
-                </span>
-                <button
-                  type="button"
-                  onClick={handleExportCSV}
-                  disabled={isExporting || serverStats.total === 0}
-                  className="px-3 py-1.5 text-xs font-medium text-stone-600 bg-stone-50 border border-stone-200 rounded-lg hover:bg-stone-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {isExporting ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Download size={14} />
-                  )}
-                  {isExporting ? t("exporting") : t("export_csv")}
-                </button>
-                <DeleteAllGuestsButton
-                  eventId={event.id}
-                  pendingCount={serverStats.pending + serverStats.failed}
-                  onDeleted={handleAllGuestsDeleted}
-                />
+              <div className="flex flex-col gap-2 sm:gap-3 md:flex-row md:items-center">
+                <div className="flex items-center gap-3">
+                  <h3 className="font-medium text-stone-900">{t("guest_list")}</h3>
+                  {isLoading && <Loader2 size={14} className="animate-spin text-stone-400" />}
+                  <span className="text-xs text-stone-400">
+                    ({listTotalDisplay} {t("total_guests") || "total"})
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleExportCSV}
+                    disabled={isExporting || serverStats.total === 0}
+                    className="px-3 py-1.5 text-xs font-medium text-stone-600 bg-stone-50 border border-stone-200 rounded-lg hover:bg-stone-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {isExporting ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Download size={14} />
+                    )}
+                    {isExporting ? t("exporting") : t("export_csv")}
+                  </button>
+                  <DeleteAllGuestsButton
+                    eventId={event.id}
+                    pendingCount={serverStats.pending + serverStats.failed}
+                    onDeleted={handleAllGuestsDeleted}
+                  />
+                </div>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <details className="relative group">

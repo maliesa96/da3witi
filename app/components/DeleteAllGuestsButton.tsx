@@ -62,7 +62,7 @@ export default function DeleteAllGuestsButton({
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+        className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
       >
         <Trash2 size={14} />
         {t('delete_all') || 'Delete All'}
