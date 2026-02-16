@@ -251,7 +251,8 @@
     "pricing": "الأسعار",
     "contact": "اتصل بنا",
     "address": "القبلة، الكويت",
-    "copyright": "© {year} Dune Technical Services Company for Computer Technology WLL."
+    "copyright": "© {year} Dune Technical Services Company for Computer Technology WLL.",
+    "attribution": "Da3witi مقدمة من Dune Technical Services Company for Computer Technology WLL."
   },
   "InvitePreview": {
     "app_name": "دعـوتـي",

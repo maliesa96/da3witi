@@ -97,7 +97,7 @@ async function AuthMessages({ searchParams }: { searchParams: Promise<{ [key: st
     };
     
     const errorKey = errorMap[params.error as string] || 'error_signup';
-    errorMessage = t(errorKey as any);
+    errorMessage = t(errorKey as string);
 
     return (
       <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg">

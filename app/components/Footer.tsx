@@ -48,12 +48,15 @@ export function Footer() {
           </div>
         </div>
         
-        <div className="border-t border-stone-100 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-stone-400">
+        <div className="border-t border-stone-100 pt-6 flex flex-col items-center md:items-start gap-3 text-xs text-stone-400">
           <div className="flex flex-wrap justify-center md:justify-start items-center gap-x-2 gap-y-1 text-center md:text-start">
             <span>{t('copyright', { year: currentYear })}</span>
             <span className="hidden md:inline text-stone-200">•</span>
             <span>{t('address')}</span>
           </div>
+          <p className="text-center md:text-start text-stone-500">
+            {t('attribution')}
+          </p>
         </div>
       </div>
     </footer>
