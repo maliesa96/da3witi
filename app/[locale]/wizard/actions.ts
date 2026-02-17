@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { type MediaType } from '@/lib/whatsapp';
 import { revalidatePath } from 'next/cache';
 import { normalizePhoneToE164 } from '@/lib/phone';
-import { MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage } from '@/lib/inviteMessage';
+import { MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage, validateWhatsAppText } from '@/lib/inviteMessage';
 import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
 
 export async function createEvent(formData: {
@@ -60,6 +60,12 @@ export async function createEvent(formData: {
       return false;
     })!;
     throw new Error(`DUPLICATE_PHONE:${dupPhone}`);
+  }
+
+  // Validate WhatsApp text restrictions (no newlines, tabs, or 5+ consecutive spaces)
+  const messageViolation = validateWhatsAppText(formData.message ?? '');
+  if (messageViolation) {
+    throw new Error(`MESSAGE_INVALID_TEXT:${messageViolation}`);
   }
 
   // Validate rendered invite message length (includes template wrapper + parameters)

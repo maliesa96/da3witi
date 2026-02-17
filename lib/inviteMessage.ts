@@ -29,6 +29,26 @@ export function countMessageChars(input: string): number {
   return Array.from(input ?? "").length;
 }
 
+/**
+ * Meta WhatsApp Cloud API rejects template text parameters that contain
+ * newline characters, tab characters, or more than 4 consecutive spaces.
+ *
+ * Returns `null` when valid, or a violation key when invalid:
+ *  - `"newline"` – contains `\n` or `\r`
+ *  - `"tab"` – contains `\t`
+ *  - `"spaces"` – contains 5+ consecutive spaces
+ */
+export type WhatsAppTextViolation = "newline" | "tab" | "spaces";
+
+export function validateWhatsAppText(
+  input: string
+): WhatsAppTextViolation | null {
+  if (/[\n\r]/.test(input)) return "newline";
+  if (/\t/.test(input)) return "tab";
+  if (/ {5,}/.test(input)) return "spaces";
+  return null;
+}
+
 export function renderInviteMessage(params: {
   locale: "en" | "ar" | string;
   qrEnabled: boolean;

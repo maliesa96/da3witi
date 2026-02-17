@@ -130,7 +130,10 @@
       "invalid_phone": "Invalid phone number. Please include the country code (example: +966...). Spaces, dashes, and parentheses are allowed.",
       "invalid_phone_row": "Row {row}: invalid phone number ({phone}). Please include the country code (example: +966...). Spaces, dashes, and parentheses are allowed.",
       "name_too_short": "Guest name must be at least 2 characters.",
-      "duplicate_phone": "The phone number {phone} is already used by another guest."
+      "duplicate_phone": "The phone number {phone} is already used by another guest.",
+      "message_invalid_newline": "Message cannot contain line breaks. WhatsApp does not allow new-line characters in template messages.",
+      "message_invalid_tab": "Message cannot contain tab characters.",
+      "message_invalid_spaces": "Message cannot contain more than 4 consecutive spaces."
     },
     "step1": {
       "title": "Guest List",
@@ -459,6 +462,9 @@
     "name_too_short": "Guest name must be at least 2 characters.",
     "invalid_invite_count": "Invite count must be a whole number between 1 and 50.",
     "message_too_long": "The invite message is too long. Please shorten it.",
+    "message_invalid_newline": "Message cannot contain line breaks. WhatsApp does not allow new-line characters in template messages.",
+    "message_invalid_tab": "Message cannot contain tab characters.",
+    "message_invalid_spaces": "Message cannot contain more than 4 consecutive spaces.",
     "unknown": "Something went wrong. Please try again."
   }
 }

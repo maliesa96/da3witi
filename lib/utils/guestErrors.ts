@@ -8,6 +8,7 @@ export type GuestError =
   | { code: 'NAME_TOO_SHORT' }
   | { code: 'INVALID_INVITE_COUNT' }
   | { code: 'MESSAGE_TOO_LONG' }
+  | { code: 'MESSAGE_INVALID_TEXT'; violation: string }
   | { code: 'UNKNOWN'; message: string };
 
 /**
@@ -32,6 +33,10 @@ export function parseGuestError(error: unknown): GuestError {
   if (msg.includes('INVALID_PHONE')) return { code: 'INVALID_PHONE' };
   if (msg.includes('NAME_TOO_SHORT')) return { code: 'NAME_TOO_SHORT' };
   if (msg.includes('INVALID_INVITE_COUNT')) return { code: 'INVALID_INVITE_COUNT' };
+  if (msg.includes('MESSAGE_INVALID_TEXT')) {
+    const violation = msg.split(':').slice(1).join(':') || 'newline';
+    return { code: 'MESSAGE_INVALID_TEXT', violation };
+  }
   if (msg.includes('MESSAGE_TOO_LONG')) return { code: 'MESSAGE_TOO_LONG' };
 
   return { code: 'UNKNOWN', message: msg };
@@ -63,6 +68,14 @@ export function guestErrorMessage(
       return t('invalid_invite_count');
     case 'MESSAGE_TOO_LONG':
       return t('message_too_long');
+    case 'MESSAGE_INVALID_TEXT': {
+      const keyMap: Record<string, string> = {
+        newline: 'message_invalid_newline',
+        tab: 'message_invalid_tab',
+        spaces: 'message_invalid_spaces',
+      };
+      return t(keyMap[error.violation] ?? 'message_invalid_newline');
+    }
     case 'UNKNOWN':
       return t('unknown');
   }

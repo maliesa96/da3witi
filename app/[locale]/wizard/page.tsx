@@ -21,8 +21,14 @@ import { useTranslations, useLocale } from "next-intl";
 import { uploadEventMedia, validateFileType, type MediaType } from "@/lib/supabase/storage";
 import { formatGoogleMapsLink } from "@/lib/maps";
 import { normalizePhoneToE164 } from "@/lib/phone";
-import { type InviteMediaType, MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage } from "@/lib/inviteMessage";
+import { type InviteMediaType, type WhatsAppTextViolation, MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage, validateWhatsAppText } from "@/lib/inviteMessage";
 import { parseGuestError, guestErrorMessage } from "@/lib/utils/guestErrors";
+
+const violationKeys: Record<WhatsAppTextViolation, string> = {
+    newline: 'errors.message_invalid_newline',
+    tab: 'errors.message_invalid_tab',
+    spaces: 'errors.message_invalid_spaces',
+};
 
 const MapPicker = dynamic(() => import("../../components/MapPicker"), {
   ssr: false,
@@ -393,7 +399,17 @@ export default function Wizard() {
     const newErrors: Record<string, string> = {};
     
     if (!details.imageUrl) newErrors.imageUrl = t('errors.required');
-    if (!details.message.trim()) newErrors.message = t('errors.required');
+    if (!details.message.trim()) {
+      newErrors.message = t('errors.required');
+    } else {
+      const violation = validateWhatsAppText(details.message);
+      if (violation) {
+        newErrors.message = t(violationKeys[violation]);
+      } else if (renderedMessageLength > MAX_INVITE_MESSAGE_CHARS) {
+        // Enforce final rendered message length (template wrapper + parameters included)
+        newErrors.message = t('errors.message_too_long', { max: MAX_INVITE_MESSAGE_CHARS });
+      }
+    }
     if (!details.date) newErrors.date = t('errors.required');
     if (!details.time) newErrors.time = t('errors.required');
     if (!details.locationName.trim()) newErrors.locationName = t('errors.required');
@@ -402,11 +418,6 @@ export default function Wizard() {
       newErrors.location = t('errors.required');
     } else if (!googleMapsRegex.test(details.location)) {
       newErrors.location = t('errors.invalid_map_link');
-    }
-
-    // Enforce final rendered message length (template wrapper + parameters included)
-    if (details.message.trim() && renderedMessageLength > MAX_INVITE_MESSAGE_CHARS) {
-      newErrors.message = t('errors.message_too_long', { max: MAX_INVITE_MESSAGE_CHARS });
     }
     
     setErrors(newErrors);
@@ -632,11 +643,20 @@ export default function Wizard() {
                     placeholder={t('step2.default_message')}
                     onChange={(e) => {
                       setDetails({ ...details, message: e.target.value });
-                      // Keep message error in sync with length requirement
+                      // Live-validate WhatsApp text restrictions
+                      const violation = validateWhatsAppText(e.target.value);
                       setErrors(prev => {
                         const next = { ...prev };
-                        // Clear any existing message error; validateStep2 will re-set on next action
-                        delete next.message;
+                        if (violation) {
+                          const violationKeys: Record<WhatsAppTextViolation, string> = {
+                            newline: 'errors.message_invalid_newline',
+                            tab: 'errors.message_invalid_tab',
+                            spaces: 'errors.message_invalid_spaces',
+                          };
+                          next.message = t(violationKeys[violation]);
+                        } else {
+                          delete next.message;
+                        }
                         return next;
                       });
                     }}
