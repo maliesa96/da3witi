@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
         guestId: m.guestId,
         guestName: m.guestName,
         status: m.status,
+        needsReply: m.needsReply,
         createdAt: m.createdAt.toISOString(),
       }))
     );

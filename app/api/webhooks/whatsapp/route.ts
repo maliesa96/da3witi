@@ -174,6 +174,11 @@ export async function POST(request: Request) {
               
               console.log(`📩 Received ${type} from ${from}: "${body || '(no text)'}"${repliedMessageId ? ` (replying to ${repliedMessageId})` : ''}`);
 
+              // Detect RSVP keywords before storing so we can set needsReply correctly
+              const isConfirm = body?.toLowerCase() === 'confirm attendance' || body === 'تأكيد الحضور';
+              const isDecline = body?.toLowerCase() === 'decline' || body === 'الاعتذار';
+              const isRsvp = (type === 'text' || type === 'button') && (isConfirm || isDecline) && !!repliedMessageId;
+
               // Store inbound message for chat view
               try {
                 // Try to match to a guest for context
@@ -197,6 +202,7 @@ export async function POST(request: Request) {
                     contextMessageId: repliedMessageId || undefined,
                     guestId: matchedGuest?.id || undefined,
                     guestName: senderName || undefined,
+                    needsReply: !isRsvp, // RSVP messages are auto-handled; everything else needs attention
                   },
                 });
 
@@ -212,14 +218,12 @@ export async function POST(request: Request) {
                   guestId: stored.guestId,
                   guestName: stored.guestName,
                   status: stored.status,
+                  needsReply: stored.needsReply,
                   createdAt: stored.createdAt.toISOString(),
                 });
               } catch (storeErr) {
                 console.error('Failed to store inbound message:', storeErr);
               }
-              
-              const isConfirm = body?.toLowerCase() === 'confirm attendance' || body === 'تأكيد الحضور';
-              const isDecline = body?.toLowerCase() === 'decline' || body === 'الاعتذار';
 
               if ((type === 'text' || type === 'button') && (isConfirm || isDecline)) {
                 if (!repliedMessageId) {

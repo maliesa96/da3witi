@@ -16,6 +16,8 @@ import {
   ChevronLeft,
   Wifi,
   WifiOff,
+  Clock,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -31,6 +33,7 @@ type Conversation = {
   lastMessage: string;
   lastMessageAt: string;
   lastDirection: string;
+  lastInboundAt: string | null;
   unreadCount: number;
   totalCount: number;
 };
@@ -46,6 +49,7 @@ type Message = {
   guestId: string | null;
   guestName: string | null;
   status: string;
+  needsReply: boolean;
   createdAt: string;
 };
 
@@ -110,6 +114,38 @@ function groupMessagesByDate(messages: Message[]): { date: string; messages: Mes
     groups.get(label)!.push(msg);
   }
   return Array.from(groups.entries()).map(([date, messages]) => ({ date, messages }));
+}
+
+/* ------------------------------------------------------------------ */
+/*  24h window helpers                                                 */
+/* ------------------------------------------------------------------ */
+
+type WindowStatus =
+  | { open: true; remaining: string; urgency: "ok" | "warning" | "critical" }
+  | { open: false; remaining: null; urgency: "closed" };
+
+function get24hWindowStatus(lastInboundAt: string | null): WindowStatus {
+  if (!lastInboundAt) return { open: false, remaining: null, urgency: "closed" };
+
+  const elapsed = Date.now() - new Date(lastInboundAt).getTime();
+  const TWENTY_FOUR_H = 24 * 60 * 60 * 1000;
+  const remainingMs = TWENTY_FOUR_H - elapsed;
+
+  if (remainingMs <= 0) return { open: false, remaining: null, urgency: "closed" };
+
+  const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+  const mins = Math.floor((remainingMs % (60 * 60 * 1000)) / 60_000);
+
+  let remaining: string;
+  if (hours > 0) remaining = `${hours}h ${mins}m`;
+  else remaining = `${mins}m`;
+
+  let urgency: "ok" | "warning" | "critical";
+  if (remainingMs > 4 * 60 * 60 * 1000) urgency = "ok";
+  else if (remainingMs > 1 * 60 * 60 * 1000) urgency = "warning";
+  else urgency = "critical";
+
+  return { open: true, remaining, urgency };
 }
 
 /* ------------------------------------------------------------------ */
@@ -368,6 +404,18 @@ function ChatView({
   const conv = conversations.find((c) => c.phone === phone);
   const displayName = conv?.guestName || formatPhone(phone);
 
+  // 24h window status - re-compute every minute
+  const [windowStatus, setWindowStatus] = useState<WindowStatus>(() =>
+    get24hWindowStatus(conv?.lastInboundAt ?? null)
+  );
+
+  useEffect(() => {
+    const update = () => setWindowStatus(get24hWindowStatus(conv?.lastInboundAt ?? null));
+    update();
+    const interval = setInterval(update, 30_000);
+    return () => clearInterval(interval);
+  }, [conv?.lastInboundAt]);
+
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -413,25 +461,46 @@ function ChatView({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-green-700 text-white shadow-sm">
+      <div className="flex items-center gap-3 px-4 py-3 bg-stone-100 text-stone-900 border-b border-stone-200 shadow-sm">
         <button
           onClick={onBack}
-          className="md:hidden p-1 rounded-lg hover:bg-green-600 transition-colors cursor-pointer"
+          className="md:hidden p-1 rounded-lg hover:bg-stone-200 transition-colors cursor-pointer"
         >
           <ChevronLeft size={22} />
         </button>
-        <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold shrink-0">
+        <div className="w-9 h-9 rounded-full bg-stone-300 flex items-center justify-center text-sm font-bold text-white shrink-0">
           {conv?.guestName ? conv.guestName.charAt(0).toUpperCase() : <User size={16} />}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate">{displayName}</p>
-          <p className="text-[11px] text-green-200 truncate">
+          <p className="text-[11px] text-stone-500 truncate">
             {conv?.guestName ? formatPhone(phone) : ""}
           </p>
         </div>
-        <div className="p-2" title={conv ? `${messages.length} messages` : ""}>
-          <MessageCircle size={16} className="text-green-200" />
-        </div>
+        {/* 24h window badge */}
+        {windowStatus.open ? (
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+              windowStatus.urgency === "ok"
+                ? "bg-emerald-100 text-emerald-700"
+                : windowStatus.urgency === "warning"
+                  ? "bg-yellow-100 text-yellow-700"
+                  : "bg-red-100 text-red-700"
+            }`}
+            title="Freeform messaging window is open"
+          >
+            <Clock size={12} />
+            {windowStatus.remaining}
+          </div>
+        ) : (
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-stone-200 text-stone-500"
+            title="24h window closed — only template messages allowed"
+          >
+            <Lock size={12} />
+            Closed
+          </div>
+        )}
       </div>
 
       {/* Messages */}
@@ -465,6 +534,17 @@ function ChatView({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* 24h window banner */}
+      {!windowStatus.open && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border-t border-amber-200 text-amber-700 text-xs">
+          <Lock size={12} className="shrink-0" />
+          <span>
+            24h messaging window closed. Only template messages can be sent until
+            the customer messages again.
+          </span>
+        </div>
+      )}
+
       {/* Composer */}
       <div className="border-t border-stone-200 bg-stone-50 px-3 py-2">
         <div className="flex items-end gap-2">
@@ -473,7 +553,11 @@ function ChatView({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
+            placeholder={
+              windowStatus.open
+                ? "Type a message..."
+                : "Window closed — template messages only"
+            }
             rows={1}
             className="flex-1 resize-none py-2.5 px-4 text-sm bg-white rounded-2xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-stone-400 max-h-32"
             style={{ minHeight: "42px" }}
@@ -523,6 +607,7 @@ export default function WhatsAppChatClient() {
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const selectedPhoneRef = useRef<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchConversations = useCallback(async () => {
@@ -564,6 +649,9 @@ export default function WhatsAppChatClient() {
   // Handle realtime message broadcast
   const handleRealtimeMessage = useCallback(
     (msg: Message) => {
+      // If this message is for the currently open conversation, auto-mark as read
+      const isViewing = selectedPhoneRef.current === msg.phone;
+
       // Add message to the appropriate conversation's message list
       setAllMessages((prev) => {
         const next = new Map(prev);
@@ -584,9 +672,14 @@ export default function WhatsAppChatClient() {
             lastMessage: msg.body,
             lastMessageAt: msg.createdAt,
             lastDirection: msg.direction,
-            totalCount: updated[idx].totalCount + 1,
-            unreadCount:
+            lastInboundAt:
               msg.direction === "inbound"
+                ? msg.createdAt
+                : updated[idx].lastInboundAt,
+            totalCount: updated[idx].totalCount + 1,
+            // Only increment unread if needsReply AND not currently viewing this chat
+            unreadCount:
+              msg.needsReply && !isViewing
                 ? updated[idx].unreadCount + 1
                 : updated[idx].unreadCount,
             guestName: msg.guestName || updated[idx].guestName,
@@ -607,12 +700,23 @@ export default function WhatsAppChatClient() {
             lastMessage: msg.body,
             lastMessageAt: msg.createdAt,
             lastDirection: msg.direction,
-            unreadCount: msg.direction === "inbound" ? 1 : 0,
+            lastInboundAt: msg.direction === "inbound" ? msg.createdAt : null,
+            unreadCount: msg.needsReply && !isViewing ? 1 : 0,
             totalCount: 1,
           },
           ...prev,
         ];
       });
+
+      // If viewing this chat and the message needs a reply, mark it read on the server
+      if (isViewing && msg.needsReply) {
+        fetch("/api/admin/whatsapp/read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ phone: msg.phone }),
+        }).catch(() => {});
+      }
     },
     []
   );
@@ -625,15 +729,41 @@ export default function WhatsAppChatClient() {
     fetchConversations();
   }, [fetchConversations]);
 
+  // Mark all needsReply messages as read for a conversation
+  const markAsRead = useCallback(async (phone: string) => {
+    // Clear unread count locally immediately
+    setConversations((prev) => {
+      const idx = prev.findIndex((c) => c.phone === phone);
+      if (idx < 0 || prev[idx].unreadCount === 0) return prev;
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], unreadCount: 0 };
+      return updated;
+    });
+
+    // Persist to server
+    try {
+      await fetch("/api/admin/whatsapp/read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ phone }),
+      });
+    } catch (err) {
+      console.error("Failed to mark as read:", err);
+    }
+  }, []);
+
   // When selecting a conversation, fetch its messages if not already loaded
   const handleSelectPhone = useCallback(
     (phone: string) => {
       setSelectedPhone(phone);
+      selectedPhoneRef.current = phone;
       if (!allMessages.has(phone)) {
         fetchMessages(phone);
       }
+      markAsRead(phone);
     },
-    [allMessages, fetchMessages]
+    [allMessages, fetchMessages, markAsRead]
   );
 
   if (forbidden) {
@@ -748,7 +878,7 @@ export default function WhatsAppChatClient() {
                     phone={selectedPhone}
                     conversations={conversations}
                     messages={allMessages.get(selectedPhone) || []}
-                    onBack={() => setSelectedPhone(null)}
+                    onBack={() => { setSelectedPhone(null); selectedPhoneRef.current = null; }}
                   />
                 ) : (
                   <EmptyState />

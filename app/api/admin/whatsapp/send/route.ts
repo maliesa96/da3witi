@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       guestId: stored.guestId,
       guestName: stored.guestName,
       status: stored.status,
+      needsReply: false,
       createdAt: stored.createdAt.toISOString(),
     };
 

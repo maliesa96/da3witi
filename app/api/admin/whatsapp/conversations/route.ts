@@ -23,6 +23,7 @@ export async function GET() {
         last_message: string;
         last_message_at: Date;
         last_direction: string;
+        last_inbound_at: Date | null;
         unread_count: number;
         total_count: number;
       }[]
@@ -45,7 +46,8 @@ export async function GET() {
           WHERE wm.phone = m.phone
           ORDER BY wm.created_at DESC LIMIT 1
         ) as last_direction,
-        COUNT(*) FILTER (WHERE m.direction = 'inbound')::int as unread_count,
+        MAX(m.created_at) FILTER (WHERE m.direction = 'inbound') as last_inbound_at,
+        COUNT(*) FILTER (WHERE m.needs_reply = true)::int as unread_count,
         COUNT(*)::int as total_count
       FROM whatsapp_messages m
       GROUP BY m.phone
@@ -59,6 +61,7 @@ export async function GET() {
         lastMessage: c.last_message,
         lastMessageAt: c.last_message_at,
         lastDirection: c.last_direction,
+        lastInboundAt: c.last_inbound_at,
         unreadCount: c.unread_count,
         totalCount: c.total_count,
       }))

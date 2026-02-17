@@ -150,6 +150,7 @@ export type BroadcastWhatsAppMessagePayload = {
   guestId: string | null;
   guestName: string | null;
   status: string;
+  needsReply: boolean;
   createdAt: string;
 };
 

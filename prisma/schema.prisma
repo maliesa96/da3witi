@@ -97,8 +97,10 @@ model WhatsAppMessage {
   guestId          String?  @map("guest_id") @db.Uuid
   guestName        String?  @map("guest_name")
   status           String   @default("sent") // for outbound: sent, delivered, read, failed
+  needsReply       Boolean  @default(false) @map("needs_reply") // true for inbound msgs requiring admin attention
 
   @@index([phone, createdAt])
+  @@index([phone, needsReply])
   @@index([createdAt])
   @@map("whatsapp_messages")
 }
