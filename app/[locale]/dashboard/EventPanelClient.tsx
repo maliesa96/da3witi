@@ -34,6 +34,7 @@ type EventForClient = {
   guestsEnabled: boolean;
   reminderEnabled: boolean;
   imageUrl: string | null;
+  locale: string | null;
   paidAt: string | null; // ISO
 
   // Denormalized counters from `GET /api/events`
@@ -1385,7 +1386,7 @@ export default function EventPanelClient({
                   imageUrl={event.imageUrl || undefined}
                   showQr={event.qrEnabled}
                   guestsEnabled={event.guestsEnabled}
-                  locale={locale as "en" | "ar"}
+                  locale={(event.locale as "en" | "ar") || (locale as "en" | "ar")}
                   />
                 </div>
               </motion.div>

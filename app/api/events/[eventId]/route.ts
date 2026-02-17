@@ -30,6 +30,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
         guestsEnabled: true,
         reminderEnabled: true,
         imageUrl: true,
+        locale: true,
         paidAt: true,
         userId: true,
       },
@@ -56,6 +57,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
       guestsEnabled: event.guestsEnabled,
       reminderEnabled: event.reminderEnabled,
       imageUrl: event.imageUrl ?? null,
+      locale: event.locale ?? null,
       paidAt: event.paidAt ? event.paidAt.toISOString() : null,
     });
   } catch (error) {

@@ -110,6 +110,7 @@ export async function createEvent(formData: {
       imageUrl: formData.imageUrl,
       mediaType: formData.mediaType,
       mediaFilename: formData.mediaFilename,
+      locale: formData.locale,
       guests: {
         create: guestsValidated.map(guest => ({
           name: guest.name,
