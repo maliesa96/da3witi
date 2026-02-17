@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Phone, Video, Plus, Mic, Camera, Signal, Wifi, Battery, MailOpen, Reply, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, Phone, Video, Plus, Mic, Camera, Signal, Wifi, Battery, Reply, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import { useLocale, useTranslations, NextIntlClientProvider } from "next-intl";
 import { TEMPLATES } from "@/lib/templates/templates";
@@ -115,8 +115,14 @@ function InvitePreviewContent({
              </div>
              
              <div className="flex-1 flex items-center gap-2 ml-2 mr-2">
-                 <div className="w-9 h-9 flex items-center justify-center rounded-full bg-stone-700 shrink-0 overflow-hidden border border-white/10">
-                    <MailOpen size={20} className="text-white" /> 
+                 <div className="w-9 h-9 flex items-center justify-center rounded-full bg-black shrink-0 overflow-hidden border border-white/10">
+                    <Image
+                      src="/images/3_white.svg"
+                      alt="Da3witi"
+                      width={18}
+                      height={18}
+                      className="object-contain"
+                    />
                  </div>
                  <div className="flex flex-col justify-center leading-tight">
                      <span className="text-[15px] font-semibold text-white">{t('app_name')}</span>

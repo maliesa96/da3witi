@@ -64,7 +64,7 @@ export default async function ContactPage({
             <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter leading-[0.9] text-stone-900">
               {t("heading")}
             </h1>
-            <div className="mx-auto mt-2 inline-flex max-w-full items-center gap-3 rounded-2xl border border-stone-200/80 bg-white/80 px-5 py-3 text-xs font-medium text-stone-600 shadow-sm backdrop-blur-sm">
+            <div className="mx-auto mt-2 flex w-full max-w-full items-center justify-around gap-2 overflow-x-auto rounded-2xl border border-stone-200/80 bg-white/80 px-4 py-3 text-[11px] font-medium text-stone-600 shadow-sm backdrop-blur-sm sm:inline-flex sm:w-auto sm:justify-center sm:gap-3 sm:px-5 sm:text-xs">
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                 <Clock3 size={14} className="text-stone-500" />
                 {t("conciergeFastReplies")}
@@ -73,10 +73,6 @@ export default async function ContactPage({
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                 <MessageCircle size={14} className="text-stone-500" />
                 {t("conciergeWhatsappFirst")}
-              </span>
-              <span className="h-3 w-px bg-stone-200" />
-              <span className="dir-ltr whitespace-nowrap font-semibold text-stone-700">
-                hello@da3witi.com
               </span>
             </div>
             <p className="mx-auto max-w-2xl text-lg md:text-xl font-light text-stone-500">

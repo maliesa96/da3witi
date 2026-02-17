@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Plus, LogOut, User, Menu, X } from "lucide-react";
+import { Globe, Plus, LogOut, User, Menu, X, Mail } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/navigation";
 import { useEffect, useState } from "react";
@@ -143,18 +143,26 @@ export function Navbar() {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-60 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Mobile Menu Panel */}
       <div
-        className={`fixed top-16 right-0 h-[calc(100vh-4rem)] w-64 bg-white shadow-xl z-40 transform transition-transform duration-300 ease-in-out md:hidden ${
+        className={`fixed top-0 right-0 h-screen w-64 bg-white shadow-xl z-60 transform transition-transform duration-300 ease-in-out md:hidden ${
           isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="flex flex-col p-6 space-y-4">
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="self-end p-2 -mt-2 -mr-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition-colors cursor-pointer"
+            aria-label="Close menu"
+          >
+            <X size={22} />
+          </button>
+
           <Link
             href={pathname}
             locale={otherLocale}
@@ -170,6 +178,7 @@ export function Navbar() {
             className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
             onClick={() => setIsMobileMenuOpen(false)}
           >
+            <Mail size={18} />
             <span>{t('contact')}</span>
           </Link>
 
