@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { buildWhatsAppImagePayload, buildWhatsAppTextPayload } from '@/lib/whatsapp';
 import { enqueueWhatsAppOutbox } from '@/lib/queue/whatsappOutbox';
 import { broadcastGuestUpdate, broadcastWhatsAppMessage } from '@/lib/supabase/broadcast';
+import { sendWhatsAppMessageNotification } from '@/lib/email';
 
 const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
 
@@ -221,6 +222,15 @@ export async function POST(request: Request) {
                   needsReply: stored.needsReply,
                   createdAt: stored.createdAt.toISOString(),
                 });
+
+                // Send email notification for messages that need admin attention
+                if (stored.needsReply) {
+                  sendWhatsAppMessageNotification({
+                    phone: from,
+                    senderName: senderName,
+                    body: stored.body,
+                  });
+                }
               } catch (storeErr) {
                 console.error('Failed to store inbound message:', storeErr);
               }
