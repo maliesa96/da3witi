@@ -264,7 +264,7 @@ export default function HomePageClient() {
           </motion.div>
 
           {/* Feature Showcase Card */}
-          <div className="bg-white rounded-[3rem] p-8 md:p-16 shadow-xl shadow-stone-200/50 overflow-hidden relative min-h-[600px] flex flex-col md:flex-row items-center gap-12">
+          <div className="bg-white rounded-[3rem] px-3 py-8 md:p-16 shadow-xl shadow-stone-200/50 overflow-hidden relative min-h-[600px] flex flex-col md:flex-row items-center gap-12">
              
              {/* Left Content */}
              <motion.div 
@@ -302,7 +302,7 @@ export default function HomePageClient() {
                   whileInView={{ y: 0, opacity: 1, rotateY: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.8 }}
-                  className="relative w-full max-w-md z-20 transform hover:scale-[1.02] transition-transform duration-500"
+                  className="relative w-full max-w-lg z-20 transform hover:scale-[1.02] transition-transform duration-500"
                 >
                    <LiveDashboardDemo />
                    

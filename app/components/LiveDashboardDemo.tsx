@@ -78,9 +78,9 @@ export default function LiveDashboardDemo() {
       
       // Update stats based on activity
       if (newActivity.type === "rsvp_yes") {
-        setStats(s => ({ ...s, confirmed: s.confirmed + 1, pending: s.pending - 1 }));
+        setStats(s => ({ ...s, confirmed: s.confirmed + 1, pending: Math.max(0, s.pending - 1) }));
       } else if (newActivity.type === "rsvp_no") {
-        setStats(s => ({ ...s, declined: s.declined + 1, pending: s.pending - 1 }));
+        setStats(s => ({ ...s, declined: s.declined + 1, pending: Math.max(0, s.pending - 1) }));
       } else if (newActivity.type === "new_guest") {
         setStats(s => ({ ...s, total: s.total + 1, pending: s.pending + 1 }));
       }
@@ -90,9 +90,9 @@ export default function LiveDashboardDemo() {
   }, [isAr]);
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white rounded-3xl shadow-2xl border border-stone-100 overflow-hidden flex flex-col h-[400px]" dir={isAr ? "rtl" : "ltr"}>
+    <div className="w-full max-w-lg mx-auto bg-white rounded-3xl shadow-2xl border border-stone-100 overflow-hidden flex flex-col h-[400px]" dir={isAr ? "rtl" : "ltr"}>
       {/* Header */}
-      <div className="p-5 border-b border-stone-100 bg-stone-50/50 flex justify-between items-center">
+      <div className="p-3 sm:p-5 border-b border-stone-100 bg-stone-50/50 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-red-400"></div>
           <div className="w-3 h-3 rounded-full bg-amber-400"></div>
@@ -102,14 +102,14 @@ export default function LiveDashboardDemo() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-1 p-5 pb-2">
+      <div className="grid grid-cols-3 gap-2 p-3 pb-2 sm:p-5 sm:pb-2">
         <StatBox label={t.invited} value={stats.total} color="bg-blue-50 text-blue-600" />
         <StatBox label={t.confirmed} value={stats.confirmed} color="bg-green-50 text-green-600" />
         <StatBox label={t.pending} value={stats.pending} color="bg-amber-50 text-amber-600" />
       </div>
 
       {/* Activity Feed */}
-      <div className="flex-1 p-5 pt-2 overflow-hidden relative">
+      <div className="flex-1 p-3 pt-2 sm:p-5 sm:pt-2 overflow-hidden relative">
         <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2">
           <Bell size={12} /> {t.recent_activity}
         </h4>
@@ -147,11 +147,11 @@ export default function LiveDashboardDemo() {
 
 function StatBox({ label, value, color }: { label: string, value: number, color: string }) {
   return (
-    <div className={`rounded-2xl p-3 text-center ${color}`}>
+    <div className={`rounded-2xl p-3 text-center min-w-0 ${color}`}>
       <div className="text-2xl font-bold tracking-tight mb-1">
         <CountUp value={value} />
       </div>
-      <div className="text-[10px] uppercase font-bold opacity-80">{label}</div>
+      <div className="text-[10px] uppercase font-bold opacity-80 truncate">{label}</div>
     </div>
   );
 }
