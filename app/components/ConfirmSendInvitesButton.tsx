@@ -91,7 +91,7 @@ export default function ConfirmSendInvitesButton({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ locale }),
+        body: JSON.stringify({}),
       });
 
       const data = await response.json();

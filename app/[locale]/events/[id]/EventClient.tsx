@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 import EventPanelClient from "@/app/[locale]/dashboard/EventPanelClient";
+import DeleteEventButton from "@/app/components/DeleteEventButton";
 import { Link } from "@/navigation";
 import { RealtimeProvider } from "@/lib/supabase/RealtimeProvider";
 
@@ -23,6 +24,7 @@ type EventForClient = {
   reminderEnabled: boolean;
   imageUrl: string | null;
   paidAt: string | null;
+  locale: string | null;
   guestCountTotal?: number;
   inviteCountTotal?: number;
   inviteCountPending?: number;
@@ -113,7 +115,7 @@ export default function EventClient({ eventId }: { eventId: string }) {
   return (
     <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pb-24 animate-fade-in">
       {/* Back to Dashboard Link */}
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <Link
           href="/dashboard"
           className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-900 transition-colors"
@@ -121,6 +123,9 @@ export default function EventClient({ eventId }: { eventId: string }) {
           <ArrowLeft size={16} />
           {t("back_to_dashboard")}
         </Link>
+        {event && !event.paidAt && (
+          <DeleteEventButton eventId={event.id} eventTitle={event.title} />
+        )}
       </div>
 
       {isLoading && (

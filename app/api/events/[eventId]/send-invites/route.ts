@@ -5,12 +5,9 @@ import { buildInviteTemplatePayload, type MediaType } from "@/lib/whatsapp";
 import { enqueueWhatsAppOutboxBatch, RedisConfigError } from "@/lib/queue/whatsappOutbox";
 import { shouldEnqueueWhatsAppInvite } from "@/lib/whatsappSendEligibility";
 
-export async function POST(request: NextRequest, context: { params: Promise<{ eventId: string }> }) {
+export async function POST(_request: NextRequest, context: { params: Promise<{ eventId: string }> }) {
   try {
     const { eventId } = await context.params;
-    const body = (await request.json().catch(() => ({}))) as { locale?: "en" | "ar" };
-    const locale = body?.locale === "ar" ? "ar" : "en";
-
     const supabase = await createClient();
     const {
       data: { user },
@@ -36,6 +33,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ev
     if (!event.paidAt) {
       return NextResponse.json({ error: "Payment required to send invites" }, { status: 402 });
     }
+
+    const locale = event.locale === "en" ? "en" : "ar";
 
     const guestsToSend = event.guests.filter((g) => shouldEnqueueWhatsAppInvite(g));
 

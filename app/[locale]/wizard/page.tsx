@@ -226,6 +226,22 @@ export default function Wizard() {
     setDetails(prev => ({ ...prev, messageLocale: locale }));
   }, [locale]);
 
+  // Re-format picker date/time when messageLocale changes
+  useEffect(() => {
+    setDetails(prev => {
+      const updates: Partial<typeof prev> = {};
+      if (dateMode === "picker" && datePickerValue) {
+        updates.date = formatDateFromPicker(datePickerValue, prev.messageLocale);
+      }
+      if (timeMode === "picker" && timePickerValue) {
+        updates.time = formatTimeFromPicker(timePickerValue, prev.messageLocale);
+      }
+      if (Object.keys(updates).length === 0) return prev;
+      return { ...prev, ...updates };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [details.messageLocale, dateMode, datePickerValue, timeMode, timePickerValue]);
+
   // For SSR safety with portal
   useEffect(() => {
     setMounted(true);
@@ -364,12 +380,12 @@ export default function Wizard() {
     }
   };
 
-  const formatDateFromPicker = (value: string) => {
+  const formatDateFromPicker = (value: string, msgLocale?: 'en' | 'ar') => {
     // value: "YYYY-MM-DD"
     const [y, m, d] = value.split("-").map(Number);
     if (!y || !m || !d) return value;
     const date = new Date(Date.UTC(y, m - 1, d));
-    const intlLocale = locale === "ar" ? "ar-SA" : "en-US";
+    const intlLocale = (msgLocale ?? details.messageLocale) === "ar" ? "ar-SA" : "en-US";
     return new Intl.DateTimeFormat(intlLocale, {
       weekday: "long",
       month: "long",
@@ -378,12 +394,12 @@ export default function Wizard() {
     }).format(date);
   };
 
-  const formatTimeFromPicker = (value: string) => {
+  const formatTimeFromPicker = (value: string, msgLocale?: 'en' | 'ar') => {
     // value: "HH:MM"
     const [hh, mm] = value.split(":").map(Number);
     if (Number.isNaN(hh) || Number.isNaN(mm)) return value;
     const date = new Date(Date.UTC(1970, 0, 1, hh, mm, 0));
-    const intlLocale = locale === "ar" ? "ar-SA" : "en-US";
+    const intlLocale = (msgLocale ?? details.messageLocale) === "ar" ? "ar-SA" : "en-US";
     const base: Intl.DateTimeFormatOptions = {
       hour: "numeric",
       hour12: true,
