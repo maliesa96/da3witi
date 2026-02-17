@@ -119,7 +119,7 @@ export default async function CheckoutSuccess({
     const session = await stripe.checkout.sessions.retrieve(session_id);
 
     // Verify payment was successful
-    if (session.payment_status !== "paid") {
+    if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
       error = "Payment not completed";
     } else {
       // Create the event (or get existing if already created)

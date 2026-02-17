@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       const session = event.data.object as Stripe.Checkout.Session;
       
       // Only process if payment is confirmed
-      if (session.payment_status === 'paid') {
+      if (session.payment_status === 'paid' || session.payment_status === 'no_payment_required') {
         const action = session.metadata?.action;
         
         if (action === 'send_invites') {

@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
       success_url: `${origin}/${locale}/checkout/send-success?session_id={CHECKOUT_SESSION_ID}&eventId=${eventId}`,
       cancel_url: `${origin}/${locale}/dashboard?eventId=${eventId}`,
       customer_email: user.email,
+      allow_promotion_codes: true,
       metadata: {
         userId: user.id,
         eventId: eventId,

@@ -77,7 +77,7 @@ export default async function SendInvitesSuccess({
     const session = await stripe.checkout.sessions.retrieve(session_id);
 
     // Verify payment was successful
-    if (session.payment_status !== "paid") {
+    if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
       result = { success: false, error: "Payment not completed" };
     } else {
       // Mark event as paid and send invites
