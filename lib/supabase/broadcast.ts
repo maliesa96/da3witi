@@ -134,3 +134,47 @@ export async function broadcastEventUpdate(
     console.error(`[Broadcast] Failed to send event:update:`, error);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  WhatsApp message broadcasts (admin chat)                           */
+/* ------------------------------------------------------------------ */
+
+export type BroadcastWhatsAppMessagePayload = {
+  id: string;
+  phone: string;
+  direction: "inbound" | "outbound";
+  body: string;
+  messageType: string;
+  whatsappMessageId: string | null;
+  contextMessageId: string | null;
+  guestId: string | null;
+  guestName: string | null;
+  status: string;
+  createdAt: string;
+};
+
+const WHATSAPP_ADMIN_CHANNEL = "whatsapp:admin";
+
+/**
+ * Broadcast a new WhatsApp message (inbound or outbound) to admin listeners.
+ */
+export async function broadcastWhatsAppMessage(
+  message: BroadcastWhatsAppMessagePayload
+) {
+  const supabase = createBroadcastClient();
+
+  try {
+    const channel = supabase.channel(WHATSAPP_ADMIN_CHANNEL);
+    await channel.send({
+      type: "broadcast",
+      event: "whatsapp:message",
+      payload: message,
+    });
+    await supabase.removeChannel(channel);
+    console.log(
+      `[Broadcast] Sent whatsapp:message to ${WHATSAPP_ADMIN_CHANNEL} - ${message.direction} ${message.phone}`
+    );
+  } catch (error) {
+    console.error(`[Broadcast] Failed to send whatsapp:message:`, error);
+  }
+}

@@ -84,3 +84,21 @@ model Guest {
   @@index([eventId, createdAt])
   @@map("guests")
 }
+
+model WhatsAppMessage {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  phone            String
+  direction        String   // "inbound" or "outbound"
+  body             String
+  messageType      String   @default("text") @map("message_type") // text, button, image, etc.
+  whatsappMessageId String? @unique @map("whatsapp_message_id")
+  contextMessageId String?  @map("context_message_id") // the message this is replying to
+  guestId          String?  @map("guest_id") @db.Uuid
+  guestName        String?  @map("guest_name")
+  status           String   @default("sent") // for outbound: sent, delivered, read, failed
+
+  @@index([phone, createdAt])
+  @@index([createdAt])
+  @@map("whatsapp_messages")
+}

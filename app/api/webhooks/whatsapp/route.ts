@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { buildWhatsAppImagePayload, buildWhatsAppTextPayload } from '@/lib/whatsapp';
 import { enqueueWhatsAppOutbox } from '@/lib/queue/whatsappOutbox';
-import { broadcastGuestUpdate } from '@/lib/supabase/broadcast';
+import { broadcastGuestUpdate, broadcastWhatsAppMessage } from '@/lib/supabase/broadcast';
 
 const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
 
@@ -146,10 +146,22 @@ export async function POST(request: Request) {
             }
           }
 
+          // Build a lookup of WhatsApp profile names from the contacts array
+          const contactNames: Record<string, string> = {};
+          if (value.contacts) {
+            for (const contact of value.contacts) {
+              const waId = contact.wa_id;
+              const profileName = contact.profile?.name;
+              if (waId && profileName) {
+                contactNames[waId] = profileName;
+              }
+            }
+          }
+
           // Handle incoming messages (for RSVP replies)
           if (value.messages) {
             for (const message of value.messages) {
-              const { from, text, button, type, context } = message;
+              const { from, id: msgId, text, button, type, context } = message;
               const repliedMessageId = context?.id;
               
               // Extract body from text message or button click
@@ -161,6 +173,50 @@ export async function POST(request: Request) {
               }
               
               console.log(`📩 Received ${type} from ${from}: "${body || '(no text)'}"${repliedMessageId ? ` (replying to ${repliedMessageId})` : ''}`);
+
+              // Store inbound message for chat view
+              try {
+                // Try to match to a guest for context
+                const phoneSuffix = from.slice(-9);
+                const matchedGuest = await prisma.guest.findFirst({
+                  where: { phone: { contains: phoneSuffix } },
+                  select: { id: true, name: true },
+                  orderBy: { createdAt: 'desc' },
+                });
+
+                // Use guest name if matched, otherwise use WhatsApp profile name
+                const senderName = matchedGuest?.name || contactNames[from] || null;
+
+                const stored = await prisma.whatsAppMessage.create({
+                  data: {
+                    phone: from,
+                    direction: 'inbound',
+                    body: body || `(${type} message)`,
+                    messageType: type || 'text',
+                    whatsappMessageId: msgId || undefined,
+                    contextMessageId: repliedMessageId || undefined,
+                    guestId: matchedGuest?.id || undefined,
+                    guestName: senderName || undefined,
+                  },
+                });
+
+                // Broadcast to admin chat UI via Supabase Realtime
+                await broadcastWhatsAppMessage({
+                  id: stored.id,
+                  phone: stored.phone,
+                  direction: 'inbound',
+                  body: stored.body,
+                  messageType: stored.messageType,
+                  whatsappMessageId: stored.whatsappMessageId,
+                  contextMessageId: stored.contextMessageId,
+                  guestId: stored.guestId,
+                  guestName: stored.guestName,
+                  status: stored.status,
+                  createdAt: stored.createdAt.toISOString(),
+                });
+              } catch (storeErr) {
+                console.error('Failed to store inbound message:', storeErr);
+              }
               
               const isConfirm = body?.toLowerCase() === 'confirm attendance' || body === 'تأكيد الحضور';
               const isDecline = body?.toLowerCase() === 'decline' || body === 'الاعتذار';

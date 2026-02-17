@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Plus, LogOut, User, Menu, X, Mail } from "lucide-react";
+import { Globe, Plus, LogOut, User, Menu, X, Mail, Shield } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/navigation";
 import { useEffect, useState } from "react";
@@ -96,6 +96,15 @@ export function Navbar() {
                 >
                   {t('dashboard')}
                 </Link>
+                {user.email === "mashari7@yahoo.com" && (
+                  <Link
+                    href="/admin"
+                    className="text-xs md:text-sm font-medium text-purple-600 hover:text-purple-800 px-2 md:px-3 py-1.5 rounded-md hover:bg-purple-50 transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <Shield size={14} />
+                    Admin
+                  </Link>
+                )}
                 <form action={signOut} className="hidden sm:block">
                   <button
                     type="submit"
@@ -192,6 +201,16 @@ export function Navbar() {
                 <User size={18} />
                 <span>{t('dashboard')}</span>
               </Link>
+              {user.email === "mashari7@yahoo.com" && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-2 text-sm font-medium text-purple-600 hover:text-purple-800 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all cursor-pointer"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Shield size={18} />
+                  <span>Admin</span>
+                </Link>
+              )}
               <form action={signOut} className="w-full">
                 <button
                   type="submit"
