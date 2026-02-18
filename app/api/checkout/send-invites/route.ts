@@ -3,15 +3,13 @@ import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
+import { isRamadanPromoActive, RAMADAN_COUPON_ID } from '@/lib/promo';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 // Pricing in fils (1 KWD = 1000 fils)
 const BASE_PRICE = 50000; // 50 KWD
 const QR_ADDON_PRICE = 10000; // 10 KWD
-
-// const BASE_PRICE = 59500;
-// const QR_ADDON_PRICE = 11900;
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,7 +91,9 @@ export async function POST(request: NextRequest) {
       success_url: `${origin}/${locale}/checkout/send-success?session_id={CHECKOUT_SESSION_ID}&eventId=${eventId}`,
       cancel_url: `${origin}/${locale}/dashboard?eventId=${eventId}`,
       customer_email: user.email,
-      allow_promotion_codes: true,
+      ...(isRamadanPromoActive()
+        ? { discounts: [{ coupon: RAMADAN_COUPON_ID }] }
+        : { allow_promotion_codes: true }),
       metadata: {
         userId: user.id,
         eventId: eventId,

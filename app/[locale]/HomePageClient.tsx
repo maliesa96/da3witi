@@ -17,22 +17,27 @@ import { useTranslations, useLocale } from "next-intl";
 import InvitePreview from "../components/InvitePreview";
 import LiveDashboardDemo from "../components/LiveDashboardDemo";
 import StorySlider from "../components/StorySlider";
+import RamadanBanner from "../components/RamadanBanner";
 import { motion } from "framer-motion";
 import { useRef } from "react";
 import { MAX_GUESTS_PER_EVENT } from "@/lib/limits";
+import { isRamadanPromoActive } from "@/lib/promo";
 
 export default function HomePageClient() {
   const t = useTranslations('HomePage');
   const locale = useLocale();
   const isArabic = locale === 'ar';
+  const promoActive = isRamadanPromoActive();
   
   const containerRef = useRef(null);
   
   return (
     <div className="min-h-screen bg-[#FDFCF8] text-stone-900 font-sans selection:bg-purple-100 selection:text-purple-900 overflow-x-hidden">
-      
+
+      <RamadanBanner />
+
       {/* Hero Section */}
-      <section className="relative pt-8 pb-16 lg:pt-16 lg:pb-24 px-6 overflow-hidden">
+      <section className="relative py-16 lg:pt-20 lg:pb-24 px-6 overflow-hidden">
         {/* Abstract SVG Backdrop */}
         <motion.div 
           initial={{ opacity: 0 }}
@@ -469,13 +474,25 @@ export default function HomePageClient() {
                  <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px] -z-10"></div>
                   
                   <div className="mb-8 relative z-10">
-                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-800 border border-stone-700 text-stone-300 text-[10px] font-bold uppercase tracking-wider mb-4">
-                        <Sparkles size={12} className="text-amber-400" />
-                        Most Popular
+                     <div className="flex items-center gap-2 flex-wrap mb-4">
+                       <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-800 border border-stone-700 text-stone-300 text-[10px] font-bold uppercase tracking-wider">
+                          <Sparkles size={12} className="text-amber-400" />
+                          Most Popular
+                       </div>
+                       {promoActive && (
+                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] font-bold uppercase tracking-wider">
+                            60% OFF
+                         </div>
+                       )}
                      </div>
-                     <h3 className="text-3xl font-display font-bold uppercase tracking-tight mb-2">{t('pricing.standard.title')}</h3>
-                     <div className="flex items-baseline gap-1">
-                        <span className="text-6xl font-black tracking-tighter text-white">{t('pricing.standard.price')}</span>
+                     <h3 className="text-3xl font-display font-bold uppercase tracking-tight mb-3">{t('pricing.standard.title')}</h3>
+                     <div className="flex items-baseline gap-3">
+                        <span className="text-6xl font-black tracking-tighter text-white">
+                          {promoActive ? t('pricing.standard.sale_price') : t('pricing.standard.price')}
+                        </span>
+                        {promoActive && (
+                          <span className="text-2xl font-bold text-stone-500 line-through decoration-stone-600">{t('pricing.standard.price')}</span>
+                        )}
                      </div>
                   </div>
 
@@ -527,11 +544,25 @@ export default function HomePageClient() {
                   </motion.div>
 
                   <div className="relative z-10 mb-8">
-                     <div className="inline-block bg-amber-100 px-3 py-1 rounded-full text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-4 border border-amber-200">
-                       Add-on
+                     <div className="flex items-center gap-2 flex-wrap mb-4">
+                       <div className="inline-block bg-amber-100 px-3 py-1 rounded-full text-[10px] font-bold text-amber-700 uppercase tracking-wide border border-amber-200">
+                         Add-on
+                       </div>
+                       {promoActive && (
+                         <div className="inline-block bg-amber-50 px-3 py-1 rounded-full text-[10px] font-bold text-amber-600 uppercase tracking-wide border border-amber-200/60">
+                           60% OFF
+                         </div>
+                       )}
                      </div>
                      <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-stone-900">{t('pricing.plus.title')}</h3>
-                     <div className="text-4xl font-black text-stone-900 tracking-tighter mt-2">{t('pricing.plus.price')}</div>
+                     <div className="flex items-baseline gap-2 mt-2">
+                       <span className="text-4xl font-black text-stone-900 tracking-tighter">
+                         {promoActive ? t('pricing.plus.sale_price') : t('pricing.plus.price')}
+                       </span>
+                       {promoActive && (
+                         <span className="text-lg font-bold text-stone-400 line-through decoration-stone-400">{t('pricing.plus.price')}</span>
+                       )}
+                     </div>
                      <p className="text-sm text-stone-500 font-medium mt-3 leading-relaxed">{t('pricing.plus.desc')}</p>
                   </div>
 

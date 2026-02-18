@@ -111,7 +111,7 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider messages={messages}>
           <Navbar />
-          <main className="pt-24 min-h-screen relative overflow-hidden flex-1">
+          <main className="min-h-screen relative overflow-hidden flex-1">
             {children}
           </main>
           <Footer />

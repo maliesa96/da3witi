@@ -55,7 +55,7 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="fixed w-full z-50 top-0 transition-all duration-300 border-b border-stone-200/50 bg-[#FDFCF8]">
+      <nav className="sticky w-full z-50 top-0 transition-all duration-300 border-b border-stone-200/50 bg-[#FDFCF8]">
         <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 cursor-pointer">
             <div className="h-12 shrink-0">

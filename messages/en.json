@@ -1,5 +1,10 @@
 {
   "HomePage": {
+    "ramadan_banner": {
+      "highlight": "Ramadan Offer",
+      "message": "60% off all invitations for the first week of Ramadan only!",
+      "cta": "Claim Offer"
+    },
     "badge": "The First Automated Invitation System in the Gulf",
     "title": "Luxury Invitations, sent in minutes.",
     "hero": {
@@ -51,6 +56,7 @@
       "standard": {
         "title": "Standard Invite",
         "price": "50 KWD",
+        "sale_price": "20 KWD",
         "features": [
           "Up to {max} Guests",
           "WhatsApp Automation",
@@ -64,6 +70,7 @@
       "plus": {
         "title": "Plus QR Code",
         "price": "+10 KWD",
+        "sale_price": "+4 KWD",
         "desc": "Add check-in capabilities",
         "features": [
           "Unique QR for each guest",
