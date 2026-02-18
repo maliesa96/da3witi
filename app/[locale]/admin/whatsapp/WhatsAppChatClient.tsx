@@ -421,9 +421,12 @@ function ChatView({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Focus input on mount
+  // Focus input on mount (skip on mobile to avoid keyboard forcing scroll)
   useEffect(() => {
-    inputRef.current?.focus();
+    const isNarrow = window.matchMedia("(max-width: 768px)").matches;
+    if (!isNarrow) {
+      inputRef.current?.focus({ preventScroll: true });
+    }
   }, [phone]);
 
   const handleSend = async () => {

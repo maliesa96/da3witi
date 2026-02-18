@@ -131,7 +131,7 @@ export default function HomePageClient() {
                initial={{ opacity: 0, y: 20 }}
                animate={{ opacity: 1, y: 0 }}
                transition={{ duration: 0.6, delay: 0.2 }}
-               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-100 shadow-sm text-stone-600 text-sm font-medium"
+               className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white border border-stone-100 shadow-sm text-stone-600 text-xs sm:text-sm font-medium whitespace-nowrap"
              >
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
               {t('badge')}

@@ -697,23 +697,21 @@ export default function AdminDashboardClient() {
             Platform overview &middot; Last 30 days
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <a
-            href="/en/admin/whatsapp"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm"
-          >
-            <Send size={14} />
-            WhatsApp Messages
-          </a>
-          <button
-            onClick={fetchStats}
-            className="text-stone-400 hover:text-stone-600 p-2 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer"
-            title="Refresh"
-          >
-            <RefreshCw size={18} />
-          </button>
-        </div>
+        <button
+          onClick={fetchStats}
+          className="text-stone-400 hover:text-stone-600 p-2 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer"
+          title="Refresh"
+        >
+          <RefreshCw size={18} />
+        </button>
       </motion.div>
+      <a
+        href="/en/admin/whatsapp"
+        className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm w-fit"
+      >
+        <Send size={14} />
+        WhatsApp Messages
+      </a>
 
       {/* ── Stat Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
