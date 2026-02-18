@@ -50,7 +50,7 @@ export default async function ContactPage({
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] text-stone-900 selection:bg-purple-100 selection:text-purple-900">
-      <section className="relative overflow-hidden px-6 py-12 md:py-20">
+      <section className="relative overflow-hidden px-6 pt-12 pb-12 md:pt-20 md:pb-20">
         <div className="absolute inset-0 -z-10 pointer-events-none">
           <div className="absolute -top-24 -left-16 h-80 w-80 rounded-full bg-purple-200/40 blur-3xl" />
           <div className="absolute top-20 -right-20 h-96 w-96 rounded-full bg-amber-200/40 blur-3xl" />

@@ -223,7 +223,7 @@ export default function DashboardClient() {
   }, [locale, router]);
 
   return (
-    <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pb-24 animate-fade-in">
+    <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pt-8 pb-24 animate-fade-in">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-display font-bold text-stone-900">

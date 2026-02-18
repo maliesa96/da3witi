@@ -113,7 +113,7 @@ export default function EventClient({ eventId }: { eventId: string }) {
   }, [eventId, locale, router]);
 
   return (
-    <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pb-24 animate-fade-in">
+    <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pt-8 pb-24 animate-fade-in">
       {/* Back to Dashboard Link */}
       <div className="mb-6 flex items-center justify-between">
         <Link

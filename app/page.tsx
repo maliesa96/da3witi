@@ -17,7 +17,7 @@ export default function Home() {
     <div className="animate-fade-in block">
       <div className="max-w-7xl mx-auto px-6 relative">
         {/* Hero */}
-        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-24 py-16 lg:py-24">
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-24 pt-8 pb-16 lg:pt-16 lg:pb-24">
           <div className="flex-1 space-y-8 relative z-10 text-center lg:text-right">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-600 text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>

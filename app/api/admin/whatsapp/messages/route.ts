@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
-
-const ADMIN_EMAILS = ["mashari7@yahoo.com"];
+import { requireAdmin } from "@/lib/admin";
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user || !ADMIN_EMAILS.includes(user.email ?? "")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const { response } = await requireAdmin();
+    if (response) return response;
 
     const phone = request.nextUrl.searchParams.get("phone");
     if (!phone) {

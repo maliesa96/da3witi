@@ -639,7 +639,7 @@ export default function AdminDashboardClient() {
   /* ---- Loading ---- */
   if (loading) {
     return (
-      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pb-24">
+      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pt-8 pb-24">
         <div className="mb-8 flex items-center gap-3">
           <Loader2 size={20} className="text-stone-400 animate-spin" />
           <span className="text-sm text-stone-400">
@@ -682,7 +682,7 @@ export default function AdminDashboardClient() {
   };
 
   return (
-    <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pb-24 animate-fade-in">
+    <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pt-8 pb-24 animate-fade-in">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}

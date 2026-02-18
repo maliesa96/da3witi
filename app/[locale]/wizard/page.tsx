@@ -484,7 +484,7 @@ export default function Wizard() {
   const imageHasError = Boolean(imageErrorText && !details.imageUrl);
 
   return (
-    <div className="max-w-7xl mx-auto px-6 pb-24">
+    <div className="max-w-7xl mx-auto px-6 pt-8 pb-24">
       {/* Stepper Progress */}
       <div className="flex items-center justify-between mb-12 relative max-w-2xl mx-auto">
         <div className="absolute top-1/2 left-0 w-full h-px bg-stone-200 -z-10"></div>

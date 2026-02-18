@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { ADMIN_EMAILS } from '@/lib/admin'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -35,19 +36,23 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    (request.nextUrl.pathname.includes('/wizard') ||
-     request.nextUrl.pathname.includes('/dashboard'))
-  ) {
-    // Determine the locale from the pathname
-    const segments = request.nextUrl.pathname.split('/');
+  const pathname = request.nextUrl.pathname
+  const requiresAuth = pathname.includes('/wizard') || pathname.includes('/dashboard') || pathname.includes('/admin')
+
+  if (!user && requiresAuth) {
+    const segments = pathname.split('/');
     const locale = segments[1] === 'ar' || segments[1] === 'en' ? segments[1] : 'en';
-    
-    // no user, redirect to login page
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}/login`
-    url.searchParams.set('next', request.nextUrl.pathname)
+    url.searchParams.set('next', pathname)
+    return NextResponse.redirect(url)
+  }
+
+  if (user && pathname.includes('/admin') && !ADMIN_EMAILS.includes(user.email ?? '')) {
+    const segments = pathname.split('/');
+    const locale = segments[1] === 'ar' || segments[1] === 'en' ? segments[1] : 'en';
+    const url = request.nextUrl.clone()
+    url.pathname = `/${locale}`
     return NextResponse.redirect(url)
   }
 
