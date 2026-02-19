@@ -93,6 +93,40 @@ export async function generateMetadata({
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 
+function JsonLd({ locale }: { locale: string }) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        name: "Da3witi",
+        alternateName: ["دعـوتـي", "da3witi", "Da3witi.com"],
+        url: "https://da3witi.com",
+        inLanguage: locale === "ar" ? "ar" : "en",
+      },
+      {
+        "@type": "Organization",
+        name: "Da3witi",
+        alternateName: ["دعـوتـي", "da3witi"],
+        url: "https://da3witi.com",
+        logo: "https://da3witi.com/images/logo_en_black.svg",
+        contactPoint: {
+          "@type": "ContactPoint",
+          email: "hello@da3witi.com",
+          contactType: "customer service",
+        },
+      },
+    ],
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
+}
+
 export default async function RootLayout({
   children,
   params
@@ -106,6 +140,9 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={direction} className="scroll-smooth">
+      <head>
+        <JsonLd locale={locale} />
+      </head>
       <body
         className={`${ibmPlexSansArabic.variable} ${inter.variable} ${cairo.variable} ${bricolageGrotesque.variable} ${alexandria.variable} ${instrumentSerif.variable} bg-stone-50 text-stone-800 font-sans antialiased selection:bg-stone-200 selection:text-stone-900 transition-colors duration-300 flex flex-col min-h-screen`}
       >
