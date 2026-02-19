@@ -5,6 +5,8 @@ import { enqueueWhatsAppOutbox } from "@/lib/queue/whatsappOutbox";
 import { broadcastWhatsAppMessage } from "@/lib/supabase/broadcast";
 import { requireAdmin } from "@/lib/admin";
 
+const TWENTY_FOUR_H = 24 * 60 * 60 * 1000;
+
 export async function POST(request: NextRequest) {
   try {
     const { response } = await requireAdmin();
@@ -16,6 +18,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "phone and message are required" },
         { status: 400 }
+      );
+    }
+
+    // Check 24h messaging window
+    const lastInbound = await prisma.whatsAppMessage.findFirst({
+      where: { phone, direction: "inbound" },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+
+    const windowOpen =
+      lastInbound &&
+      Date.now() - lastInbound.createdAt.getTime() < TWENTY_FOUR_H;
+
+    if (!windowOpen) {
+      return NextResponse.json(
+        { error: "24h messaging window is closed. Cannot send until the customer messages again." },
+        { status: 403 }
       );
     }
 

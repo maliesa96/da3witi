@@ -556,18 +556,19 @@ function ChatView({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={!windowStatus.open}
             placeholder={
               windowStatus.open
                 ? "Type a message..."
-                : "Window closed — template messages only"
+                : "Window closed — messaging unavailable"
             }
             rows={1}
-            className="flex-1 resize-none py-2.5 px-4 text-sm bg-white rounded-2xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-stone-400 max-h-32"
+            className="flex-1 resize-none py-2.5 px-4 text-sm bg-white rounded-2xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-stone-400 max-h-32 disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed"
             style={{ minHeight: "42px" }}
           />
           <button
             onClick={handleSend}
-            disabled={!draft.trim() || sending}
+            disabled={!windowStatus.open || !draft.trim() || sending}
             className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center hover:bg-green-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
           >
             {sending ? (
