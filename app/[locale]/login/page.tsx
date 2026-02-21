@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import PasswordLoginForm from './PasswordLoginForm';
 import MagicLinkForm from './MagicLinkForm';
+import OAuthButtons from './OAuthButtons';
 
 export const metadata: Metadata = {
   robots: {
@@ -57,6 +58,19 @@ export default async function LoginPage({
               {t('signup')}
             </Link>
           </p>
+        </div>
+
+        {/* OAuth providers */}
+        <OAuthButtons
+          locale={locale}
+          next={typeof sp.next === 'string' ? sp.next : ''}
+        />
+
+        {/* Divider */}
+        <div className="relative flex items-center gap-3">
+          <div className="flex-1 border-t border-stone-200" />
+          <span className="text-xs text-stone-400 shrink-0">{t('or_continue_with')}</span>
+          <div className="flex-1 border-t border-stone-200" />
         </div>
 
         {mode === 'password' ? (
