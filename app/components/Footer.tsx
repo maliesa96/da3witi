@@ -54,6 +54,22 @@ export function Footer() {
             <span className="hidden md:inline text-stone-200">•</span>
             <span>{t('address')}</span>
           </div>
+          <div className="flex gap-4">
+            <Link
+              href="/terms"
+              locale={locale}
+              className="hover:text-stone-600 transition-colors"
+            >
+              {t('terms')}
+            </Link>
+            <Link
+              href="/privacy"
+              locale={locale}
+              className="hover:text-stone-600 transition-colors"
+            >
+              {t('privacy')}
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

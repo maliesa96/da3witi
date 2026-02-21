@@ -194,11 +194,6 @@ export default function DashboardClient() {
         const eventsRes = await fetchJson<{ events: EventCardData[]; defaultEventId: string | null }>("/api/events");
         if (cancelled) return;
 
-        if (eventsRes.events.length === 0) {
-          router.replace(`/${locale}/wizard`);
-          return;
-        }
-
         setEvents(eventsRes.events);
         setIsLoading(false);
       } catch (err) {

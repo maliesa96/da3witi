@@ -260,6 +260,8 @@
     "about": "About",
     "pricing": "Pricing",
     "contact": "Contact Us",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
     "address": "Al Qibla, Kuwait",
     "copyright": "© {year} Da3witi is provided by Dune Technical Services Company for Computer Technology WLL."
   },
@@ -456,7 +458,9 @@
     "check_email": "We've sent a sign-in link to your email! Please check your inbox (and spam folder) and click the link to continue.",
     "check_email_confirm": "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account.",
     "error_magic_link": "We couldn't send the sign-in link. Please check your email address and try again.",
-    "or_continue_with": "Or continue with",
+    "or_continue_with": "or continue with",
+    "continue_with_google": "Continue with Google",
+    "continue_with_apple": "Continue with Apple",
     "login_with_password": "Login with password",
     "login_with_magic_link": "Login with magic link",
     "auth_error_title": "This sign-in link isn't valid",
@@ -464,6 +468,100 @@
     "auth_error_generic": "We couldn't sign you in. Please request a new link and try again.",
     "auth_error_cta_login": "Go to login",
     "auth_error_cta_home": "Go to home"
+  },
+  "TermsPage": {
+    "title": "Terms of Service",
+    "last_updated": "Last updated: February 2025",
+    "intro": "Please read these Terms of Service carefully before using Da3witi. By accessing or using our service, you agree to be bound by these terms.",
+    "sections": [
+      {
+        "heading": "1. Acceptance of Terms",
+        "body": "By creating an account or using Da3witi in any way, you confirm that you are at least 18 years old and agree to these Terms of Service and our Privacy Policy. If you are using the service on behalf of a business, you represent that you have authority to bind that business to these terms."
+      },
+      {
+        "heading": "2. Description of Service",
+        "body": "Da3witi is a WhatsApp-based invitation management platform that allows you to create, send, and track event invitations. The service includes guest list management, RSVP tracking, QR code check-in, and automated messaging features. The service is provided by Dune Technical Services Company for Computer Technology WLL, registered in Kuwait."
+      },
+      {
+        "heading": "3. User Accounts",
+        "body": "You are responsible for maintaining the confidentiality of your account credentials. You must notify us immediately of any unauthorized access to your account. We reserve the right to terminate accounts that violate these terms or that have been inactive for an extended period."
+      },
+      {
+        "heading": "4. Payments and Refunds",
+        "body": "Service fees are charged per event and are due before sending invitations. All prices are listed in Kuwaiti Dinars (KWD) and are inclusive of applicable taxes. Payments are processed securely through our payment provider. Refunds are not available once invitations have been sent. If technical issues on our end prevent delivery, we will work with you to resolve the issue or issue a credit."
+      },
+      {
+        "heading": "5. User Content and Conduct",
+        "body": "You retain ownership of content you upload (invitation cards, guest lists, event details). By uploading content, you grant us a limited license to use it solely for providing the service to you. You must not use Da3witi to send unsolicited messages, spam, or content that is illegal, offensive, or violates any third party's rights. You are solely responsible for obtaining consent from your guests to receive WhatsApp messages."
+      },
+      {
+        "heading": "6. WhatsApp Compliance",
+        "body": "Da3witi operates through the official WhatsApp Business API. You agree to comply with WhatsApp's Business Policy and Terms of Service. Sending messages to recipients who have not consented may result in suspension of your account and potential action by WhatsApp."
+      },
+      {
+        "heading": "7. Limitation of Liability",
+        "body": "Da3witi is provided \"as is\" without warranties of any kind. We are not liable for indirect, incidental, or consequential damages arising from your use of the service. Our total liability shall not exceed the amount you paid for the specific event in question. We are not responsible for delays or failures caused by WhatsApp platform outages, network issues, or factors outside our control."
+      },
+      {
+        "heading": "8. Modifications to Terms",
+        "body": "We may update these terms from time to time. We will notify you of material changes by email or by posting a notice on our website. Continued use of the service after such notice constitutes your acceptance of the updated terms."
+      },
+      {
+        "heading": "9. Governing Law",
+        "body": "These terms are governed by the laws of the State of Kuwait. Any disputes shall be resolved in the competent courts of Kuwait."
+      },
+      {
+        "heading": "10. Contact",
+        "body": "For questions about these Terms of Service, please contact us at hello@da3witi.com or via WhatsApp at +965 96685677."
+      }
+    ]
+  },
+  "PrivacyPage": {
+    "title": "Privacy Policy",
+    "last_updated": "Last updated: February 2025",
+    "intro": "At Da3witi, we take your privacy seriously. This policy explains what information we collect, how we use it, and your rights regarding your data.",
+    "sections": [
+      {
+        "heading": "1. Information We Collect",
+        "body": "We collect information you provide directly: your name, email address, and password when you register; event details, guest names, and phone numbers you upload; payment information (processed securely by our payment provider — we do not store card details). We also collect usage data such as pages visited, features used, and device information to improve our service."
+      },
+      {
+        "heading": "2. How We Use Your Information",
+        "body": "We use your information to provide and operate the Da3witi service; send WhatsApp invitations to your guests on your behalf; process payments and manage your account; send you service-related communications such as receipts and notifications; improve and develop new features; and comply with legal obligations."
+      },
+      {
+        "heading": "3. Guest Data",
+        "body": "Guest names and phone numbers you upload are used solely to deliver invitations for your event. We do not use guest contact information for our own marketing. Guest data is retained for as long as your event is active and deleted upon your request or within 12 months after the event date."
+      },
+      {
+        "heading": "4. Sharing of Information",
+        "body": "We do not sell your personal information. We share data only with: WhatsApp (Meta) to deliver messages via the Business API; our payment processor to handle transactions; cloud infrastructure providers who process data under strict confidentiality agreements. We may disclose information if required by law or to protect the rights and safety of our users."
+      },
+      {
+        "heading": "5. Data Retention",
+        "body": "Account data is retained as long as your account is active. Event and guest data is retained for 12 months after the event date, after which it is permanently deleted. You may request deletion of your data at any time by contacting us."
+      },
+      {
+        "heading": "6. Data Security",
+        "body": "We implement industry-standard security measures including encryption in transit (TLS) and at rest. Access to personal data is restricted to authorized personnel only. Despite our efforts, no system is completely secure and we cannot guarantee absolute security."
+      },
+      {
+        "heading": "7. Your Rights",
+        "body": "You have the right to access the personal information we hold about you; correct inaccurate data; request deletion of your account and associated data; withdraw consent for processing where consent is the legal basis. To exercise these rights, contact us at hello@da3witi.com."
+      },
+      {
+        "heading": "8. Cookies",
+        "body": "We use essential cookies to keep you logged in and remember your preferences. We do not use third-party advertising cookies. You can control cookie settings through your browser, though disabling essential cookies may affect functionality."
+      },
+      {
+        "heading": "9. Changes to This Policy",
+        "body": "We may update this Privacy Policy periodically. We will notify you of significant changes by email. The date at the top of this page indicates when the policy was last revised."
+      },
+      {
+        "heading": "10. Contact",
+        "body": "For privacy-related inquiries, please contact us at hello@da3witi.com or via WhatsApp at +965 96685677. Our address is: Dune Technical Services Company for Computer Technology WLL, Al Qibla, Kuwait."
+      }
+    ]
   },
   "GuestErrors": {
     "duplicate_phone": "The phone number {phone} is already used by another guest in this event.",
