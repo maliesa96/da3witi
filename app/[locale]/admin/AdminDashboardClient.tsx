@@ -500,12 +500,13 @@ function RecentEventsList({ events }: { events: RecentEvent[] }) {
   return (
     <div className="space-y-2">
       {events.map((ev, i) => (
-        <motion.div
+        <motion.a
           key={ev.id}
+          href={`/en/admin/events/${ev.id}`}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 + i * 0.05 }}
-          className="flex items-center gap-3 p-3 rounded-xl bg-stone-50/60 hover:bg-stone-100/80 transition-colors"
+          className="flex items-center gap-3 p-3 rounded-xl bg-stone-50/60 hover:bg-stone-100/80 transition-colors cursor-pointer"
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-stone-900 truncate">
@@ -540,7 +541,7 @@ function RecentEventsList({ events }: { events: RecentEvent[] }) {
               Free
             </span>
           )}
-        </motion.div>
+        </motion.a>
       ))}
     </div>
   );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/admin";
 
 export type ActivityItem = {
   id: string;
@@ -38,7 +39,7 @@ export async function GET(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    if (event.userId !== user.id) {
+    if (event.userId !== user.id && !isAdmin(user.email)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
