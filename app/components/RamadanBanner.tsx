@@ -6,7 +6,7 @@ import { isRamadanPromoActive } from "@/lib/promo";
 export default function RamadanBanner() {
   const t = useTranslations("HomePage");
 
-  if (!isRamadanPromoActive) return null;
+  if (!isRamadanPromoActive()) return null;
 
   return (
     <motion.div

@@ -254,7 +254,10 @@
     "dashboard": "لوحة التحكم",
     "contact": "اتصل بنا",
     "start_now": "ابدأ الآن",
-    "create_event": "إنشاء المناسبة"
+    "create_event": "إنشاء المناسبة",
+    "how_it_works": "طريقة العمل",
+    "pricing": "الأسعار",
+    "about": "عن المنصة"
   },
   "Footer": {
     "about": "عن المنصة",

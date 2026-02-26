@@ -86,6 +86,20 @@ export function Navbar() {
             </Link>
 
             <Link
+              href="/#how-it-works"
+              className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
+            >
+              {t('how_it_works')}
+            </Link>
+
+            <Link
+              href="/#pricing"
+              className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
+            >
+              {t('pricing')}
+            </Link>
+
+            <Link
               href="/contact"
               className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
             >
@@ -184,6 +198,22 @@ export function Navbar() {
           >
             <Globe size={18} />
             <span>{langLabel}</span>
+          </Link>
+
+          <Link
+            href="/#how-it-works"
+            className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <span>{t('how_it_works')}</span>
+          </Link>
+
+          <Link
+            href="/#pricing"
+            className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <span>{t('pricing')}</span>
           </Link>
 
           <Link

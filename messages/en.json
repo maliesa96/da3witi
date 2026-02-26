@@ -254,7 +254,10 @@
     "dashboard": "Dashboard",
     "contact": "Contact Us",
     "start_now": "Start Now",
-    "create_event": "Create Event"
+    "create_event": "Create Event",
+    "how_it_works": "How It Works",
+    "pricing": "Pricing",
+    "about": "About"
   },
   "Footer": {
     "about": "About",
