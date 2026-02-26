@@ -58,6 +58,9 @@ export async function generateMetadata({
 
   return {
     metadataBase: SITE_URL,
+    verification: {
+      google: "WRfHWklz83tXOIsEtFWeQGcnWxMT20SdFdV6NRKuze8",
+    },
     title: {
       default: brand,
       template: `%s | ${brand}`,
