@@ -25,6 +25,7 @@ export async function generateMetadata({
       languages: {
         en: "/en/contact",
         ar: "/ar/contact",
+        "x-default": "/en/contact",
       },
     },
     openGraph: {

@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import "../globals.css";
 
-const SITE_URL = new URL("https://da3witi.com");
+const SITE_URL = new URL("https://www.da3witi.com");
 
 const bricolageGrotesque = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -64,9 +64,11 @@ export async function generateMetadata({
     },
     description,
     alternates: {
+      canonical: `/${locale}`,
       languages: {
         en: "/en",
         ar: "/ar",
+        "x-default": "/en",
       },
     },
     openGraph: {

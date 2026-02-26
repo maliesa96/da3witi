@@ -24,6 +24,7 @@ export async function generateMetadata({
       languages: {
         en: "/en/privacy",
         ar: "/ar/privacy",
+        "x-default": "/en/privacy",
       },
     },
     openGraph: {
