@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/admin";
+
+function canAccessEvent(
+  event: { userId: string | null; customerEmail: string | null; customerUserId: string | null; vendorId: string | null },
+  user: { id: string; email?: string | undefined }
+): boolean {
+  if (event.userId === user.id) return true;
+  if (isAdmin(user.email)) return true;
+  if (event.vendorId && event.customerEmail && user.email && event.customerEmail === user.email) return true;
+  if (event.vendorId && event.customerUserId && event.customerUserId === user.id) return true;
+  return false;
+}
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ eventId: string }> }) {
   try {
@@ -33,6 +45,10 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
         locale: true,
         paidAt: true,
         userId: true,
+        vendorId: true,
+        customerEmail: true,
+        customerUserId: true,
+        customerPermissions: true,
       },
     });
 
@@ -40,7 +56,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    if (event.userId !== user.id) {
+    if (!canAccessEvent(event, user)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -59,6 +75,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
       imageUrl: event.imageUrl ?? null,
       locale: event.locale ?? null,
       paidAt: event.paidAt ? event.paidAt.toISOString() : null,
+      customerPermissions: event.customerPermissions ?? null,
     });
   } catch (error) {
     console.error("GET /api/events/[eventId] failed:", error);
@@ -81,14 +98,15 @@ export async function DELETE(_request: NextRequest, context: { params: Promise<{
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, userId: true, paidAt: true, imageUrl: true },
+      select: { id: true, userId: true, paidAt: true, imageUrl: true, vendorId: true, customerEmail: true, customerUserId: true },
     });
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    if (event.userId !== user.id) {
+    // Only the owner (or admin) can delete; customers cannot
+    if (event.userId !== user.id && !isAdmin(user.email)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

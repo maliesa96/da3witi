@@ -55,6 +55,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
         inviteCountDeclined: true,
         inviteCountFailed: true,
         inviteCountNoReply: true,
+        vendorId: true,
+        customerEmail: true,
+        customerUserId: true,
       },
     });
 
@@ -62,7 +65,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    if (event.userId !== user.id && !isAdmin(user.email)) {
+    const isOwner = event.userId === user.id;
+    const isCustomer =
+      event.vendorId &&
+      ((event.customerEmail && user.email && event.customerEmail === user.email) ||
+       (event.customerUserId && event.customerUserId === user.id));
+
+    if (!isOwner && !isAdmin(user.email) && !isCustomer) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

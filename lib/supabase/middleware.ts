@@ -1,6 +1,32 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { ADMIN_EMAILS } from '@/lib/admin'
+import { ADMIN_EMAILS } from '../admin-emails'
+import { COOKIE_NAME } from './cookieName'
+
+const VENDOR_ID = process.env.VENDOR_ID || null;
+const _isVendorMode = !!VENDOR_ID;
+
+let _vendorAdminEmailsCache: string[] | null = null;
+let _vendorAdminEmailsCacheTime = 0;
+const CACHE_TTL_MS = 60_000;
+
+async function getVendorAdminEmails(
+  supabase: ReturnType<typeof createServerClient>
+): Promise<string[]> {
+  if (!VENDOR_ID) return [];
+  const now = Date.now();
+  if (_vendorAdminEmailsCache && now - _vendorAdminEmailsCacheTime < CACHE_TTL_MS) {
+    return _vendorAdminEmailsCache;
+  }
+  const { data } = await supabase
+    .from("vendors")
+    .select("admin_emails")
+    .eq("id", VENDOR_ID)
+    .single();
+  _vendorAdminEmailsCache = (data?.admin_emails as string[]) ?? [];
+  _vendorAdminEmailsCacheTime = now;
+  return _vendorAdminEmailsCache;
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -11,12 +37,13 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
     {
+      ...(COOKIE_NAME ? { cookieOptions: { name: COOKIE_NAME } } : {}),
       cookies: {
         getAll() {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -48,12 +75,23 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && pathname.includes('/admin') && !ADMIN_EMAILS.includes(user.email ?? '')) {
-    const segments = pathname.split('/');
-    const locale = segments[1] === 'ar' || segments[1] === 'en' ? segments[1] : 'en';
-    const url = request.nextUrl.clone()
-    url.pathname = `/${locale}`
-    return NextResponse.redirect(url)
+  if (user && (pathname.includes('/admin') || (_isVendorMode && pathname.includes('/wizard')))) {
+    const vendorAdminEmails = _isVendorMode ? await getVendorAdminEmails(supabase) : [];
+    const isAllowed = _isVendorMode
+      ? vendorAdminEmails.includes(user.email!) || ADMIN_EMAILS.includes(user.email!)
+      : ADMIN_EMAILS.includes(user.email!);
+
+    if (!isAllowed) {
+      const segments = pathname.split('/');
+      const locale = segments[1] === 'ar' || segments[1] === 'en' ? segments[1] : 'en';
+      const url = request.nextUrl.clone()
+      if (pathname.includes('/admin')) {
+        url.pathname = `/${locale}`
+      } else {
+        url.pathname = `/${locale}/dashboard`
+      }
+      return NextResponse.redirect(url)
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as is. If you're creating a

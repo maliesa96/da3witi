@@ -23,6 +23,7 @@ import { formatGoogleMapsLink } from "@/lib/maps";
 import { normalizePhoneToE164 } from "@/lib/phone";
 import { type InviteMediaType, type WhatsAppTextViolation, MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage, validateWhatsAppText } from "@/lib/inviteMessage";
 import { parseGuestError, guestErrorMessage } from "@/lib/utils/guestErrors";
+import { isVendorMode } from "@/lib/vendorClient";
 
 const violationKeys: Record<WhatsAppTextViolation, string> = {
     newline: 'errors.message_invalid_newline',
@@ -276,6 +277,10 @@ export default function Wizard() {
   }, [errors, step1ValidationError]);
 
   // State for ContactImport to persist across tab switches
+  // Vendor-mode fields
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [canSendInvites, setCanSendInvites] = useState(false);
+
   const [importData, setImportData] = useState<(string | number | null)[][]>([]);
   const [importNameCol, setImportNameCol] = useState<number | null>(null);
   const [importPhoneCol, setImportPhoneCol] = useState<number | null>(null);
@@ -463,7 +468,11 @@ export default function Wizard() {
         mediaType: details.mediaType,
         mediaFilename: details.mediaFilename,
         guests: normalized.invites.filter(i => i.name && i.phone),
-        locale: details.messageLocale
+        locale: details.messageLocale,
+        ...(isVendorMode ? {
+          customerEmail: customerEmail || undefined,
+          customerPermissions: { canSendInvites },
+        } : {}),
       });
 
       if (result.success) {
@@ -1048,6 +1057,52 @@ export default function Wizard() {
                   </label>
                 </div>
               </div>
+
+              {isVendorMode && (
+                <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm space-y-4">
+                  <h3 className="text-sm font-medium text-stone-900">
+                    {locale === 'ar' ? 'إعدادات العميل' : 'Customer Settings'}
+                  </h3>
+                  <div>
+                    <label className="text-xs font-medium text-stone-700 mb-1.5 block">
+                      {locale === 'ar' ? 'البريد الإلكتروني للعميل' : 'Customer Email'}
+                    </label>
+                    <input
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder={locale === 'ar' ? 'customer@example.com' : 'customer@example.com'}
+                      className="w-full px-4 py-2.5 rounded-lg bg-stone-50 border border-stone-200 text-sm outline-none focus:bg-white focus:border-stone-400 transition-all dir-ltr text-left"
+                    />
+                    <p className="text-[10px] text-stone-500 mt-1.5">
+                      {locale === 'ar' 
+                        ? 'سيتمكن العميل من تسجيل الدخول بهذا البريد لمتابعة الدعوات'
+                        : 'The customer will sign in with this email to track their RSVPs'}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-stone-900">
+                        {locale === 'ar' ? 'السماح بإرسال الدعوات' : 'Allow Sending Invites'}
+                      </div>
+                      <div className="text-[11px] text-stone-500">
+                        {locale === 'ar'
+                          ? 'السماح للعميل بإرسال الدعوات عبر واتساب'
+                          : 'Allow the customer to send invites via WhatsApp'}
+                      </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={canSendInvites}
+                        onChange={(e) => setCanSendInvites(e.target.checked)}
+                        className="sr-only peer custom-checkbox"
+                      />
+                      <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4">
                 <div className="hidden lg:flex justify-end">

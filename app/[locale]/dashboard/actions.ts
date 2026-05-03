@@ -8,6 +8,8 @@ import { enqueueWhatsAppOutboxBatch } from '@/lib/queue/whatsappOutbox';
 import { shouldEnqueueWhatsAppInvite } from '@/lib/whatsappSendEligibility';
 import { broadcastGuestInsert } from '@/lib/supabase/broadcast';
 import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
+import { isAdmin } from '@/lib/admin';
+import { parseCustomerPermissions } from '@/lib/vendor';
 
 async function getAuthedUser() {
   const supabase = await createClient();
@@ -20,6 +22,17 @@ async function getAuthedUser() {
   }
 
   return user;
+}
+
+function canAccessEvent(
+  event: { userId: string | null; customerEmail: string | null; customerUserId: string | null; vendorId: string | null },
+  user: { id: string; email?: string | undefined }
+): boolean {
+  if (event.userId === user.id) return true;
+  if (isAdmin(user.email)) return true;
+  if (event.vendorId && event.customerEmail && user.email && event.customerEmail === user.email) return true;
+  if (event.vendorId && event.customerUserId && event.customerUserId === user.id) return true;
+  return false;
 }
 
 export async function addGuests(
@@ -36,7 +49,7 @@ export async function addGuests(
     throw new Error('Event not found');
   }
 
-  if (event.userId !== user.id) {
+  if (!canAccessEvent(event, user)) {
     throw new Error('Forbidden');
   }
 
@@ -162,8 +175,17 @@ export async function sendInvitesForEvent(eventId: string, locale: 'en' | 'ar') 
     throw new Error('Event not found');
   }
 
-  if (event.userId !== user.id) {
+  if (!canAccessEvent(event, user)) {
     throw new Error('Forbidden');
+  }
+
+  // For vendor customers, check if they have permission to send invites
+  const isOwner = event.userId === user.id;
+  if (!isOwner && event.vendorId) {
+    const perms = parseCustomerPermissions(event.customerPermissions);
+    if (!perms.canSendInvites) {
+      throw new Error('Forbidden');
+    }
   }
 
   // Check if event has been paid for
@@ -233,7 +255,7 @@ export async function getGuestsPaginated(
     throw new Error('Event not found');
   }
 
-  if (event.userId !== user.id) {
+  if (!canAccessEvent(event, user)) {
     throw new Error('Forbidden');
   }
 
@@ -339,7 +361,7 @@ export async function deleteGuest(guestId: string) {
     throw new Error('Guest not found');
   }
 
-  if (guest.event.userId !== user.id) {
+  if (!canAccessEvent(guest.event, user)) {
     throw new Error('Forbidden');
   }
 
@@ -366,7 +388,7 @@ export async function deleteAllGuests(eventId: string) {
     throw new Error('Event not found');
   }
 
-  if (event.userId !== user.id) {
+  if (!canAccessEvent(event, user)) {
     throw new Error('Forbidden');
   }
 
@@ -396,7 +418,7 @@ export async function updateGuest(
     throw new Error('Guest not found');
   }
 
-  if (guest.event.userId !== user.id) {
+  if (!canAccessEvent(guest.event, user)) {
     throw new Error('Forbidden');
   }
 

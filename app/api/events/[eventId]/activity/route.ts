@@ -29,17 +29,22 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify event ownership
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { userId: true },
+      select: { userId: true, vendorId: true, customerEmail: true, customerUserId: true },
     });
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    if (event.userId !== user.id && !isAdmin(user.email)) {
+    const isOwner = event.userId === user.id;
+    const isCustomer =
+      event.vendorId &&
+      ((event.customerEmail && user.email && event.customerEmail === user.email) ||
+       (event.customerUserId && event.customerUserId === user.id));
+
+    if (!isOwner && !isAdmin(user.email) && !isCustomer) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

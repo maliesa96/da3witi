@@ -12,6 +12,26 @@ datasource db {
   provider = "postgresql"
 }
 
+model Vendor {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  name          String
+  slug          String   @unique
+  logoUrl       String?  @map("logo_url")
+  faviconUrl    String?  @map("favicon_url")
+  adminEmails   String[] @map("admin_emails")
+  defaultLocale String   @default("ar") @map("default_locale")
+
+  whatsappPhoneNumberId String? @map("whatsapp_phone_number_id")
+  wabaId                String? @map("waba_id")
+  whatsappVerifyToken   String? @map("whatsapp_verify_token")
+  supportWhatsapp       String? @map("support_whatsapp")
+
+  events        Event[]
+
+  @@map("vendors")
+}
+
 model Event {
   id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -35,6 +55,12 @@ model Event {
   paidAt           DateTime? @map("paid_at") @db.Timestamptz(6)
   guests           Guest[]
 
+  vendorId            String?  @map("vendor_id") @db.Uuid
+  vendor              Vendor?  @relation(fields: [vendorId], references: [id])
+  customerEmail       String?  @map("customer_email")
+  customerUserId      String?  @map("customer_user_id") @db.Uuid
+  customerPermissions Json?    @map("customer_permissions")
+
   // Denormalized counters (maintained via DB triggers on "guests")
   guestCountTotal      Int @default(0) @map("guest_count_total")
 
@@ -49,6 +75,9 @@ model Event {
   inviteCountNoReply   Int @default(0) @map("invite_count_no_reply")
 
   @@index([userId, createdAt])
+  @@index([vendorId])
+  @@index([customerEmail])
+  @@index([customerUserId])
   @@map("events")
 }
 

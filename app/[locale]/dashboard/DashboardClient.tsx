@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Calendar, Clock, MapPin, Users, Plus, QrCode, CheckCircle2, Image as ImageIcon, BadgeCheck } from "lucide-react";
 
 import { Link } from "@/navigation";
+import { isVendorMode } from "@/lib/vendorClient";
 
 type EventCardData = {
   id: string;
@@ -261,7 +262,11 @@ export default function DashboardClient() {
             <Calendar size={28} className="text-stone-400" />
           </div>
           <h3 className="text-lg font-semibold text-stone-900 mb-2">{t("no_events_title")}</h3>
-          <p className="text-sm text-stone-500 mb-6">{t("no_events_desc")}</p>
+          <p className="text-sm text-stone-500 mb-6">
+            {isVendorMode
+              ? (locale === 'ar' ? 'لم يتم إنشاء أي فعالية بعد' : 'No events have been created for you yet')
+              : t("no_events_desc")}
+          </p>
           <Link
             href="/wizard"
             prefetch={false}

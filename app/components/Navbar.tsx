@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Plus, LogOut, User, Menu, X, Mail, Shield } from "lucide-react";
+import { Globe, Plus, LogOut, User, Menu, X, Mail, Shield, MessageCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/navigation";
 import { useEffect, useState } from "react";
@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { AuthChangeEvent, Session, User as SupabaseUser } from "@supabase/supabase-js";
 import { signOut } from "@/app/[locale]/login/actions";
 import Image from "next/image";
+import { isVendorMode, SITE_NAME, LOGO_URL } from "@/lib/vendorClient";
 
 export function Navbar() {
   const t = useTranslations('Navbar');
@@ -63,13 +64,23 @@ export function Navbar() {
         <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 cursor-pointer">
             <div className="h-12 shrink-0">
-              <Image
-                src={locale === 'ar' ? '/images/logo_ar_black.svg' : '/images/logo_en_black.svg'}
-                alt={t('brand')}
-                width={240}
-                height={64}
-                className="h-12 w-auto"
-              />
+              {LOGO_URL ? (
+                <Image
+                  src={LOGO_URL}
+                  alt={SITE_NAME || t('brand')}
+                  width={240}
+                  height={64}
+                  className="h-12 w-auto"
+                />
+              ) : (
+                <Image
+                  src={locale === 'ar' ? '/images/logo_ar_black.svg' : '/images/logo_en_black.svg'}
+                  alt={t('brand')}
+                  width={240}
+                  height={64}
+                  className="h-12 w-auto"
+                />
+              )}
             </div>
           </Link>
 
@@ -85,27 +96,43 @@ export function Navbar() {
               <span className="sm:hidden uppercase">{otherLocale}</span>
             </Link>
 
-            <Link
-              href="/#how-it-works"
-              className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
-            >
-              {t('how_it_works')}
-            </Link>
+            {!isVendorMode && (
+              <>
+                <Link
+                  href="/#how-it-works"
+                  className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
+                >
+                  {t('how_it_works')}
+                </Link>
 
-            <Link
-              href="/#pricing"
-              className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
-            >
-              {t('pricing')}
-            </Link>
+                <Link
+                  href="/#pricing"
+                  className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
+                >
+                  {t('pricing')}
+                </Link>
 
-            <Link
-              href="/contact"
-              className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
-            >
-              {t('contact')}
-            </Link>
-            
+                <Link
+                  href="/contact"
+                  className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer"
+                >
+                  {t('contact')}
+                </Link>
+              </>
+            )}
+
+            {isVendorMode && (
+              <a
+                href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "966500000000"}?text=${encodeURIComponent(locale === 'ar' ? 'مرحبًا، أحتاج مساعدة' : 'Hi, I need help')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs md:text-sm font-medium text-stone-600 hover:text-stone-900 px-2 md:px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <MessageCircle size={14} />
+                <span>{locale === 'ar' ? 'تواصل معنا' : 'Contact us'}</span>
+              </a>
+            )}
+
             {user ? (
               <>
                 <Link
@@ -143,17 +170,19 @@ export function Navbar() {
               </Link>
             )}
 
-            <Link
-              href="/wizard"
-              prefetch={false}
-              className="bg-stone-900 text-white text-xs md:text-sm font-semibold px-4 md:px-6 py-2.5 rounded-full hover:bg-stone-800 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 group shrink-0 cursor-pointer"
-            >
-              <span>{user ? t('create_event') : t('start_now')}</span>
-              <Plus
-                size={16}
-                className="transition-transform group-hover:rotate-90 md:block hidden"
-              />
-            </Link>
+            {(!isVendorMode || user) && (
+              <Link
+                href="/wizard"
+                prefetch={false}
+                className="bg-stone-900 text-white text-xs md:text-sm font-semibold px-4 md:px-6 py-2.5 rounded-full hover:bg-stone-800 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 group shrink-0 cursor-pointer"
+              >
+                <span>{user ? t('create_event') : t('start_now')}</span>
+                <Plus
+                  size={16}
+                  className="transition-transform group-hover:rotate-90 md:block hidden"
+                />
+              </Link>
+            )}
           </div>
 
           {/* Mobile Hamburger Button */}
@@ -200,30 +229,47 @@ export function Navbar() {
             <span>{langLabel}</span>
           </Link>
 
-          <Link
-            href="/#how-it-works"
-            className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <span>{t('how_it_works')}</span>
-          </Link>
+          {!isVendorMode && (
+            <>
+              <Link
+                href="/#how-it-works"
+                className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <span>{t('how_it_works')}</span>
+              </Link>
 
-          <Link
-            href="/#pricing"
-            className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <span>{t('pricing')}</span>
-          </Link>
+              <Link
+                href="/#pricing"
+                className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <span>{t('pricing')}</span>
+              </Link>
 
-          <Link
-            href="/contact"
-            className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <Mail size={18} />
-            <span>{t('contact')}</span>
-          </Link>
+              <Link
+                href="/contact"
+                className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Mail size={18} />
+                <span>{t('contact')}</span>
+              </Link>
+            </>
+          )}
+
+          {isVendorMode && (
+            <a
+              href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "966500000000"}?text=${encodeURIComponent(locale === 'ar' ? 'مرحبًا، أحتاج مساعدة' : 'Hi, I need help')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <MessageCircle size={18} />
+              <span>{locale === 'ar' ? 'تواصل معنا' : 'Contact us'}</span>
+            </a>
+          )}
 
           {user ? (
             <>
@@ -267,17 +313,19 @@ export function Navbar() {
             </Link>
           )}
 
-          <div className="pt-4 border-t border-stone-200">
-            <Link
-              href="/wizard"
-              prefetch={false}
-              className="w-full bg-stone-900 text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-stone-800 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <Plus size={18} />
-              <span>{user ? t('create_event') : t('start_now')}</span>
-            </Link>
-          </div>
+          {(!isVendorMode || user) && (
+            <div className="pt-4 border-t border-stone-200">
+              <Link
+                href="/wizard"
+                prefetch={false}
+                className="w-full bg-stone-900 text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-stone-800 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Plus size={18} />
+                <span>{user ? t('create_event') : t('start_now')}</span>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </>

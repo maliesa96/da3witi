@@ -1,12 +1,10 @@
 import {defineRouting} from 'next-intl/routing';
 
+const defaultLocale = (process.env.NEXT_PUBLIC_DEFAULT_LOCALE === 'en' ? 'en' : 'ar') as 'en' | 'ar';
+const isVendorMode = process.env.NEXT_PUBLIC_VENDOR_MODE === '1';
+
 export const routing = defineRouting({
-  // A list of all locales that are supported
   locales: ['en', 'ar'],
-
-  // Used when no locale matches
-  defaultLocale: 'ar',
-
-  // Always start from Arabic instead of inferring from browser language
-  // localeDetection: true
+  defaultLocale,
+  localeDetection: !isVendorMode,
 });

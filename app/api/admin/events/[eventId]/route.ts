@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
+import { VENDOR_ID } from "@/lib/vendor";
 
 export async function GET(
   _request: NextRequest,
@@ -12,8 +13,11 @@ export async function GET(
 
     const { eventId } = await context.params;
 
+    const whereClause: { id: string; vendorId?: string } = { id: eventId };
+    if (VENDOR_ID) whereClause.vendorId = VENDOR_ID;
+
     const event = await prisma.event.findUnique({
-      where: { id: eventId },
+      where: whereClause,
       select: {
         id: true,
         title: true,

@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { buildInviteTemplatePayload, type MediaType } from "@/lib/whatsapp";
 import { enqueueWhatsAppOutboxBatch, RedisConfigError } from "@/lib/queue/whatsappOutbox";
 import { shouldEnqueueWhatsAppInvite } from "@/lib/whatsappSendEligibility";
+import { isAdmin } from "@/lib/admin";
+import { parseCustomerPermissions } from "@/lib/vendor";
 
 export async function POST(_request: NextRequest, context: { params: Promise<{ eventId: string }> }) {
   try {
@@ -26,8 +28,22 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ e
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    if (event.userId !== user.id) {
+    const isOwner = event.userId === user.id;
+    const isCustomer =
+      event.vendorId &&
+      ((event.customerEmail && user.email && event.customerEmail === user.email) ||
+       (event.customerUserId && event.customerUserId === user.id));
+
+    if (!isOwner && !isAdmin(user.email) && !isCustomer) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Check customer permissions for sending invites
+    if (!isOwner && !isAdmin(user.email) && event.vendorId) {
+      const perms = parseCustomerPermissions(event.customerPermissions);
+      if (!perms.canSendInvites) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     if (!event.paidAt) {

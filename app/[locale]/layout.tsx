@@ -3,8 +3,9 @@ import { IBM_Plex_Sans_Arabic, Inter, Cairo, Bricolage_Grotesque, Alexandria, In
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import "../globals.css";
+import { SITE_NAME as VENDOR_SITE_NAME, FAVICON_URL as VENDOR_FAVICON_URL, isVendorMode } from "@/lib/vendor";
 
-const SITE_URL = new URL("https://www.da3witi.com");
+const SITE_URL = new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.da3witi.com");
 
 const bricolageGrotesque = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -51,9 +52,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
 
-  // Use existing marketing copy as a safe default for the whole locale segment.
   const t = await getTranslations({ locale, namespace: "HomePage" });
-  const brand = locale === "ar" ? "دعـوتـي" : "Da3witi";
+  const brand = VENDOR_SITE_NAME || (locale === "ar" ? "دعـوتـي" : "Da3witi");
   const description = t("description");
 
   return {
@@ -61,6 +61,7 @@ export async function generateMetadata({
     verification: {
       google: "WRfHWklz83tXOIsEtFWeQGcnWxMT20SdFdV6NRKuze8",
     },
+    ...(VENDOR_FAVICON_URL ? { icons: { icon: VENDOR_FAVICON_URL } } : {}),
     title: {
       default: brand,
       template: `%s | ${brand}`,
@@ -99,6 +100,8 @@ import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 
 function JsonLd({ locale }: { locale: string }) {
+  if (isVendorMode) return null;
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -156,7 +159,7 @@ export default async function RootLayout({
           <main className="min-h-screen relative overflow-hidden flex-1">
             {children}
           </main>
-          <Footer />
+          {!isVendorMode && <Footer />}
         </NextIntlClientProvider>
       </body>
     </html>

@@ -4,24 +4,45 @@ import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { Link } from "@/navigation";
 import Image from "next/image";
+import { isVendorMode, SITE_NAME, LOGO_URL } from "@/lib/vendorClient";
 
 export function Footer() {
   const t = useTranslations('Footer');
   const locale = useLocale();
   const currentYear = new Date().getFullYear();
 
+  if (isVendorMode) {
+    return (
+      <footer className="border-t border-stone-200 bg-white py-6 mt-auto">
+        <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-6 text-center text-xs text-stone-400">
+          <span>&copy; {currentYear} {SITE_NAME || "Da3witi"}</span>
+        </div>
+      </footer>
+    );
+  }
+
   return (
     <footer className="border-t border-stone-200 bg-white py-8 mt-auto">
       <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
           <div className="h-8">
-            <Image
-              src={locale === 'ar' ? '/images/logo_ar_black.svg' : '/images/logo_en_black.svg'}
-              alt="Da3witi"
-              width={120}
-              height={32}
-              className="h-8 w-auto"
-            />
+            {LOGO_URL ? (
+              <Image
+                src={LOGO_URL}
+                alt={SITE_NAME || "Da3witi"}
+                width={120}
+                height={32}
+                className="h-8 w-auto"
+              />
+            ) : (
+              <Image
+                src={locale === 'ar' ? '/images/logo_ar_black.svg' : '/images/logo_en_black.svg'}
+                alt="Da3witi"
+                width={120}
+                height={32}
+                className="h-8 w-auto"
+              />
+            )}
           </div>
           <div className="flex gap-6 text-sm text-stone-500 font-medium">
             <Link

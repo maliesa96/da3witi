@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { normalizePhoneToE164 } from '@/lib/phone';
 import { MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage, validateWhatsAppText } from '@/lib/inviteMessage';
 import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
+import { VENDOR_ID, isVendorMode, isVendorAdmin, type CustomerPermissions, DEFAULT_CUSTOMER_PERMISSIONS } from '@/lib/vendor';
 
 export async function createEvent(formData: {
   title: string;
@@ -23,12 +24,19 @@ export async function createEvent(formData: {
   mediaFilename?: string;
   guests: { name: string; phone: string; inviteCount?: number }[]
   locale: 'en' | 'ar';
+  customerEmail?: string;
+  customerPermissions?: CustomerPermissions;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     throw new Error('Unauthorized');
+  }
+
+  // In vendor mode, only vendor admins can create events
+  if (isVendorMode && !(await isVendorAdmin(user.email))) {
+    throw new Error('Forbidden');
   }
 
   const guestsValidated = (formData.guests || []).map((guest) => {
@@ -111,6 +119,12 @@ export async function createEvent(formData: {
       mediaType: formData.mediaType,
       mediaFilename: formData.mediaFilename,
       locale: formData.locale,
+      ...(isVendorMode && VENDOR_ID ? {
+        vendorId: VENDOR_ID,
+        customerEmail: formData.customerEmail || null,
+        customerPermissions: formData.customerPermissions ?? DEFAULT_CUSTOMER_PERMISSIONS,
+        paidAt: new Date(),
+      } : {}),
       guests: {
         create: guestsValidated.map(guest => ({
           name: guest.name,

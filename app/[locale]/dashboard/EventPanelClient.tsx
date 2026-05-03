@@ -11,6 +11,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/navigation";
 import AddGuestForm from "@/app/components/AddGuestForm";
 import ConfirmSendInvitesButton from "@/app/components/ConfirmSendInvitesButton";
+import { isVendorMode } from "@/lib/vendorClient";
 import DeleteAllGuestsButton from "@/app/components/DeleteAllGuestsButton";
 import RecentActivity from "@/app/components/RecentActivity";
 import { GuestListClient, type GuestRowData } from "@/app/components/AnimatedGuestRows";
@@ -20,6 +21,10 @@ import {
   type BroadcastGuestPayload as RealtimeGuestPayload,
   type BroadcastEventPayload as RealtimeEventPayload,
 } from "@/lib/supabase/RealtimeProvider";
+
+type CustomerPermissions = {
+  canSendInvites?: boolean;
+} | null;
 
 type EventForClient = {
   id: string;
@@ -36,6 +41,7 @@ type EventForClient = {
   imageUrl: string | null;
   locale: string | null;
   paidAt: string | null; // ISO
+  customerPermissions?: CustomerPermissions;
 
   // Denormalized counters from `GET /api/events`
   guestCountTotal?: number;
@@ -1075,12 +1081,14 @@ export default function EventPanelClient({
           </div>
 
           <div className="flex flex-col gap-3 min-w-[200px]">
-            <ConfirmSendInvitesButton 
-              pendingToSend={pendingToSend} 
-              onSent={handleInvitesSent}
-              eventId={event.id}
-              isPaid={!!event.paidAt}
-            />
+            {(!isVendorMode || !event.customerPermissions || (event.customerPermissions as { canSendInvites?: boolean }).canSendInvites !== false) && (
+              <ConfirmSendInvitesButton 
+                pendingToSend={pendingToSend} 
+                onSent={handleInvitesSent}
+                eventId={event.id}
+                isPaid={!!event.paidAt}
+              />
+            )}
             <div className="w-full">
               <AddGuestForm
                 eventId={event.id}

@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { COOKIE_NAME } from './cookieName'
 
 let browserClient: ReturnType<typeof createBrowserClient> | null = null
 
@@ -15,6 +16,7 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
     {
+      ...(COOKIE_NAME ? { cookieOptions: { name: COOKIE_NAME } } : {}),
       realtime: {
         // Use Web Worker for heartbeats to prevent browser throttling
         // when the tab is in background. This keeps the connection alive.

@@ -1,11 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
+import { VENDOR_ID } from "@/lib/vendor";
+import { Prisma } from "@prisma/client";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { response } = await requireAdmin();
     if (response) return response;
+
+    const vendorId = VENDOR_ID ?? request.nextUrl.searchParams.get("vendorId");
+    const vendorFilter = vendorId ? { vendorId } : {};
+    const vendorSql = vendorId
+      ? Prisma.sql`AND e.vendor_id = ${vendorId}::uuid`
+      : Prisma.empty;
+    const vendorSqlNoAlias = vendorId
+      ? Prisma.sql`AND vendor_id = ${vendorId}::uuid`
+      : Prisma.empty;
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -22,15 +33,16 @@ export async function GET() {
       signupsPerDay,
       recentEvents,
     ] = await Promise.all([
-      prisma.event.count(),
-      prisma.event.count({ where: { paidAt: { not: null } } }),
-      prisma.guest.count(),
+      prisma.event.count({ where: vendorFilter }),
+      prisma.event.count({ where: { ...vendorFilter, paidAt: { not: null } } }),
+      prisma.guest.count({ where: vendorId ? { event: { vendorId } } : {} }),
       prisma.event.findMany({
-        where: { userId: { not: null } },
+        where: { ...vendorFilter, userId: { not: null } },
         distinct: ["userId"],
         select: { userId: true },
       }),
       prisma.event.aggregate({
+        where: vendorFilter,
         _sum: {
           inviteCountTotal: true,
           inviteCountSent: true,
@@ -46,30 +58,39 @@ export async function GET() {
       prisma.$queryRaw<{ date: string; count: number }[]>`
         SELECT DATE(created_at)::text as date, COUNT(*)::int as count
         FROM events
-        WHERE created_at >= ${thirtyDaysAgo}
+        WHERE created_at >= ${thirtyDaysAgo} ${vendorSqlNoAlias}
         GROUP BY DATE(created_at)
         ORDER BY date
       `,
       prisma.$queryRaw<{ date: string; count: number }[]>`
         SELECT DATE(paid_at)::text as date, COUNT(*)::int as count
         FROM events
-        WHERE paid_at IS NOT NULL AND paid_at >= ${thirtyDaysAgo}
+        WHERE paid_at IS NOT NULL AND paid_at >= ${thirtyDaysAgo} ${vendorSqlNoAlias}
         GROUP BY DATE(paid_at)
         ORDER BY date
       `,
-      prisma.$queryRaw<{ date: string; count: number }[]>`
-        SELECT DATE(created_at)::text as date, COUNT(*)::int as count
-        FROM guests
-        WHERE created_at >= ${thirtyDaysAgo}
-        GROUP BY DATE(created_at)
-        ORDER BY date
-      `,
+      vendorId
+        ? prisma.$queryRaw<{ date: string; count: number }[]>`
+            SELECT DATE(g.created_at)::text as date, COUNT(*)::int as count
+            FROM guests g
+            JOIN events e ON g.event_id = e.id
+            WHERE g.created_at >= ${thirtyDaysAgo} ${vendorSql}
+            GROUP BY DATE(g.created_at)
+            ORDER BY date
+          `
+        : prisma.$queryRaw<{ date: string; count: number }[]>`
+            SELECT DATE(created_at)::text as date, COUNT(*)::int as count
+            FROM guests
+            WHERE created_at >= ${thirtyDaysAgo}
+            GROUP BY DATE(created_at)
+            ORDER BY date
+          `,
       prisma.$queryRaw<{ date: string; count: number }[]>`
         SELECT DATE(first_event)::text as date, COUNT(*)::int as count
         FROM (
           SELECT user_id, MIN(created_at) as first_event
           FROM events
-          WHERE user_id IS NOT NULL
+          WHERE user_id IS NOT NULL ${vendorSqlNoAlias}
           GROUP BY user_id
         ) sub
         WHERE first_event >= ${thirtyDaysAgo}
@@ -86,6 +107,7 @@ export async function GET() {
           paid_at: Date | null;
           owner_email: string | null;
           owner_name: string | null;
+          vendor_id: string | null;
         }[]
       >`
         SELECT
@@ -95,10 +117,12 @@ export async function GET() {
           e.guest_count_total,
           e.invite_count_total,
           e.paid_at,
+          e.vendor_id,
           u.email as owner_email,
           COALESCE(u.raw_user_meta_data->>'display_name', u.raw_user_meta_data->>'name') as owner_name
         FROM events e
         LEFT JOIN auth.users u ON e.user_id = u.id
+        WHERE 1=1 ${vendorSql}
         ORDER BY e.created_at DESC
         LIMIT 10
       `,
@@ -158,6 +182,7 @@ export async function GET() {
         paidAt: e.paid_at?.toISOString() ?? null,
         ownerEmail: e.owner_email ?? null,
         ownerName: e.owner_name ?? null,
+        vendorId: e.vendor_id ?? null,
       })),
     });
   } catch (error) {

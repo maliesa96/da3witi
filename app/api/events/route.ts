@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { isVendorMode } from "@/lib/vendor";
+import type { Prisma } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -13,8 +15,15 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Build query: owner events OR customer events (matched by email or userId)
+    const orConditions: Prisma.EventWhereInput[] = [{ userId: user.id }];
+    if (isVendorMode && user.email) {
+      orConditions.push({ customerEmail: user.email, vendorId: { not: null } });
+      orConditions.push({ customerUserId: user.id, vendorId: { not: null } });
+    }
+
     const events = await prisma.event.findMany({
-      where: { userId: user.id },
+      where: { OR: orConditions },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -41,8 +50,26 @@ export async function GET() {
         inviteCountDeclined: true,
         inviteCountFailed: true,
         inviteCountNoReply: true,
+        vendorId: true,
+        customerEmail: true,
+        customerUserId: true,
+        customerPermissions: true,
       },
     });
+
+    // Auto-link: if customer accessed by email but customerUserId is not set, set it
+    const unlinked = events.filter(
+      (e) =>
+        e.vendorId &&
+        e.customerEmail === user.email &&
+        !e.customerUserId
+    );
+    if (unlinked.length > 0) {
+      await prisma.event.updateMany({
+        where: { id: { in: unlinked.map((e) => e.id) } },
+        data: { customerUserId: user.id },
+      });
+    }
 
     return NextResponse.json({
       events: events.map((e) => ({
@@ -70,6 +97,7 @@ export async function GET() {
         inviteCountDeclined: e.inviteCountDeclined,
         inviteCountFailed: e.inviteCountFailed,
         inviteCountNoReply: e.inviteCountNoReply,
+        customerPermissions: e.customerPermissions ?? null,
       })),
       defaultEventId: events[0]?.id ?? null,
     });

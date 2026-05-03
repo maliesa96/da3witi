@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -14,6 +15,13 @@ import {
   RefreshCw,
   BadgeCheck,
   Clock,
+  Store,
+  Plus,
+  Copy,
+  Check,
+  X,
+  Pencil,
+  Save,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -39,6 +47,25 @@ type RecentEvent = {
   paidAt: string | null;
   ownerEmail: string | null;
   ownerName: string | null;
+  vendorId: string | null;
+};
+
+type VendorSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  faviconUrl: string | null;
+  adminEmails: string[];
+  defaultLocale: string;
+  whatsappPhoneNumberId: string | null;
+  wabaId: string | null;
+  whatsappVerifyToken: string | null;
+  supportWhatsapp: string | null;
+  createdAt: string;
+  eventCount: number;
+  paidEventCount: number;
+  guestCount: number;
 };
 
 type AdminStats = {
@@ -393,7 +420,16 @@ function DonutChart({ data }: { data: StatusEntry[] }) {
     radius = 72,
     strokeWidth = 22;
   const circumference = 2 * Math.PI * radius;
-  let cumulative = 0;
+
+  const segments = data.reduce<{ segLen: number; offset: number; color: string; status: string }[]>(
+    (acc, segment) => {
+      const segLen = (segment.count / total) * circumference;
+      const offset = acc.length > 0 ? acc[acc.length - 1].offset + acc[acc.length - 1].segLen : 0;
+      acc.push({ segLen, offset, color: STATUS_COLORS[segment.status] || "#d6d3d1", status: segment.status });
+      return acc;
+    },
+    []
+  );
 
   return (
     <div className="flex flex-col items-center gap-5">
@@ -403,36 +439,28 @@ function DonutChart({ data }: { data: StatusEntry[] }) {
         transition={{ type: "spring", stiffness: 120, delay: 0.3 }}
       >
         <svg viewBox="0 0 200 200" className="w-44 h-44">
-          {data.map((segment, i) => {
-            const segLen = (segment.count / total) * circumference;
-            const offset = cumulative;
-            cumulative += segLen;
-            const segColor =
-              STATUS_COLORS[segment.status] || "#d6d3d1";
-
-            return (
+          {segments.map((seg, i) => (
               <circle
-                key={segment.status}
+                key={seg.status}
                 cx={cx}
                 cy={cy}
                 r={radius}
                 fill="none"
                 strokeWidth={strokeWidth}
-                stroke={segColor}
+                stroke={seg.color}
                 strokeDasharray={
                   visible
-                    ? `${segLen} ${circumference - segLen}`
+                    ? `${seg.segLen} ${circumference - seg.segLen}`
                     : `0 ${circumference}`
                 }
-                strokeDashoffset={-offset}
+                strokeDashoffset={-seg.offset}
                 style={{
                   transform: `rotate(-90deg)`,
                   transformOrigin: `${cx}px ${cy}px`,
                   transition: `stroke-dasharray 1s ease-out ${0.4 + i * 0.08}s`,
                 }}
               />
-            );
-          })}
+          ))}
           {/* Center label */}
           <text
             x={cx}
@@ -531,6 +559,12 @@ function RecentEventsList({ events }: { events: RecentEvent[] }) {
             <Users size={12} className="text-stone-400" />
             {ev.guestCountTotal}
           </div>
+          {ev.vendorId && (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 text-[10px] font-semibold">
+              <Store size={10} />
+              Vendor
+            </span>
+          )}
           {ev.paidAt ? (
             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-semibold">
               <BadgeCheck size={10} />
@@ -585,25 +619,62 @@ export default function AdminDashboardClient() {
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [activeChart, setActiveChart] = useState<ChartKey>("events");
+  const [vendors, setVendors] = useState<VendorSummary[]>([]);
+  const [activeTab, setActiveTab] = useState<"overview" | "vendors">("overview");
+
+  const [showCreateVendor, setShowCreateVendor] = useState(false);
+  const [newVendorName, setNewVendorName] = useState("");
+  const [newVendorSlug, setNewVendorSlug] = useState("");
+  const [newVendorEmails, setNewVendorEmails] = useState("");
+  const [newVendorLogoUrl, setNewVendorLogoUrl] = useState("");
+  const [newVendorFaviconUrl, setNewVendorFaviconUrl] = useState("");
+  const [newVendorLocale, setNewVendorLocale] = useState<"ar" | "en">("ar");
+  const [newVendorWhatsappPhoneNumberId, setNewVendorWhatsappPhoneNumberId] = useState("");
+  const [newVendorWabaId, setNewVendorWabaId] = useState("");
+  const [newVendorWhatsappVerifyToken, setNewVendorWhatsappVerifyToken] = useState("");
+  const [newVendorSupportWhatsapp, setNewVendorSupportWhatsapp] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createdVendor, setCreatedVendor] = useState<{ id: string; name: string; slug: string; adminEmails: string[]; defaultLocale: string } | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSlug, setEditSlug] = useState("");
+  const [editEmails, setEditEmails] = useState("");
+  const [editLogoUrl, setEditLogoUrl] = useState("");
+  const [editFaviconUrl, setEditFaviconUrl] = useState("");
+  const [editLocale, setEditLocale] = useState<"ar" | "en">("ar");
+  const [editWhatsappPhoneNumberId, setEditWhatsappPhoneNumberId] = useState("");
+  const [editWabaId, setEditWabaId] = useState("");
+  const [editWhatsappVerifyToken, setEditWhatsappVerifyToken] = useState("");
+  const [editSupportWhatsapp, setEditSupportWhatsapp] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
     setError(null);
     setForbidden(false);
     try {
-      const res = await fetch("/api/admin/stats", {
-        cache: "no-store",
-        credentials: "include",
-      });
-      if (res.status === 403) {
+      const [statsRes, vendorsRes] = await Promise.all([
+        fetch("/api/admin/stats", { cache: "no-store", credentials: "include" }),
+        fetch("/api/admin/vendors", { cache: "no-store", credentials: "include" }),
+      ]);
+      if (statsRes.status === 403) {
         setForbidden(true);
         return;
       }
-      if (!res.ok) {
-        throw new Error(`Request failed: ${res.status}`);
+      if (!statsRes.ok) {
+        throw new Error(`Request failed: ${statsRes.status}`);
       }
-      const data = (await res.json()) as AdminStats;
+      const data = (await statsRes.json()) as AdminStats;
       setStats(data);
+
+      if (vendorsRes.ok) {
+        const vData = (await vendorsRes.json()) as { vendors: VendorSummary[] };
+        setVendors(vData.vendors);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -614,6 +685,129 @@ export default function AdminDashboardClient() {
   useEffect(() => {
     void fetchStats();
   }, [fetchStats]);
+
+  const handleCreateVendor = async () => {
+    setCreateError(null);
+    setCreating(true);
+    try {
+      const emails = newVendorEmails
+        .split(/[,\n]/)
+        .map((e) => e.trim())
+        .filter(Boolean);
+
+      const res = await fetch("/api/admin/vendors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: newVendorName,
+          slug: newVendorSlug,
+          adminEmails: emails,
+          logoUrl: newVendorLogoUrl || undefined,
+          faviconUrl: newVendorFaviconUrl || undefined,
+          defaultLocale: newVendorLocale,
+          whatsappPhoneNumberId: newVendorWhatsappPhoneNumberId || undefined,
+          wabaId: newVendorWabaId || undefined,
+          whatsappVerifyToken: newVendorWhatsappVerifyToken || undefined,
+          supportWhatsapp: newVendorSupportWhatsapp || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateError(data.error || "Failed to create vendor");
+        return;
+      }
+
+      setCreatedVendor(data.vendor);
+      setShowCreateVendor(false);
+      setNewVendorName("");
+      setNewVendorSlug("");
+      setNewVendorEmails("");
+      setNewVendorLogoUrl("");
+      setNewVendorFaviconUrl("");
+      setNewVendorLocale("ar");
+      setNewVendorWhatsappPhoneNumberId("");
+      setNewVendorWabaId("");
+      setNewVendorWhatsappVerifyToken("");
+      setNewVendorSupportWhatsapp("");
+      void fetchStats();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const startEditing = (vendor: VendorSummary) => {
+    setEditingVendorId(vendor.id);
+    setEditName(vendor.name);
+    setEditSlug(vendor.slug);
+    setEditEmails(vendor.adminEmails.join(", "));
+    setEditLogoUrl(vendor.logoUrl || "");
+    setEditFaviconUrl(vendor.faviconUrl || "");
+    setEditLocale(vendor.defaultLocale as "ar" | "en");
+    setEditWhatsappPhoneNumberId(vendor.whatsappPhoneNumberId || "");
+    setEditWabaId(vendor.wabaId || "");
+    setEditWhatsappVerifyToken(vendor.whatsappVerifyToken || "");
+    setEditSupportWhatsapp(vendor.supportWhatsapp || "");
+    setEditError(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingVendorId(null);
+    setEditError(null);
+  };
+
+  const handleSaveVendor = async () => {
+    if (!editingVendorId) return;
+    setEditError(null);
+    setSaving(true);
+    try {
+      const emails = editEmails
+        .split(/[,\n]/)
+        .map((e) => e.trim())
+        .filter(Boolean);
+
+      const res = await fetch("/api/admin/vendors", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          id: editingVendorId,
+          name: editName,
+          slug: editSlug,
+          adminEmails: emails,
+          logoUrl: editLogoUrl || undefined,
+          faviconUrl: editFaviconUrl || undefined,
+          defaultLocale: editLocale,
+          whatsappPhoneNumberId: editWhatsappPhoneNumberId || undefined,
+          wabaId: editWabaId || undefined,
+          whatsappVerifyToken: editWhatsappVerifyToken || undefined,
+          supportWhatsapp: editSupportWhatsapp || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setEditError(data.error || "Failed to update vendor");
+        return;
+      }
+
+      setEditingVendorId(null);
+      void fetchStats();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   /* ---- Forbidden ---- */
   if (forbidden) {
@@ -706,14 +900,546 @@ export default function AdminDashboardClient() {
           <RefreshCw size={18} />
         </button>
       </motion.div>
-      <a
-        href="/en/admin/whatsapp"
-        className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm w-fit"
-      >
-        <Send size={14} />
-        WhatsApp Messages
-      </a>
+      <div className="flex items-center gap-3 mb-6">
+        <Link
+          href="/en/admin/whatsapp"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm w-fit"
+        >
+          <Send size={14} />
+          WhatsApp Messages
+        </Link>
+      </div>
 
+      {/* Tab Switcher */}
+      <div className="flex gap-1.5 mb-6">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+            activeTab === "overview"
+              ? "bg-stone-900 text-white"
+              : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab("vendors")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === "vendors"
+              ? "bg-stone-900 text-white"
+              : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+          }`}
+        >
+          <Store size={14} />
+          Vendors
+          {vendors.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              activeTab === "vendors" ? "bg-white/20" : "bg-stone-200"
+            }`}>
+              {vendors.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === "vendors" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4 mb-8"
+        >
+          {/* Created vendor env config */}
+          {createdVendor && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 md:p-6"
+            >
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <Check size={18} className="text-emerald-600" />
+                  <h3 className="text-lg font-semibold text-stone-900">
+                    {createdVendor.name} created
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setCreatedVendor(null)}
+                  className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="text-sm text-stone-600 mb-3">
+                Add this environment variable to the vendor&apos;s deployment. Locale, name, logo, favicon, and WhatsApp config are read from the DB automatically.
+              </p>
+              <div className="space-y-2">
+                {[
+                  { key: "VENDOR_ID", value: createdVendor.id },
+                ].map(({ key, value }) => (
+                  <div
+                    key={key}
+                    className="flex items-center gap-2 bg-white rounded-lg border border-emerald-200 px-3 py-2 font-mono text-xs"
+                  >
+                    <span className="text-emerald-700 font-semibold shrink-0">{key}</span>
+                    <span className="text-stone-400">=</span>
+                    <span className="text-stone-700 truncate flex-1">{value}</span>
+                    <button
+                      onClick={() => copyToClipboard(`${key}=${value}`, key)}
+                      className="shrink-0 text-stone-400 hover:text-stone-600 p-1 cursor-pointer"
+                      title="Copy"
+                    >
+                      {copiedField === key ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Create vendor form */}
+          {showCreateVendor ? (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl border border-stone-200/60 p-5 md:p-6 shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-semibold text-stone-900">New Vendor</h3>
+                <button
+                  onClick={() => { setShowCreateVendor(false); setCreateError(null); }}
+                  className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Business name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newVendorName}
+                    onChange={(e) => {
+                      setNewVendorName(e.target.value);
+                      if (!newVendorSlug || newVendorSlug === newVendorName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")) {
+                        setNewVendorSlug(e.target.value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+                      }
+                    }}
+                    placeholder="Al-Faris Events"
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Slug *
+                  </label>
+                  <input
+                    type="text"
+                    value={newVendorSlug}
+                    onChange={(e) => setNewVendorSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    placeholder="al-faris-events"
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Admin email(s) *
+                  </label>
+                  <input
+                    type="text"
+                    value={newVendorEmails}
+                    onChange={(e) => setNewVendorEmails(e.target.value)}
+                    placeholder="admin@vendor.com, manager@vendor.com"
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                  />
+                  <p className="text-[11px] text-stone-400 mt-1">Comma-separated</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Logo URL <span className="text-stone-400">(optional)</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={newVendorLogoUrl}
+                    onChange={(e) => setNewVendorLogoUrl(e.target.value)}
+                    placeholder="https://vendor.com/logo.svg"
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Favicon URL <span className="text-stone-400">(optional)</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={newVendorFaviconUrl}
+                    onChange={(e) => setNewVendorFaviconUrl(e.target.value)}
+                    placeholder="https://vendor.com/favicon.ico"
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Default language
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewVendorLocale("ar")}
+                      className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all cursor-pointer ${
+                        newVendorLocale === "ar"
+                          ? "bg-stone-900 text-white border-stone-900"
+                          : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
+                      }`}
+                    >
+                      العربية
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewVendorLocale("en")}
+                      className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all cursor-pointer ${
+                        newVendorLocale === "en"
+                          ? "bg-stone-900 text-white border-stone-900"
+                          : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
+                      }`}
+                    >
+                      English
+                    </button>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 border-t border-stone-100 pt-4 mt-1">
+                  <p className="text-xs font-medium text-stone-500 mb-3">
+                    WhatsApp Integration <span className="text-stone-400">(optional)</span>
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">Phone Number ID</label>
+                      <input
+                        type="text"
+                        value={newVendorWhatsappPhoneNumberId}
+                        onChange={(e) => setNewVendorWhatsappPhoneNumberId(e.target.value)}
+                        placeholder="e.g. 123456789012345"
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">WABA ID</label>
+                      <input
+                        type="text"
+                        value={newVendorWabaId}
+                        onChange={(e) => setNewVendorWabaId(e.target.value)}
+                        placeholder="e.g. 123456789012345"
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">Verify Token</label>
+                      <input
+                        type="text"
+                        value={newVendorWhatsappVerifyToken}
+                        onChange={(e) => setNewVendorWhatsappVerifyToken(e.target.value)}
+                        placeholder="e.g. my-secret-token"
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 border-t border-stone-100 pt-4 mt-1">
+                  <p className="text-xs font-medium text-stone-500 mb-3">
+                    Landing Page <span className="text-stone-400">(optional)</span>
+                  </p>
+                  <div>
+                    <label className="block text-xs font-medium text-stone-600 mb-1.5">Support WhatsApp Number</label>
+                    <input
+                      type="text"
+                      value={newVendorSupportWhatsapp}
+                      onChange={(e) => setNewVendorSupportWhatsapp(e.target.value)}
+                      placeholder="e.g. 966500000000"
+                      className="w-full max-w-sm px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                    />
+                    <p className="text-xs text-stone-400 mt-1">International format without + sign. Shown on the landing page &quot;Get in touch&quot; button.</p>
+                  </div>
+                </div>
+              </div>
+
+              {createError && (
+                <div className="mt-4 flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                  <AlertTriangle size={14} />
+                  {createError}
+                </div>
+              )}
+
+              <div className="mt-5 flex items-center gap-3">
+                <button
+                  onClick={handleCreateVendor}
+                  disabled={creating || !newVendorName.trim() || !newVendorSlug.trim() || !newVendorEmails.trim()}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                  Create Vendor
+                </button>
+                <button
+                  onClick={() => { setShowCreateVendor(false); setCreateError(null); }}
+                  className="px-4 py-2.5 text-sm text-stone-500 hover:text-stone-700 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <button
+              onClick={() => { setShowCreateVendor(true); setCreatedVendor(null); }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors cursor-pointer shadow-sm"
+            >
+              <Plus size={16} />
+              New Vendor
+            </button>
+          )}
+
+          {/* Vendor list */}
+          {vendors.map((vendor, i) => (
+            <motion.div
+              key={vendor.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="bg-white rounded-2xl border border-stone-200/60 p-5 md:p-6 shadow-sm"
+            >
+              {editingVendorId === vendor.id ? (
+                /* ---- Edit mode ---- */
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-stone-900">Edit Vendor</h3>
+                    <button
+                      onClick={cancelEditing}
+                      className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">Business name</label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">Slug</label>
+                      <input
+                        type="text"
+                        value={editSlug}
+                        onChange={(e) => setEditSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">Admin email(s)</label>
+                      <input
+                        type="text"
+                        value={editEmails}
+                        onChange={(e) => setEditEmails(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                      />
+                      <p className="text-[11px] text-stone-400 mt-1">Comma-separated</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                        Logo URL <span className="text-stone-400">(optional)</span>
+                      </label>
+                      <input
+                        type="url"
+                        value={editLogoUrl}
+                        onChange={(e) => setEditLogoUrl(e.target.value)}
+                        placeholder="https://vendor.com/logo.svg"
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                        Favicon URL <span className="text-stone-400">(optional)</span>
+                      </label>
+                      <input
+                        type="url"
+                        value={editFaviconUrl}
+                        onChange={(e) => setEditFaviconUrl(e.target.value)}
+                        placeholder="https://vendor.com/favicon.ico"
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">Default language</label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditLocale("ar")}
+                          className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all cursor-pointer ${
+                            editLocale === "ar"
+                              ? "bg-stone-900 text-white border-stone-900"
+                              : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
+                          }`}
+                        >
+                          العربية
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditLocale("en")}
+                          className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all cursor-pointer ${
+                            editLocale === "en"
+                              ? "bg-stone-900 text-white border-stone-900"
+                              : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
+                          }`}
+                        >
+                          English
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2 border-t border-stone-100 pt-4 mt-1">
+                      <p className="text-xs font-medium text-stone-500 mb-3">
+                        WhatsApp Integration <span className="text-stone-400">(optional)</span>
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-stone-600 mb-1.5">Phone Number ID</label>
+                          <input
+                            type="text"
+                            value={editWhatsappPhoneNumberId}
+                            onChange={(e) => setEditWhatsappPhoneNumberId(e.target.value)}
+                            placeholder="e.g. 123456789012345"
+                            className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-stone-600 mb-1.5">WABA ID</label>
+                          <input
+                            type="text"
+                            value={editWabaId}
+                            onChange={(e) => setEditWabaId(e.target.value)}
+                            placeholder="e.g. 123456789012345"
+                            className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-stone-600 mb-1.5">Verify Token</label>
+                          <input
+                            type="text"
+                            value={editWhatsappVerifyToken}
+                            onChange={(e) => setEditWhatsappVerifyToken(e.target.value)}
+                            placeholder="e.g. my-secret-token"
+                            className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2 border-t border-stone-100 pt-4 mt-1">
+                      <p className="text-xs font-medium text-stone-500 mb-3">
+                        Landing Page <span className="text-stone-400">(optional)</span>
+                      </p>
+                      <div>
+                        <label className="block text-xs font-medium text-stone-600 mb-1.5">Support WhatsApp Number</label>
+                        <input
+                          type="text"
+                          value={editSupportWhatsapp}
+                          onChange={(e) => setEditSupportWhatsapp(e.target.value)}
+                          placeholder="e.g. 966500000000"
+                          className="w-full max-w-sm px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                        />
+                        <p className="text-xs text-stone-400 mt-1">International format without + sign. Shown on the landing page &quot;Get in touch&quot; button.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {editError && (
+                    <div className="mt-4 flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                      <AlertTriangle size={14} />
+                      {editError}
+                    </div>
+                  )}
+
+                  <div className="mt-5 flex items-center gap-3">
+                    <button
+                      onClick={handleSaveVendor}
+                      disabled={saving || !editName.trim() || !editSlug.trim() || !editEmails.trim()}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      className="px-4 py-2.5 text-sm text-stone-500 hover:text-stone-700 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ---- View mode ---- */
+                <>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-stone-900">{vendor.name}</h3>
+                      <p className="text-xs text-stone-500 mt-0.5">
+                        {vendor.slug} &middot; {vendor.adminEmails.join(", ")} &middot;{" "}
+                        <span className="uppercase">{vendor.defaultLocale}</span>
+                      </p>
+                      <button
+                        onClick={() => copyToClipboard(vendor.id, `vid-${vendor.id}`)}
+                        className="inline-flex items-center gap-1.5 mt-1.5 text-[11px] text-stone-400 hover:text-stone-600 font-mono transition-colors cursor-pointer"
+                        title="Copy Vendor ID"
+                      >
+                        {copiedField === `vid-${vendor.id}` ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
+                        {vendor.id}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => startEditing(vendor)}
+                        className="text-stone-400 hover:text-stone-600 p-1.5 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer"
+                        title="Edit vendor"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <span className="text-xs text-stone-400">{timeAgo(vendor.createdAt)}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="rounded-xl bg-stone-50 p-3 text-center">
+                      <div className="text-xl font-bold text-stone-900 tabular-nums">{vendor.eventCount}</div>
+                      <div className="text-[10px] text-stone-500 mt-0.5">Events</div>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 p-3 text-center">
+                      <div className="text-xl font-bold text-stone-900 tabular-nums">{vendor.guestCount}</div>
+                      <div className="text-[10px] text-stone-500 mt-0.5">Guests</div>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 p-3 text-center">
+                      <div className="text-xl font-bold text-stone-900 tabular-nums">{vendor.paidEventCount}</div>
+                      <div className="text-[10px] text-stone-500 mt-0.5">Paid</div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          ))}
+
+          {vendors.length === 0 && !showCreateVendor && (
+            <div className="text-center py-12 text-stone-400 text-sm">
+              No vendors yet. Create your first one above.
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {activeTab === "overview" && <>
       {/* ── Stat Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
@@ -808,6 +1534,7 @@ export default function AdminDashboardClient() {
         </h2>
         <RecentEventsList events={stats.recentEvents} />
       </motion.div>
+      </>}
     </div>
   );
 }
