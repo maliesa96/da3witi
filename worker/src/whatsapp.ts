@@ -1,21 +1,23 @@
-import type { Config } from "./config";
+import type { WhatsAppCredentials } from "./config";
 import type { WhatsAppResponse } from "./types";
 
-export function createWhatsAppClient(config: Config) {
-  const baseUrl = `https://graph.facebook.com/${config.whatsappVersion}/${config.whatsappPhoneNumberId}/messages`;
-  const headers = {
-    Authorization: `Bearer ${config.metaAccessToken}`,
-    "Content-Type": "application/json",
-  };
-
+export function createWhatsAppClient(defaultVersion: string) {
   return {
-    async send(payload: Record<string, unknown>): Promise<WhatsAppResponse> {
-      // Ensure messaging_product is set
+    async send(
+      payload: Record<string, unknown>,
+      credentials: WhatsAppCredentials
+    ): Promise<WhatsAppResponse> {
+      const version = credentials.whatsappVersion || defaultVersion;
+      const url = `https://graph.facebook.com/${version}/${credentials.whatsappPhoneNumberId}/messages`;
+
       const body = { messaging_product: "whatsapp", ...payload };
 
-      const response = await fetch(baseUrl, {
+      const response = await fetch(url, {
         method: "POST",
-        headers,
+        headers: {
+          Authorization: `Bearer ${credentials.metaAccessToken}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
 

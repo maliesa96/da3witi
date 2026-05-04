@@ -56,7 +56,7 @@ export async function isVendorCustomer(email: string | null | undefined): Promis
  * fetches the vendor record from the DB and populates:
  * - NEXT_PUBLIC_VENDOR_MODE, NEXT_PUBLIC_SITE_NAME, NEXT_PUBLIC_LOGO_URL,
  *   NEXT_PUBLIC_FAVICON_URL, NEXT_PUBLIC_DEFAULT_LOCALE, NEXT_PUBLIC_SUPABASE_COOKIE_NAME,
- *   WHATSAPP_PHONE_NUMBER_ID, WABA_ID, WHATSAPP_VERIFY_TOKEN
+ *   WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_VERIFY_TOKEN
  * Admin emails are read from the DB at runtime (no env var needed).
  */
 export const VENDOR_SLUG = process.env.NEXT_PUBLIC_VENDOR_SLUG || null;

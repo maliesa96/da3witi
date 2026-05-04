@@ -7,6 +7,19 @@ import { sendWhatsAppMessageNotification } from '@/lib/email';
 
 const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
 
+async function isValidVerifyToken(token: string): Promise<boolean> {
+  if (WHATSAPP_VERIFY_TOKEN && token === WHATSAPP_VERIFY_TOKEN) {
+    return true;
+  }
+
+  const vendor = await prisma.vendor.findFirst({
+    where: { whatsappVerifyToken: token },
+    select: { id: true },
+  });
+
+  return !!vendor;
+}
+
 /**
  * Verification handler for Meta Webhooks
  */
@@ -16,7 +29,7 @@ export async function GET(request: Request) {
   const token = searchParams.get('hub.verify_token');
   const challenge = searchParams.get('hub.challenge');
 
-  if (mode === 'subscribe' && token === WHATSAPP_VERIFY_TOKEN) {
+  if (mode === 'subscribe' && token && await isValidVerifyToken(token)) {
     return new Response(challenge, { status: 200 });
   }
 
@@ -308,6 +321,7 @@ export async function POST(request: Request) {
                         kind: 'webhook_followup',
                         guestId: guest.id,
                         repliedMessageId,
+                        vendorId: guest.event.vendorId,
                       });
 
                       // Handle QR code if enabled
@@ -328,6 +342,7 @@ export async function POST(request: Request) {
                           kind: 'webhook_followup',
                           guestId: guest.id,
                           repliedMessageId,
+                          vendorId: guest.event.vendorId,
                         });
                       }
                       
@@ -380,6 +395,7 @@ export async function POST(request: Request) {
                         kind: 'webhook_followup',
                         guestId: guest.id,
                         repliedMessageId,
+                        vendorId: guest.event.vendorId,
                       });
                       
                       console.log(`✅ Successfully processed decline for ${guest.name}`);

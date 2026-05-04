@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isAdmin } from "@/lib/admin";
+import { encrypt } from "@/lib/crypto";
 
 export async function GET() {
   try {
@@ -22,9 +23,9 @@ export async function GET() {
         adminEmails: true,
         defaultLocale: true,
         whatsappPhoneNumberId: true,
-        wabaId: true,
         whatsappVerifyToken: true,
         supportWhatsapp: true,
+        metaAccessTokenEncrypted: true,
         createdAt: true,
         _count: {
           select: { events: true },
@@ -52,9 +53,9 @@ export async function GET() {
           adminEmails: v.adminEmails,
           defaultLocale: v.defaultLocale,
           whatsappPhoneNumberId: v.whatsappPhoneNumberId,
-          wabaId: v.wabaId,
           whatsappVerifyToken: v.whatsappVerifyToken,
           supportWhatsapp: v.supportWhatsapp,
+          hasMetaAccessToken: !!v.metaAccessTokenEncrypted,
           createdAt: v.createdAt.toISOString(),
           eventCount: v._count.events,
           paidEventCount: paidCount,
@@ -83,7 +84,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, name, slug, adminEmails, logoUrl, faviconUrl, defaultLocale, whatsappPhoneNumberId, wabaId, whatsappVerifyToken, supportWhatsapp } = body as {
+    const { id, name, slug, adminEmails, logoUrl, faviconUrl, defaultLocale, whatsappPhoneNumberId, whatsappVerifyToken, supportWhatsapp, metaAccessToken } = body as {
       id: string;
       name?: string;
       slug?: string;
@@ -92,9 +93,9 @@ export async function PUT(request: NextRequest) {
       faviconUrl?: string;
       defaultLocale?: string;
       whatsappPhoneNumberId?: string;
-      wabaId?: string;
       whatsappVerifyToken?: string;
       supportWhatsapp?: string;
+      metaAccessToken?: string;
     };
 
     if (!id) {
@@ -154,16 +155,17 @@ export async function PUT(request: NextRequest) {
       data.whatsappPhoneNumberId = whatsappPhoneNumberId.trim() || null;
     }
 
-    if (wabaId !== undefined) {
-      data.wabaId = wabaId.trim() || null;
-    }
-
     if (whatsappVerifyToken !== undefined) {
       data.whatsappVerifyToken = whatsappVerifyToken.trim() || null;
     }
 
     if (supportWhatsapp !== undefined) {
       data.supportWhatsapp = supportWhatsapp.trim() || null;
+    }
+
+    if (metaAccessToken !== undefined) {
+      const trimmed = metaAccessToken.trim();
+      data.metaAccessTokenEncrypted = trimmed ? encrypt(trimmed) : null;
     }
 
     if (defaultLocale !== undefined) {
@@ -195,7 +197,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug, adminEmails, logoUrl, faviconUrl, defaultLocale, whatsappPhoneNumberId, wabaId, whatsappVerifyToken, supportWhatsapp } = body as {
+    const { name, slug, adminEmails, logoUrl, faviconUrl, defaultLocale, whatsappPhoneNumberId, whatsappVerifyToken, supportWhatsapp, metaAccessToken } = body as {
       name?: string;
       slug?: string;
       adminEmails?: string[];
@@ -203,9 +205,9 @@ export async function POST(request: NextRequest) {
       faviconUrl?: string;
       defaultLocale?: string;
       whatsappPhoneNumberId?: string;
-      wabaId?: string;
       whatsappVerifyToken?: string;
       supportWhatsapp?: string;
+      metaAccessToken?: string;
     };
 
     if (!name || !name.trim()) {
@@ -248,6 +250,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const tokenTrimmed = metaAccessToken?.trim();
+
     const vendor = await prisma.vendor.create({
       data: {
         name: name.trim(),
@@ -257,9 +261,9 @@ export async function POST(request: NextRequest) {
         faviconUrl: faviconUrl?.trim() || null,
         defaultLocale: defaultLocale === "en" ? "en" : "ar",
         whatsappPhoneNumberId: whatsappPhoneNumberId?.trim() || null,
-        wabaId: wabaId?.trim() || null,
         whatsappVerifyToken: whatsappVerifyToken?.trim() || null,
         supportWhatsapp: supportWhatsapp?.trim() || null,
+        metaAccessTokenEncrypted: tokenTrimmed ? encrypt(tokenTrimmed) : null,
       },
     });
 

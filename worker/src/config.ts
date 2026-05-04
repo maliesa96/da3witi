@@ -4,10 +4,13 @@ export const configSchema = z.object({
   // Redis (TCP connection for BullMQ - e.g., rediss://default:xxx@xxx.upstash.io:6379)
   redisUrl: z.string().min(1),
 
-  // WhatsApp
+  // WhatsApp (optional – used as fallback when job has no vendorId)
   whatsappVersion: z.string().default("v23.0"),
-  whatsappPhoneNumberId: z.string().min(1),
-  metaAccessToken: z.string().min(1),
+  whatsappPhoneNumberId: z.string().optional(),
+  metaAccessToken: z.string().optional(),
+
+  // Encryption key for decrypting vendor tokens
+  encryptionKey: z.string().optional(),
 
   // Database
   databaseUrl: z.string().min(1),
@@ -26,6 +29,12 @@ export const configSchema = z.object({
 
 export type Config = z.infer<typeof configSchema>;
 
+export interface WhatsAppCredentials {
+  whatsappPhoneNumberId: string;
+  metaAccessToken: string;
+  whatsappVersion: string;
+}
+
 export function loadConfig(): Config {
   const env = process.env;
 
@@ -34,6 +43,7 @@ export function loadConfig(): Config {
     whatsappVersion: env.WHATSAPP_VERSION,
     whatsappPhoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID,
     metaAccessToken: env.META_ACCESS_TOKEN,
+    encryptionKey: env.ENCRYPTION_KEY,
     databaseUrl: env.DATABASE_URL,
     queueName: env.QUEUE_NAME,
     concurrency: env.WORKER_CONCURRENCY,

@@ -3,6 +3,7 @@ export interface JobMeta {
   guestId?: string;
   eventId?: string;
   locale?: "en" | "ar";
+  vendorId?: string | null;
   [key: string]: unknown;
 }
 

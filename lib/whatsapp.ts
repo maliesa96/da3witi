@@ -1,9 +1,5 @@
 import { TEMPLATE_OVERRIDES } from "./templates/templates";
 
-const WHATSAPP_VERSION = 'v23.0';
-const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
-
 // WhatsApp template component types
 interface TextParameter {
   type: 'text';
@@ -38,12 +34,6 @@ interface SendTemplateParams {
   templateName: string;
   languageCode?: string;
   components?: TemplateComponent[];
-}
-
-interface SendTemplateResult {
-  success: boolean;
-  messageId?: string;
-  error?: unknown;
 }
 
 /**
@@ -93,65 +83,6 @@ export function buildWhatsAppImagePayload(to: string, imageUrl: string, caption?
   } as const;
 }
 
-// export async function sendWhatsAppPayload(payload: unknown): Promise<SendTemplateResult> {
-//   if (!WHATSAPP_PHONE_NUMBER_ID || !META_ACCESS_TOKEN) {
-//     console.error("WhatsApp API credentials missing");
-//     return { success: false, error: "Credentials missing" };
-//   }
-
-//   const url = `https://graph.facebook.com/${WHATSAPP_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-
-//   try {
-//     const response = await fetch(url, {
-//       method: "POST",
-//       headers: {
-//         Authorization: `Bearer ${META_ACCESS_TOKEN}`,
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify(payload),
-//     });
-
-//     const data = await response.json();
-
-//     if (!response.ok) {
-//       console.error("WhatsApp API Error:", data);
-//       return { success: false, error: data };
-//     }
-
-//     const messageId = data.messages?.[0]?.id;
-//     return { success: true, messageId };
-//   } catch (error) {
-//     console.error("WhatsApp Request Failed:", error);
-//     return { success: false, error };
-//   }
-// }
-
-// export async function sendWhatsAppTemplate({
-//   to,
-//   templateName,
-//   languageCode = 'en',
-//   components = []
-// }: SendTemplateParams): Promise<SendTemplateResult> {
-//   const body = buildWhatsAppTemplatePayload({ to, templateName, languageCode, components });
-//   return await sendWhatsAppPayload(body);
-// }
-
-// /**
-//  * Sends a simple text message via WhatsApp
-//  */
-// export async function sendWhatsAppText(to: string, text: string): Promise<SendTemplateResult> {
-//   const body = buildWhatsAppTextPayload(to, text);
-//   return await sendWhatsAppPayload(body);
-// }
-
-// /**
-//  * Sends an image message via WhatsApp
-//  */
-// export async function sendWhatsAppImage(to: string, imageUrl: string, caption?: string): Promise<SendTemplateResult> {
-//   const body = buildWhatsAppImagePayload(to, imageUrl, caption);
-//   return await sendWhatsAppPayload(body);
-// }
-
 /**
  * Template name mapping based on locale, media type, QR requirement, and guests requirement
  */
@@ -188,55 +119,6 @@ interface SendInviteTemplateParams {
   /** Filename to display for documents (optional) */
   mediaFilename?: string;
 }
-
-/**
- * Sends an invitation using the appropriate template based on locale and QR requirement.
- * Templates: invite_doc_en, invite_doc_ar, invite_doc_qr_en, invite_doc_qr_ar
- * 
- * Named parameters (must match your Meta template exactly):
- * - {{invitee}} - Guest name
- * - {{greeting_text}} - Custom greeting message
- * - {{date}} - Event date
- * - {{time}} - Event time  
- * - {{location_name}} - Location/venue name
- * 
- * Header: Image or document
- */
-// export async function sendInviteTemplate({
-//   to,
-//   locale,
-//   qrEnabled,
-//   guestsEnabled,
-//   inviteCount,
-//   invitee,
-//   greetingText,
-//   date,
-//   time,
-//   locationName,
-//   location,
-//   mediaUrl,
-//   mediaType,
-//   mediaFilename
-// }: SendInviteTemplateParams): Promise<SendTemplateResult> {
-//   const body = buildInviteTemplatePayload({
-//     to,
-//     locale,
-//     qrEnabled,
-//     guestsEnabled,
-//     inviteCount,
-//     invitee,
-//     greetingText,
-//     date,
-//     time,
-//     locationName,
-//     location,
-//     mediaUrl,
-//     mediaType,
-//     mediaFilename,
-//   });
-
-//   return await sendWhatsAppPayload(body);
-// }
 
 export function buildInviteTemplatePayload({
   to,

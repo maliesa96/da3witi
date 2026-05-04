@@ -28,10 +28,11 @@ export async function GET(request: Request) {
         locale: string | null;
         event_date: Date;
         reminder_days_before: number;
+        vendor_id: string | null;
       }>
     >`
       SELECT id, title, date, time, location, location_name, locale,
-             event_date, reminder_days_before
+             event_date, reminder_days_before, vendor_id
       FROM events
       WHERE event_date IS NOT NULL
         AND reminder_enabled = true
@@ -92,6 +93,7 @@ export async function GET(request: Request) {
           guestId: guest.id,
           eventId: event.id,
           locale,
+          vendorId: event.vendor_id,
         } as WhatsAppOutboxMeta,
       }));
 

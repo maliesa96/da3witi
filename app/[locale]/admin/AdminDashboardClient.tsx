@@ -59,9 +59,9 @@ type VendorSummary = {
   adminEmails: string[];
   defaultLocale: string;
   whatsappPhoneNumberId: string | null;
-  wabaId: string | null;
   whatsappVerifyToken: string | null;
   supportWhatsapp: string | null;
+  hasMetaAccessToken: boolean;
   createdAt: string;
   eventCount: number;
   paidEventCount: number;
@@ -630,9 +630,9 @@ export default function AdminDashboardClient() {
   const [newVendorFaviconUrl, setNewVendorFaviconUrl] = useState("");
   const [newVendorLocale, setNewVendorLocale] = useState<"ar" | "en">("ar");
   const [newVendorWhatsappPhoneNumberId, setNewVendorWhatsappPhoneNumberId] = useState("");
-  const [newVendorWabaId, setNewVendorWabaId] = useState("");
   const [newVendorWhatsappVerifyToken, setNewVendorWhatsappVerifyToken] = useState("");
   const [newVendorSupportWhatsapp, setNewVendorSupportWhatsapp] = useState("");
+  const [newVendorMetaAccessToken, setNewVendorMetaAccessToken] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createdVendor, setCreatedVendor] = useState<{ id: string; name: string; slug: string; adminEmails: string[]; defaultLocale: string } | null>(null);
@@ -646,9 +646,9 @@ export default function AdminDashboardClient() {
   const [editFaviconUrl, setEditFaviconUrl] = useState("");
   const [editLocale, setEditLocale] = useState<"ar" | "en">("ar");
   const [editWhatsappPhoneNumberId, setEditWhatsappPhoneNumberId] = useState("");
-  const [editWabaId, setEditWabaId] = useState("");
   const [editWhatsappVerifyToken, setEditWhatsappVerifyToken] = useState("");
   const [editSupportWhatsapp, setEditSupportWhatsapp] = useState("");
+  const [editMetaAccessToken, setEditMetaAccessToken] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -707,9 +707,9 @@ export default function AdminDashboardClient() {
           faviconUrl: newVendorFaviconUrl || undefined,
           defaultLocale: newVendorLocale,
           whatsappPhoneNumberId: newVendorWhatsappPhoneNumberId || undefined,
-          wabaId: newVendorWabaId || undefined,
           whatsappVerifyToken: newVendorWhatsappVerifyToken || undefined,
           supportWhatsapp: newVendorSupportWhatsapp || undefined,
+          metaAccessToken: newVendorMetaAccessToken || undefined,
         }),
       });
 
@@ -728,9 +728,9 @@ export default function AdminDashboardClient() {
       setNewVendorFaviconUrl("");
       setNewVendorLocale("ar");
       setNewVendorWhatsappPhoneNumberId("");
-      setNewVendorWabaId("");
       setNewVendorWhatsappVerifyToken("");
       setNewVendorSupportWhatsapp("");
+      setNewVendorMetaAccessToken("");
       void fetchStats();
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : String(err));
@@ -754,9 +754,9 @@ export default function AdminDashboardClient() {
     setEditFaviconUrl(vendor.faviconUrl || "");
     setEditLocale(vendor.defaultLocale as "ar" | "en");
     setEditWhatsappPhoneNumberId(vendor.whatsappPhoneNumberId || "");
-    setEditWabaId(vendor.wabaId || "");
     setEditWhatsappVerifyToken(vendor.whatsappVerifyToken || "");
     setEditSupportWhatsapp(vendor.supportWhatsapp || "");
+    setEditMetaAccessToken("");
     setEditError(null);
   };
 
@@ -788,9 +788,9 @@ export default function AdminDashboardClient() {
           faviconUrl: editFaviconUrl || undefined,
           defaultLocale: editLocale,
           whatsappPhoneNumberId: editWhatsappPhoneNumberId || undefined,
-          wabaId: editWabaId || undefined,
           whatsappVerifyToken: editWhatsappVerifyToken || undefined,
           supportWhatsapp: editSupportWhatsapp || undefined,
+          ...(editMetaAccessToken ? { metaAccessToken: editMetaAccessToken } : {}),
         }),
       });
 
@@ -1114,23 +1114,13 @@ export default function AdminDashboardClient() {
                   <p className="text-xs font-medium text-stone-500 mb-3">
                     WhatsApp Integration <span className="text-stone-400">(optional)</span>
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-stone-600 mb-1.5">Phone Number ID</label>
                       <input
                         type="text"
                         value={newVendorWhatsappPhoneNumberId}
                         onChange={(e) => setNewVendorWhatsappPhoneNumberId(e.target.value)}
-                        placeholder="e.g. 123456789012345"
-                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-stone-600 mb-1.5">WABA ID</label>
-                      <input
-                        type="text"
-                        value={newVendorWabaId}
-                        onChange={(e) => setNewVendorWabaId(e.target.value)}
                         placeholder="e.g. 123456789012345"
                         className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
                       />
@@ -1145,6 +1135,17 @@ export default function AdminDashboardClient() {
                         className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
                       />
                     </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-xs font-medium text-stone-600 mb-1.5">Meta Access Token</label>
+                    <input
+                      type="password"
+                      value={newVendorMetaAccessToken}
+                      onChange={(e) => setNewVendorMetaAccessToken(e.target.value)}
+                      placeholder="Paste the vendor's permanent access token"
+                      className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                    />
+                    <p className="text-xs text-stone-400 mt-1">Stored encrypted. Required for sending from this vendor&apos;s WhatsApp number.</p>
                   </div>
                 </div>
 
@@ -1306,23 +1307,13 @@ export default function AdminDashboardClient() {
                       <p className="text-xs font-medium text-stone-500 mb-3">
                         WhatsApp Integration <span className="text-stone-400">(optional)</span>
                       </p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-xs font-medium text-stone-600 mb-1.5">Phone Number ID</label>
                           <input
                             type="text"
                             value={editWhatsappPhoneNumberId}
                             onChange={(e) => setEditWhatsappPhoneNumberId(e.target.value)}
-                            placeholder="e.g. 123456789012345"
-                            className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-stone-600 mb-1.5">WABA ID</label>
-                          <input
-                            type="text"
-                            value={editWabaId}
-                            onChange={(e) => setEditWabaId(e.target.value)}
                             placeholder="e.g. 123456789012345"
                             className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
                           />
@@ -1337,6 +1328,21 @@ export default function AdminDashboardClient() {
                             className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
                           />
                         </div>
+                      </div>
+                      <div className="mt-4">
+                        <label className="block text-xs font-medium text-stone-600 mb-1.5">Meta Access Token</label>
+                        <input
+                          type="password"
+                          value={editMetaAccessToken}
+                          onChange={(e) => setEditMetaAccessToken(e.target.value)}
+                          placeholder={vendor.hasMetaAccessToken ? "Token is set. Enter a new value to replace it." : "Paste the vendor's permanent access token"}
+                          className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                        />
+                        <p className="text-xs text-stone-400 mt-1">
+                          {vendor.hasMetaAccessToken
+                            ? "A token is already stored. Leave blank to keep the current token."
+                            : "Stored encrypted. Required for sending from this vendor\u2019s WhatsApp number."}
+                        </p>
                       </div>
                     </div>
 

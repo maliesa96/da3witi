@@ -22,10 +22,10 @@ model Vendor {
   adminEmails   String[] @map("admin_emails")
   defaultLocale String   @default("ar") @map("default_locale")
 
-  whatsappPhoneNumberId String? @map("whatsapp_phone_number_id")
-  wabaId                String? @map("waba_id")
-  whatsappVerifyToken   String? @map("whatsapp_verify_token")
-  supportWhatsapp       String? @map("support_whatsapp")
+  whatsappPhoneNumberId      String? @map("whatsapp_phone_number_id")
+  whatsappVerifyToken        String? @map("whatsapp_verify_token")
+  supportWhatsapp            String? @map("support_whatsapp")
+  metaAccessTokenEncrypted   String? @map("meta_access_token_encrypted")
 
   events        Event[]
 

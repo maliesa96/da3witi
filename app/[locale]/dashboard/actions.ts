@@ -236,7 +236,7 @@ export async function sendInvitesForEvent(eventId: string, locale: 'en' | 'ar') 
       mediaType: (event.mediaType as MediaType) || 'image',
       mediaFilename: event.mediaFilename || undefined,
     }),
-    meta: { kind: 'invite' as const, guestId: guest.id, eventId, locale },
+    meta: { kind: 'invite' as const, guestId: guest.id, eventId, locale, vendorId: event.vendorId },
   }));
 
   await Promise.all([

@@ -16,17 +16,20 @@ export type WhatsAppOutboxMeta =
       guestId: string;
       eventId: string;
       locale: "en" | "ar";
+      vendorId?: string | null;
     }
   | {
       kind: "reminder";
       guestId: string;
       eventId: string;
       locale: "en" | "ar";
+      vendorId?: string | null;
     }
   | {
       kind: "webhook_followup";
       guestId?: string;
       repliedMessageId?: string;
+      vendorId?: string | null;
     }
   | Record<string, unknown>;
 

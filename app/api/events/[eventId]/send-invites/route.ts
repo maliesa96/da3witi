@@ -76,7 +76,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ e
         mediaType: (event.mediaType as MediaType) || "image",
         mediaFilename: event.mediaFilename || undefined,
       }),
-      meta: { kind: "invite" as const, guestId: guest.id, eventId, locale },
+      meta: { kind: "invite" as const, guestId: guest.id, eventId, locale, vendorId: event.vendorId },
     }));
 
     // Enqueue first; only mark as enqueued if Redis enqueue succeeded.

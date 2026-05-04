@@ -6,6 +6,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { loadConfig } from "./config";
 import { createWhatsAppClient } from "./whatsapp";
 import { createGuestRepository } from "./db";
+import { createVendorCredentialResolver } from "./vendorCredentials";
 import type { JobData } from "./types";
 
 async function main() {
@@ -39,8 +40,9 @@ async function main() {
   const prisma = new PrismaClient({ adapter });
 
   // Create clients
-  const whatsapp = createWhatsAppClient(config);
+  const whatsapp = createWhatsAppClient(config.whatsappVersion);
   const guests = createGuestRepository(prisma);
+  const credentials = createVendorCredentialResolver(prisma, config);
 
   // Create BullMQ worker
   const worker = new Worker<JobData>(
@@ -55,10 +57,13 @@ async function main() {
         template: (payload.template as Record<string, unknown>)?.name,
       };
 
-      log.info({ jobId: job.id, ...summary, kind: meta.kind }, "Processing job");
+      log.info({ jobId: job.id, ...summary, kind: meta.kind, vendorId: meta.vendorId ?? null }, "Processing job");
+
+      // Resolve credentials (vendor-specific or default fallback)
+      const creds = await credentials.resolve(meta.vendorId);
 
       // Send to WhatsApp
-      const res = await whatsapp.send(payload);
+      const res = await whatsapp.send(payload, creds);
 
       if (res.ok) {
         const messageId = whatsapp.extractMessageId(res.data);

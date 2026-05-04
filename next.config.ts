@@ -17,7 +17,7 @@ async function bootstrapVendorEnv() {
   const pool = new Pool({ connectionString, connectionTimeoutMillis: 5000 });
   try {
     const { rows } = await pool.query(
-      'SELECT slug, default_locale, name, logo_url, favicon_url, whatsapp_phone_number_id, waba_id, whatsapp_verify_token, support_whatsapp FROM vendors WHERE id = $1 LIMIT 1',
+      'SELECT slug, default_locale, name, logo_url, favicon_url, whatsapp_phone_number_id, whatsapp_verify_token, support_whatsapp FROM vendors WHERE id = $1 LIMIT 1',
       [vendorId]
     );
     const vendor = rows[0];
@@ -40,9 +40,6 @@ async function bootstrapVendorEnv() {
     }
     if (vendor.whatsapp_phone_number_id && !process.env.WHATSAPP_PHONE_NUMBER_ID) {
       process.env.WHATSAPP_PHONE_NUMBER_ID = vendor.whatsapp_phone_number_id;
-    }
-    if (vendor.waba_id && !process.env.WABA_ID) {
-      process.env.WABA_ID = vendor.waba_id;
     }
     if (vendor.whatsapp_verify_token && !process.env.WHATSAPP_VERIFY_TOKEN) {
       process.env.WHATSAPP_VERIFY_TOKEN = vendor.whatsapp_verify_token;
