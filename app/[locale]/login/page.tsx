@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { isVendorMode } from '@/lib/vendor';
 import Link from 'next/link';
 import PasswordLoginForm from './PasswordLoginForm';
 import MagicLinkForm from './MagicLinkForm';
@@ -49,15 +50,17 @@ export default async function LoginPage({
       <div className="w-full max-w-md space-y-6 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-stone-200">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-stone-900">{t('login')}</h1>
-          <p className="text-stone-500 mt-2 text-sm">
-            {t('dont_have_account')}{' '}
-            <Link 
-              href={`/${locale}/signup`} 
-              className="text-stone-900 font-medium hover:underline"
-            >
-              {t('signup')}
-            </Link>
-          </p>
+          {!isVendorMode && (
+            <p className="text-stone-500 mt-2 text-sm">
+              {t('dont_have_account')}{' '}
+              <Link 
+                href={`/${locale}/signup`} 
+                className="text-stone-900 font-medium hover:underline"
+              >
+                {t('signup')}
+              </Link>
+            </p>
+          )}
         </div>
 
         {/* OAuth providers */}

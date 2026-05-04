@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useLocale, useTranslations, NextIntlClientProvider } from "next-intl";
 import { TEMPLATES } from "@/lib/templates/templates";
 import { getInviteTemplateName } from "@/lib/whatsapp";
+import { isVendorMode, SITE_NAME, FAVICON_URL } from "@/lib/vendorClient";
 import React, { useEffect, useState } from "react";
 
 interface InvitePreviewProps {
@@ -58,7 +59,7 @@ function InvitePreviewContent({
     date: date || t('default_date'),
     time: time || timeString,
     location_name: locationName || t('default_location_name'),
-    event_name: t('app_name'),
+    event_name: isVendorMode && SITE_NAME ? SITE_NAME : t('app_name'),
     rsvp_date: date || t('default_rsvp_date'),
     ...(guestsEnabled && { invite_count: '2' }),
   }) : message;
@@ -116,16 +117,27 @@ function InvitePreviewContent({
              
              <div className="flex-1 flex items-center gap-2 ml-2 mr-2">
                  <div className="w-9 h-9 flex items-center justify-center rounded-full bg-black shrink-0 overflow-hidden border border-white/10">
-                    <Image
-                      src="/images/3_white.svg"
-                      alt="Da3witi"
-                      width={18}
-                      height={18}
-                      className="object-contain"
-                    />
+                    {isVendorMode && FAVICON_URL ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={FAVICON_URL}
+                        alt={SITE_NAME || ""}
+                        width={35}
+                        height={35}
+                        className="object-contain"
+                      />
+                    ) : (
+                      <Image
+                        src="/images/3_white.svg"
+                        alt="Da3witi"
+                        width={18}
+                        height={18}
+                        className="object-contain"
+                      />
+                    )}
                  </div>
                  <div className="flex flex-col justify-center leading-tight">
-                     <span className="text-[15px] font-semibold text-white">{t('app_name')}</span>
+                     <span className="text-[15px] font-semibold text-white">{isVendorMode && SITE_NAME ? SITE_NAME : t('app_name')}</span>
                      <span className="text-[10px] text-gray-400">{t('contact_info')}</span>
                  </div>
              </div>

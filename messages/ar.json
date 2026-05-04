@@ -386,6 +386,13 @@
     "error_duplicate_phone": "رقم الهاتف {phone} مستخدم بالفعل من قبل ضيف آخر في هذه المناسبة.",
     "confirm_add": "إضافة ضيوف",
     "preview_invite": "معاينة الدعوة",
+    "edit_event": "تعديل التفاصيل",
+    "edit_event_title": "تعديل بيانات المناسبة",
+    "edit_event_save": "حفظ التعديلات",
+    "edit_event_saving": "جاري الحفظ...",
+    "edit_event_cancel": "إلغاء",
+    "edit_event_close": "إغلاق",
+    "edit_event_disabled_tooltip": "لا يمكن التعديل بعد إرسال الدعوات",
     "scan_qr": "مسح رمز QR",
     "scan_success": "تم تسجيل الدخول بنجاح!",
     "scan_already_checked_in": "تم تسجيل الدخول مسبقاً",
@@ -421,7 +428,12 @@
     "activity_update": "تحديث جديد",
     "activity_failed": "فشل إرسال الدعوة لـ",
     "export_csv": "تصدير CSV",
-    "exporting": "جاري التصدير..."
+    "exporting": "جاري التصدير...",
+    "resend_email": "إعادة إرسال الإيميل",
+    "resend_email_sending": "جاري الإرسال...",
+    "resend_email_sent": "تم الإرسال",
+    "resend_email_failed": "فشل الإرسال",
+    "resend_email_tooltip": "إعادة إرسال رسالة الدعوة إلى {email}"
   },
   "Auth": {
     "login": "تسجيل الدخول",
@@ -470,7 +482,11 @@
     "auth_error_expired": "انتهت صلاحية رابط تسجيل الدخول أو تم استخدامه مسبقاً. اطلب رابطاً جديداً من صفحة تسجيل الدخول.",
     "auth_error_generic": "تعذر تسجيل الدخول. يرجى طلب رابط جديد والمحاولة مرة أخرى.",
     "auth_error_cta_login": "العودة لتسجيل الدخول",
-    "auth_error_cta_home": "الذهاب للرئيسية"
+    "auth_error_cta_home": "الذهاب إلى الرئيسية",
+    "setup_password_title": "إنشاء كلمة المرور",
+    "setup_password_description": "أنشئ كلمة مرور لحسابك. ستستخدمها لتسجيل الدخول لاحقاً.",
+    "setup_password_submit": "حفظ كلمة المرور والمتابعة",
+    "setup_password_saving": "جارٍ تعيين كلمة المرور..."
   },
   "TermsPage": {
     "title": "شروط الخدمة",

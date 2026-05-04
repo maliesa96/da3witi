@@ -3,14 +3,21 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { isVendorMode } from '@/lib/vendor'
+import { getAppOrigin } from '@/lib/getAppOrigin'
 
 export async function signUpWithPassword(formData: FormData) {
+  const locale = (formData.get('locale') as string) || 'en'
+
+  if (isVendorMode) {
+    redirect(`/${locale}/login`)
+  }
+
   const supabase = await createClient()
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const confirmPassword = formData.get('confirmPassword') as string
-  const locale = formData.get('locale') as string || 'en'
   const next = formData.get('next') as string || `/${locale}/dashboard`
 
   // Basic validation
@@ -48,7 +55,7 @@ export async function signUpWithPassword(formData: FormData) {
     email,
     password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/auth/callback?next=${next}`,
+      emailRedirectTo: `${await getAppOrigin()}/${locale}/auth/callback?next=${next}`,
     },
   })
 

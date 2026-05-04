@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
-import { isVendorMode } from "@/lib/vendor";
+import { isVendorMode, isVendorAdmin } from "@/lib/vendor";
 import type { Prisma } from "@prisma/client";
 
 export async function GET() {
@@ -38,6 +38,8 @@ export async function GET() {
         guestsEnabled: true,
         reminderEnabled: true,
         imageUrl: true,
+        mediaType: true,
+        mediaFilename: true,
         locale: true,
         paidAt: true,
         guestCountTotal: true,
@@ -71,7 +73,10 @@ export async function GET() {
       });
     }
 
+    const vendorAdmin = isVendorMode && await isVendorAdmin(user.email);
+
     return NextResponse.json({
+      isVendorAdmin: vendorAdmin,
       events: events.map((e) => ({
         id: e.id,
         title: e.title,
@@ -85,6 +90,8 @@ export async function GET() {
         guestsEnabled: e.guestsEnabled,
         reminderEnabled: e.reminderEnabled,
         imageUrl: e.imageUrl ?? null,
+        mediaType: e.mediaType ?? null,
+        mediaFilename: e.mediaFilename ?? null,
         locale: e.locale ?? null,
         paidAt: e.paidAt ? e.paidAt.toISOString() : null,
         guestCountTotal: e.guestCountTotal,
@@ -98,6 +105,7 @@ export async function GET() {
         inviteCountFailed: e.inviteCountFailed,
         inviteCountNoReply: e.inviteCountNoReply,
         customerPermissions: e.customerPermissions ?? null,
+        customerEmail: e.customerEmail ?? null,
       })),
       defaultEventId: events[0]?.id ?? null,
     });

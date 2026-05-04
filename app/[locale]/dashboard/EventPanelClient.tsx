@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect, memo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Camera, Users, Clock, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Filter, BadgeCheck, Download } from "lucide-react";
+import { Calendar, Camera, Users, Clock, MapPin, Search, Loader2, QrCode, Bell, Eye, ExternalLink, X, Filter, BadgeCheck, Download, Mail, Pencil } from "lucide-react";
 import { getStatusConfig, StatusIcon } from "@/lib/statusConfig";
 import { AnimatePresence, motion } from "framer-motion";
 import InvitePreview from "@/app/components/InvitePreview";
@@ -12,7 +12,9 @@ import { Link } from "@/navigation";
 import AddGuestForm from "@/app/components/AddGuestForm";
 import ConfirmSendInvitesButton from "@/app/components/ConfirmSendInvitesButton";
 import { isVendorMode } from "@/lib/vendorClient";
+import { resendCustomerEmail } from "@/app/[locale]/dashboard/actions";
 import DeleteAllGuestsButton from "@/app/components/DeleteAllGuestsButton";
+import EditEventDialog from "@/app/components/EditEventDialog";
 import RecentActivity from "@/app/components/RecentActivity";
 import { GuestListClient, type GuestRowData } from "@/app/components/AnimatedGuestRows";
 import {
@@ -39,9 +41,12 @@ type EventForClient = {
   guestsEnabled: boolean;
   reminderEnabled: boolean;
   imageUrl: string | null;
+  mediaType: string | null;
+  mediaFilename: string | null;
   locale: string | null;
   paidAt: string | null; // ISO
   customerPermissions?: CustomerPermissions;
+  customerEmail?: string | null;
 
   // Denormalized counters from `GET /api/events`
   guestCountTotal?: number;
@@ -114,18 +119,71 @@ const StatCard = memo(function StatCard({
       }`}
       aria-pressed={isActive}
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] md:text-xs font-medium text-stone-500">{label}</span>
-        <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${iconBgClassName}`}>
+      <div className="w-full flex items-center justify-between gap-2 mb-2">
+        <span className="text-[10px] md:text-xs font-medium text-stone-500 min-w-0">{label}</span>
+        <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBgClassName}`}>
           <StatusIcon status={status} size={16} />
         </span>
       </div>
-      <div className="text-xl md:text-2xl font-semibold text-stone-900 tabular-nums">
+      <div className="w-full text-xl md:text-2xl font-semibold text-stone-900 tabular-nums">
         {value}
       </div>
     </button>
   );
 });
+
+function ResendEmailButton({ eventId, customerEmail }: { eventId: string; customerEmail: string }) {
+  const t = useTranslations("Dashboard");
+  const locale = useLocale();
+  const [pending, setPending] = useState(false);
+  const [result, setResult] = useState<"success" | "error" | null>(null);
+
+  const handleResend = async () => {
+    setPending(true);
+    setResult(null);
+    try {
+      await resendCustomerEmail(eventId, locale as "en" | "ar");
+      setResult("success");
+      setTimeout(() => setResult(null), 4000);
+    } catch {
+      setResult("error");
+      setTimeout(() => setResult(null), 4000);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleResend}
+      disabled={pending}
+      className={`px-4 py-2 border rounded-lg text-sm font-medium transition-all flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+        result === "success"
+          ? "bg-green-50 border-green-200 text-green-700"
+          : result === "error"
+            ? "bg-red-50 border-red-200 text-red-700"
+            : "bg-white/70 hover:bg-white border-stone-200 text-stone-700"
+      }`}
+      title={t("resend_email_tooltip", { email: customerEmail })}
+    >
+      {pending ? (
+        <Loader2 size={16} className="animate-spin" />
+      ) : result === "success" ? (
+        <Mail size={16} className="text-green-600" />
+      ) : (
+        <Mail size={16} />
+      )}
+      {pending
+        ? t("resend_email_sending")
+        : result === "success"
+          ? t("resend_email_sent")
+          : result === "error"
+            ? t("resend_email_failed")
+            : t("resend_email")}
+    </button>
+  );
+}
 
 export default function EventPanelClient({
   event,
@@ -133,15 +191,18 @@ export default function EventPanelClient({
   initialPagination,
   initialStats,
   initialInviteTotals,
+  isVendorAdmin = false,
 }: {
   event: EventForClient;
   initialGuests?: GuestRowData[];
   initialPagination?: PaginationInfo;
   initialStats?: GuestStats;
   initialInviteTotals?: InviteTotals;
+  isVendorAdmin?: boolean;
 }) {
   const t = useTranslations("Dashboard");
   const locale = useLocale();
+  const isCustomerView = isVendorMode && !isVendorAdmin;
 
   // Threshold: use client-side filtering for small lists, server-side for large
   const CLIENT_SIDE_THRESHOLD = 500;
@@ -963,6 +1024,21 @@ export default function EventPanelClient({
     onEventUpdate: handleRealtimeEventUpdate,
   });
 
+  // Edit event dialog state
+  const [showEditEvent, setShowEditEvent] = useState(false);
+
+  const sentInvitesCount = useMemo(() => {
+    return (
+      serverStats.sent +
+      serverStats.delivered +
+      serverStats.read +
+      serverStats.confirmed +
+      serverStats.declined
+    );
+  }, [serverStats]);
+
+  const canEditEvent = sentInvitesCount === 0;
+
   // Mobile activity sheet state
   const [showMobileActivity, setShowMobileActivity] = useState(false);
 
@@ -1068,6 +1144,29 @@ export default function EventPanelClient({
                 <Eye size={16} />
                 {t("preview_invite") || "Preview Invite"}
               </button>
+              {!isCustomerView && (
+                <div className="relative group/edit">
+                  <button
+                    type="button"
+                    onClick={() => canEditEvent && setShowEditEvent(true)}
+                    disabled={!canEditEvent}
+                    className={`px-4 py-2 border rounded-lg text-sm font-medium transition-all flex items-center gap-2 shadow-sm ${
+                      canEditEvent
+                        ? "bg-white/70 hover:bg-white border-stone-200 text-stone-700 cursor-pointer"
+                        : "bg-stone-100 border-stone-200 text-stone-400 cursor-not-allowed"
+                    }`}
+                  >
+                    <Pencil size={16} />
+                    {t("edit_event")}
+                  </button>
+                  {!canEditEvent && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-stone-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover/edit:opacity-100 transition-opacity pointer-events-none z-10">
+                      {t("edit_event_disabled_tooltip")}
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2 h-2 bg-stone-900 rotate-45" />
+                    </div>
+                  )}
+                </div>
+              )}
               {event.qrEnabled && (
                 <Link
                   href={`/dashboard/scan?eventId=${event.id}`}
@@ -1076,6 +1175,9 @@ export default function EventPanelClient({
                   <Camera size={16} />
                   {t("scan_qr") || "Scan QR"}
                 </Link>
+              )}
+              {isVendorAdmin && event.customerEmail && (
+                <ResendEmailButton eventId={event.id} customerEmail={event.customerEmail} />
               )}
             </div>
           </div>
@@ -1089,14 +1191,16 @@ export default function EventPanelClient({
                 isPaid={!!event.paidAt}
               />
             )}
-            <div className="w-full">
-              <AddGuestForm
-                eventId={event.id}
-                guestsEnabled={event.guestsEnabled}
-                onGuestsAdded={handleGuestsAdded}
-                buttonClassName="w-full px-6 py-3 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2 bg-white text-stone-900 border border-stone-200 hover:bg-stone-50 hover:-translate-y-0.5 cursor-pointer"
-              />
-            </div>
+            {!isCustomerView && (
+              <div className="w-full">
+                <AddGuestForm
+                  eventId={event.id}
+                  guestsEnabled={event.guestsEnabled}
+                  onGuestsAdded={handleGuestsAdded}
+                  buttonClassName="w-full px-6 py-3 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2 bg-white text-stone-900 border border-stone-200 hover:bg-stone-50 hover:-translate-y-0.5 cursor-pointer"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1194,11 +1298,13 @@ export default function EventPanelClient({
                     )}
                     {isExporting ? t("exporting") : t("export_csv")}
                   </button>
-                  <DeleteAllGuestsButton
-                    eventId={event.id}
-                    pendingCount={serverStats.pending + serverStats.failed}
-                    onDeleted={handleAllGuestsDeleted}
-                  />
+                  {!isCustomerView && (
+                    <DeleteAllGuestsButton
+                      eventId={event.id}
+                      pendingCount={serverStats.pending + serverStats.failed}
+                      onDeleted={handleAllGuestsDeleted}
+                    />
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1283,6 +1389,7 @@ export default function EventPanelClient({
               isLoading={isLoading}
               searchQuery={searchQuery}
               hasFilters={hasFilters}
+              readOnly={isCustomerView}
             />
           </div>
         </div>
@@ -1403,6 +1510,17 @@ export default function EventPanelClient({
         </AnimatePresence>,
         document.body
       )}
+
+      {/* Edit Event Dialog */}
+      <EditEventDialog
+        event={event}
+        isVendorAdmin={isVendorAdmin}
+        open={showEditEvent}
+        onClose={() => setShowEditEvent(false)}
+        onSaved={() => {
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

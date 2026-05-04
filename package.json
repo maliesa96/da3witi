@@ -11,16 +11,17 @@
     "deploy:worker": "fly deploy -c worker/fly.toml"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.10",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "@vis.gl/react-google-maps": "^1.7.1",
     "bullmq": "^5.34.8",
-    "ioredis": "^5.4.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.25",
     "html5-qrcode": "^2.3.8",
+    "ioredis": "^5.4.2",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.556.0",
     "next": "16.0.7",

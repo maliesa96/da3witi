@@ -64,6 +64,15 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
+
+  if (_isVendorMode && pathname.includes('/signup')) {
+    const segments = pathname.split('/');
+    const locale = segments[1] === 'ar' || segments[1] === 'en' ? segments[1] : 'en';
+    const url = request.nextUrl.clone()
+    url.pathname = `/${locale}/login`
+    return NextResponse.redirect(url)
+  }
+
   const requiresAuth = pathname.includes('/wizard') || pathname.includes('/dashboard') || pathname.includes('/admin')
 
   if (!user && requiresAuth) {

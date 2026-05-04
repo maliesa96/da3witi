@@ -9,7 +9,10 @@ import { shouldEnqueueWhatsAppInvite } from '@/lib/whatsappSendEligibility';
 import { broadcastGuestInsert } from '@/lib/supabase/broadcast';
 import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
 import { isAdmin } from '@/lib/admin';
-import { parseCustomerPermissions } from '@/lib/vendor';
+import { parseCustomerPermissions, isVendorMode, isVendorAdmin, SITE_NAME } from '@/lib/vendor';
+import { sendCustomerInvitationEmail, sendExistingCustomerInvitationEmail } from '@/lib/email';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { getAppOrigin } from '@/lib/getAppOrigin';
 
 async function getAuthedUser() {
   const supabase = await createClient();
@@ -35,6 +38,19 @@ function canAccessEvent(
   return false;
 }
 
+async function canWriteEvent(
+  event: { userId: string | null; customerEmail: string | null; customerUserId: string | null; vendorId: string | null },
+  user: { id: string; email?: string | undefined }
+): Promise<boolean> {
+  if (!canAccessEvent(event, user)) return false;
+  if (isVendorMode && event.vendorId) {
+    if (event.userId === user.id) return true;
+    if (isAdmin(user.email)) return true;
+    return isVendorAdmin(user.email);
+  }
+  return true;
+}
+
 export async function addGuests(
   eventId: string,
   guests: { name: string; phone: string; inviteCount?: number | string }[]
@@ -49,7 +65,7 @@ export async function addGuests(
     throw new Error('Event not found');
   }
 
-  if (!canAccessEvent(event, user)) {
+  if (!(await canWriteEvent(event, user))) {
     throw new Error('Forbidden');
   }
 
@@ -361,7 +377,7 @@ export async function deleteGuest(guestId: string) {
     throw new Error('Guest not found');
   }
 
-  if (!canAccessEvent(guest.event, user)) {
+  if (!(await canWriteEvent(guest.event, user))) {
     throw new Error('Forbidden');
   }
 
@@ -388,7 +404,7 @@ export async function deleteAllGuests(eventId: string) {
     throw new Error('Event not found');
   }
 
-  if (!canAccessEvent(event, user)) {
+  if (!(await canWriteEvent(event, user))) {
     throw new Error('Forbidden');
   }
 
@@ -418,7 +434,7 @@ export async function updateGuest(
     throw new Error('Guest not found');
   }
 
-  if (!canAccessEvent(guest.event, user)) {
+  if (!(await canWriteEvent(guest.event, user))) {
     throw new Error('Forbidden');
   }
 
@@ -476,5 +492,80 @@ export async function updateGuest(
   });
 
   return { success: true, guest: updated };
+}
+
+export async function resendCustomerEmail(eventId: string, locale: 'en' | 'ar') {
+  const user = await getAuthedUser();
+
+  if (!isVendorMode || !(await isVendorAdmin(user.email))) {
+    throw new Error('Forbidden');
+  }
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: {
+      id: true,
+      title: true,
+      vendorId: true,
+      customerEmail: true,
+      userId: true,
+    },
+  });
+
+  if (!event) {
+    throw new Error('Event not found');
+  }
+
+  if (!event.vendorId || !event.customerEmail) {
+    throw new Error('No customer email on this event');
+  }
+
+  const appUrl = await getAppOrigin();
+  const setPasswordPath = `/${locale}/setup-password?eventId=${event.id}`;
+
+  const adminSupabase = createAdminClient();
+
+  let linkData;
+  const inviteRedirectTo = `${appUrl}/${locale}/auth/callback?next=${encodeURIComponent(setPasswordPath)}`;
+
+  const inviteResult = await adminSupabase.auth.admin.generateLink({
+    type: 'invite',
+    email: event.customerEmail,
+    options: { redirectTo: inviteRedirectTo },
+  });
+
+  if (inviteResult.error) {
+    const loginUrl = `${appUrl}/${locale}/login`;
+
+    await sendExistingCustomerInvitationEmail({
+      customerEmail: event.customerEmail,
+      eventTitle: event.title,
+      loginUrl,
+      siteName: SITE_NAME || 'Da3witi',
+      locale,
+    });
+  } else {
+    linkData = inviteResult.data;
+
+    if (!linkData?.properties?.action_link) {
+      throw new Error('Auth link generation returned no action link');
+    }
+
+    const supabaseLink = new URL(linkData.properties.action_link);
+    const token_hash = supabaseLink.searchParams.get('token_hash') || supabaseLink.searchParams.get('token');
+    const type = supabaseLink.searchParams.get('type') || 'invite';
+
+    const inviteUrl = `${appUrl}/${locale}/auth/confirm?token_hash=${token_hash}&type=${type}&next=${encodeURIComponent(setPasswordPath)}`;
+
+    await sendCustomerInvitationEmail({
+      customerEmail: event.customerEmail,
+      eventTitle: event.title,
+      inviteUrl,
+      siteName: SITE_NAME || 'Da3witi',
+      locale,
+    });
+  }
+
+  return { success: true };
 }
 

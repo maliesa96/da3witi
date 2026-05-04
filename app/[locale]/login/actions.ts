@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getAppOrigin } from '@/lib/getAppOrigin'
 
 export async function signInWithPassword(formData: FormData) {
   const supabase = await createClient()
@@ -48,7 +49,8 @@ export async function signInWithMagicLink(formData: FormData) {
   const email = formData.get('email') as string
   const locale = formData.get('locale') as string || 'en'
   const next = formData.get('next') as string || `/${locale}/dashboard`
-  const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/auth/callback?next=${next}`
+  const appOrigin = await getAppOrigin()
+  const redirectUrl = `${appOrigin}/${locale}/auth/callback?next=${next}`
 
   // Basic validation
   if (!email) {

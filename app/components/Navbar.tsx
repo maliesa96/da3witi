@@ -16,6 +16,7 @@ export function Navbar() {
   const locale = useLocale();
   const pathname = usePathname();
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [vendorAdmin, setVendorAdmin] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -38,6 +39,20 @@ export function Navbar() {
 
     return () => subscription.unsubscribe();
   }, [pathname]);
+
+  useEffect(() => {
+    if (!isVendorMode || !user) return;
+    let cancelled = false;
+    fetch("/api/events", { credentials: "include", cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!cancelled) setVendorAdmin(!!data?.isVendorAdmin);
+      })
+      .catch(() => {
+        if (!cancelled) setVendorAdmin(false);
+      });
+    return () => { cancelled = true; };
+  }, [user]);
 
   const otherLocale = locale === 'ar' ? 'en' : 'ar';
   const langLabel = locale === 'ar' ? 'English' : 'العربية';
@@ -65,11 +80,10 @@ export function Navbar() {
           <Link href="/" className="flex items-center gap-2 cursor-pointer">
             <div className="h-12 shrink-0">
               {LOGO_URL ? (
-                <Image
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
                   src={LOGO_URL}
-                  alt={SITE_NAME || t('brand')}
-                  width={240}
-                  height={64}
+                  alt={SITE_NAME || ""}
                   className="h-12 w-auto"
                 />
               ) : (
@@ -170,7 +184,7 @@ export function Navbar() {
               </Link>
             )}
 
-            {(!isVendorMode || user) && (
+            {(!isVendorMode || (user && vendorAdmin)) && (
               <Link
                 href="/wizard"
                 prefetch={false}
@@ -313,7 +327,7 @@ export function Navbar() {
             </Link>
           )}
 
-          {(!isVendorMode || user) && (
+          {(!isVendorMode || (user && vendorAdmin)) && (
             <div className="pt-4 border-t border-stone-200">
               <Link
                 href="/wizard"

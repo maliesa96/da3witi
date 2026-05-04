@@ -386,6 +386,13 @@
     "error_duplicate_phone": "The phone number {phone} is already used by another guest in this event.",
     "confirm_add": "Add Guests",
     "preview_invite": "Preview Invite",
+    "edit_event": "Edit Event",
+    "edit_event_title": "Edit Event Details",
+    "edit_event_save": "Save Changes",
+    "edit_event_saving": "Saving...",
+    "edit_event_cancel": "Cancel",
+    "edit_event_close": "Close",
+    "edit_event_disabled_tooltip": "Cannot edit after invites have been sent",
     "scan_qr": "Scan QR Codes",
     "scan_success": "Check-in successful!",
     "scan_already_checked_in": "Already checked in",
@@ -421,7 +428,12 @@
     "activity_update": "Activity update",
     "activity_failed": "Invitation failed for",
     "export_csv": "Export CSV",
-    "exporting": "Exporting..."
+    "exporting": "Exporting...",
+    "resend_email": "Resend Email",
+    "resend_email_sending": "Sending...",
+    "resend_email_sent": "Email Sent",
+    "resend_email_failed": "Send Failed",
+    "resend_email_tooltip": "Resend invitation email to {email}"
   },
   "Auth": {
     "login": "Login",
@@ -470,7 +482,11 @@
     "auth_error_expired": "This sign-in link has expired or was already used. Request a new link from the login page.",
     "auth_error_generic": "We couldn't sign you in. Please request a new link and try again.",
     "auth_error_cta_login": "Go to login",
-    "auth_error_cta_home": "Go to home"
+    "auth_error_cta_home": "Go to home",
+    "setup_password_title": "Set Your Password",
+    "setup_password_description": "Create a password for your account. You'll use this to log in.",
+    "setup_password_submit": "Set Password & Continue",
+    "setup_password_saving": "Setting password..."
   },
   "TermsPage": {
     "title": "Terms of Service",

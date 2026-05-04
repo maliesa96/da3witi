@@ -190,11 +190,13 @@ function EmptyState({
   eventId,
   guestsEnabled,
   onGuestsAdded,
+  readOnly = false,
 }: {
   t: (key: string, values?: Record<string, string | number | Date>) => string;
   eventId: string;
   guestsEnabled?: boolean;
   onGuestsAdded?: (guests: GuestRowData[]) => void;
+  readOnly?: boolean;
 }) {
   return (
     <div className="px-6 py-16 text-center flex flex-col items-center">
@@ -208,9 +210,11 @@ function EmptyState({
         {t("no_guests_desc") ||
           "Start by adding guests to your event list. You can add them manually to get started."}
       </p>
-      <div className="w-full max-w-[200px] mx-auto flex justify-center">
-        <AddGuestForm eventId={eventId} guestsEnabled={guestsEnabled} onGuestsAdded={onGuestsAdded} />
-      </div>
+      {!readOnly && (
+        <div className="w-full max-w-[200px] mx-auto flex justify-center">
+          <AddGuestForm eventId={eventId} guestsEnabled={guestsEnabled} onGuestsAdded={onGuestsAdded} />
+        </div>
+      )}
     </div>
   );
 }
@@ -555,6 +559,7 @@ export function GuestListClient({
   isLoading,
   searchQuery = "",
   hasFilters = false,
+  readOnly = false,
 }: {
   guests: GuestRowData[];
   eventId: string;
@@ -568,6 +573,7 @@ export function GuestListClient({
   isLoading?: boolean;
   searchQuery?: string;
   hasFilters?: boolean;
+  readOnly?: boolean;
 }) {
   const t = useTranslations("Dashboard");
   const isSearching = searchQuery.trim() !== "" || hasFilters;
@@ -605,8 +611,8 @@ export function GuestListClient({
         >
           {guests.map((guest) => {
             const statusBadge = getStatusBadge(t, guest.status);
-            const canDelete = guest.status === "pending" || guest.status === "failed";
-            const canEdit = guest.status === "pending" || guest.status === "failed";
+            const canDelete = !readOnly && (guest.status === "pending" || guest.status === "failed");
+            const canEdit = !readOnly && (guest.status === "pending" || guest.status === "failed");
             return (
               <motion.div
                 key={guest.id}
@@ -674,7 +680,7 @@ export function GuestListClient({
           isSearching ? (
             <NoResultsState t={t} searchQuery={searchQuery} />
           ) : (
-            <EmptyState t={t} eventId={eventId} guestsEnabled={guestsEnabled} onGuestsAdded={onGuestsAdded} />
+            <EmptyState t={t} eventId={eventId} guestsEnabled={guestsEnabled} onGuestsAdded={onGuestsAdded} readOnly={readOnly} />
           )
         )}
       </div>
@@ -732,8 +738,8 @@ export function GuestListClient({
             >
               {guests.map((guest) => {
                 const statusBadge = getStatusBadge(t, guest.status);
-                const canDelete = guest.status === "pending" || guest.status === "failed";
-                const canEdit = guest.status === "pending" || guest.status === "failed";
+                const canDelete = !readOnly && (guest.status === "pending" || guest.status === "failed");
+                const canEdit = !readOnly && (guest.status === "pending" || guest.status === "failed");
                 return (
                   <motion.tr
                     key={guest.id}
@@ -802,7 +808,7 @@ export function GuestListClient({
                   {isSearching ? (
                     <NoResultsState t={t} searchQuery={searchQuery} />
                   ) : (
-                    <EmptyState t={t} eventId={eventId} guestsEnabled={guestsEnabled} onGuestsAdded={onGuestsAdded} />
+                    <EmptyState t={t} eventId={eventId} guestsEnabled={guestsEnabled} onGuestsAdded={onGuestsAdded} readOnly={readOnly} />
                   )}
                 </td>
               </tr>

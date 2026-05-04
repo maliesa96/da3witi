@@ -10,11 +10,15 @@ import { useRouter } from 'next/navigation';
 interface DeleteEventButtonProps {
   eventId: string;
   eventTitle: string;
+  variant?: 'default' | 'icon';
+  onDeleted?: () => void;
 }
 
 export default function DeleteEventButton({
   eventId,
   eventTitle,
+  variant = 'default',
+  onDeleted,
 }: DeleteEventButtonProps) {
   const t = useTranslations('Dashboard');
   const locale = useLocale();
@@ -50,7 +54,11 @@ export default function DeleteEventButton({
         throw new Error(data?.error || 'Failed to delete event');
       }
       setIsOpen(false);
-      router.replace(`/${locale}/dashboard`);
+      if (onDeleted) {
+        onDeleted();
+      } else {
+        router.replace(`/${locale}/dashboard`);
+      }
     } catch (error) {
       console.error('Failed to delete event:', error);
       alert(error instanceof Error ? error.message : 'Failed to delete event. Please try again.');
@@ -61,14 +69,25 @@ export default function DeleteEventButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="px-4 py-2 bg-white/70 hover:bg-red-50 border border-stone-200 hover:border-red-200 rounded-lg text-sm font-medium text-red-600 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
-      >
-        <Trash2 size={16} />
-        {t('delete_event') || 'Delete Event'}
-      </button>
+      {variant === 'icon' ? (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="p-1.5 bg-white/90 hover:bg-red-50 border border-stone-200 hover:border-red-300 rounded-lg text-stone-400 hover:text-red-600 transition-all shadow-sm cursor-pointer backdrop-blur-sm"
+          title={t('delete_event') || 'Delete Event'}
+        >
+          <Trash2 size={14} />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="px-4 py-2 bg-white/70 hover:bg-red-50 border border-stone-200 hover:border-red-200 rounded-lg text-sm font-medium text-red-600 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+        >
+          <Trash2 size={16} />
+          {t('delete_event') || 'Delete Event'}
+        </button>
+      )}
 
       {mounted && createPortal(
         <AnimatePresence>

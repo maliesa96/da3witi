@@ -7,7 +7,10 @@ import { revalidatePath } from 'next/cache';
 import { normalizePhoneToE164 } from '@/lib/phone';
 import { MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage, validateWhatsAppText } from '@/lib/inviteMessage';
 import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
-import { VENDOR_ID, isVendorMode, isVendorAdmin, type CustomerPermissions, DEFAULT_CUSTOMER_PERMISSIONS } from '@/lib/vendor';
+import { VENDOR_ID, isVendorMode, isVendorAdmin, SITE_NAME, type CustomerPermissions, DEFAULT_CUSTOMER_PERMISSIONS } from '@/lib/vendor';
+import { sendCustomerInvitationEmail, sendExistingCustomerInvitationEmail } from '@/lib/email';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { getAppOrigin } from '@/lib/getAppOrigin';
 
 export async function createEvent(formData: {
   title: string;
@@ -102,41 +105,92 @@ export async function createEvent(formData: {
     }
   }
 
-  // 1. Create the event in Prisma
-  const event = await prisma.event.create({
-    data: {
-      userId: user.id,
-      title: formData.title,
-      date: formData.date,
-      time: formData.time,
-      location: formData.location,
-      locationName: formData.locationName,
-      message: formData.message,
-      qrEnabled: formData.qrEnabled,
-      guestsEnabled: formData.guestsEnabled,
-      reminderEnabled: formData.reminderEnabled,
-      imageUrl: formData.imageUrl,
-      mediaType: formData.mediaType,
-      mediaFilename: formData.mediaFilename,
-      locale: formData.locale,
-      ...(isVendorMode && VENDOR_ID ? {
-        vendorId: VENDOR_ID,
-        customerEmail: formData.customerEmail || null,
-        customerPermissions: formData.customerPermissions ?? DEFAULT_CUSTOMER_PERMISSIONS,
-        paidAt: new Date(),
-      } : {}),
-      guests: {
-        create: guestsValidated.map(guest => ({
-          name: guest.name,
-          phone: guest.phone,
-          inviteCount: guest.inviteCount,
-          status: 'pending'
-        }))
+  const event = await prisma.$transaction(async (tx) => {
+    const created = await tx.event.create({
+      data: {
+        userId: user.id,
+        title: formData.title,
+        date: formData.date,
+        time: formData.time,
+        location: formData.location,
+        locationName: formData.locationName,
+        message: formData.message,
+        qrEnabled: formData.qrEnabled,
+        guestsEnabled: formData.guestsEnabled,
+        reminderEnabled: formData.reminderEnabled,
+        imageUrl: formData.imageUrl,
+        mediaType: formData.mediaType,
+        mediaFilename: formData.mediaFilename,
+        locale: formData.locale,
+        ...(isVendorMode && VENDOR_ID ? {
+          vendorId: VENDOR_ID,
+          customerEmail: formData.customerEmail || null,
+          customerPermissions: formData.customerPermissions ?? DEFAULT_CUSTOMER_PERMISSIONS,
+          paidAt: new Date(),
+        } : {}),
+        guests: {
+          create: guestsValidated.map(guest => ({
+            name: guest.name,
+            phone: guest.phone,
+            inviteCount: guest.inviteCount,
+            status: 'pending'
+          }))
+        }
+      },
+      include: {
+        guests: true
       }
-    },
-    include: {
-      guests: true
+    });
+
+    if (isVendorMode && formData.customerEmail) {
+      const appUrl = await getAppOrigin();
+      const setPasswordPath = `/${formData.locale}/setup-password?eventId=${created.id}`;
+
+      const adminSupabase = createAdminClient();
+
+      let linkData;
+      const inviteRedirectTo = `${appUrl}/${formData.locale}/auth/callback?next=${encodeURIComponent(setPasswordPath)}`;
+
+      const inviteResult = await adminSupabase.auth.admin.generateLink({
+        type: 'invite',
+        email: formData.customerEmail,
+        options: { redirectTo: inviteRedirectTo },
+      });
+
+      if (inviteResult.error) {
+        const loginUrl = `${appUrl}/${formData.locale}/login`;
+
+        await sendExistingCustomerInvitationEmail({
+          customerEmail: formData.customerEmail,
+          eventTitle: formData.title,
+          loginUrl,
+          siteName: SITE_NAME || 'Da3witi',
+          locale: formData.locale,
+        });
+      } else {
+        linkData = inviteResult.data;
+
+        if (!linkData?.properties?.action_link) {
+          throw new Error('Auth link generation returned no action link');
+        }
+
+        const supabaseLink = new URL(linkData.properties.action_link);
+        const token_hash = supabaseLink.searchParams.get('token_hash') || supabaseLink.searchParams.get('token');
+        const type = supabaseLink.searchParams.get('type') || 'invite';
+
+        const inviteUrl = `${appUrl}/${formData.locale}/auth/confirm?token_hash=${token_hash}&type=${type}&next=${encodeURIComponent(setPasswordPath)}`;
+
+        await sendCustomerInvitationEmail({
+          customerEmail: formData.customerEmail,
+          eventTitle: formData.title,
+          inviteUrl,
+          siteName: SITE_NAME || 'Da3witi',
+          locale: formData.locale,
+        });
+      }
     }
+
+    return created;
   });
 
   revalidatePath('/dashboard');

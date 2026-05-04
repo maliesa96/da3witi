@@ -19,6 +19,8 @@ type AdminEvent = {
   guestsEnabled: boolean;
   reminderEnabled: boolean;
   imageUrl: string | null;
+  mediaType: string | null;
+  mediaFilename: string | null;
   paidAt: string | null;
   locale: string | null;
   guestCountTotal: number;
@@ -137,7 +139,7 @@ export default function AdminEventViewClient({ eventId }: { eventId: string }) {
 
       {!isLoading && !loadError && event && (
         <RealtimeProvider eventId={event.id} enabled={!!event.paidAt}>
-          <EventPanelClient key={event.id} event={event} />
+          <EventPanelClient key={event.id} event={event} isVendorAdmin={true} />
         </RealtimeProvider>
       )}
     </div>

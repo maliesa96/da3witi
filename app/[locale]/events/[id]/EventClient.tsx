@@ -9,6 +9,7 @@ import EventPanelClient from "@/app/[locale]/dashboard/EventPanelClient";
 import DeleteEventButton from "@/app/components/DeleteEventButton";
 import { Link } from "@/navigation";
 import { RealtimeProvider } from "@/lib/supabase/RealtimeProvider";
+import { isVendorMode } from "@/lib/vendorClient";
 
 type EventForClient = {
   id: string;
@@ -23,8 +24,11 @@ type EventForClient = {
   guestsEnabled: boolean;
   reminderEnabled: boolean;
   imageUrl: string | null;
+  mediaType: string | null;
+  mediaFilename: string | null;
   paidAt: string | null;
   locale: string | null;
+  customerEmail?: string | null;
   guestCountTotal?: number;
   inviteCountTotal?: number;
   inviteCountPending?: number;
@@ -68,6 +72,7 @@ export default function EventClient({ eventId }: { eventId: string }) {
   const router = useRouter();
 
   const [event, setEvent] = useState<EventForClient | null>(null);
+  const [vendorAdmin, setVendorAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -80,7 +85,7 @@ export default function EventClient({ eventId }: { eventId: string }) {
 
       try {
         // Fetch event with counters from the events list endpoint
-        const eventsRes = await fetchJson<{ events: EventForClient[]; defaultEventId: string | null }>("/api/events");
+        const eventsRes = await fetchJson<{ events: EventForClient[]; defaultEventId: string | null; isVendorAdmin?: boolean }>("/api/events");
         if (cancelled) return;
 
         const foundEvent = eventsRes.events.find((e) => e.id === eventId);
@@ -91,6 +96,7 @@ export default function EventClient({ eventId }: { eventId: string }) {
         }
 
         setEvent(foundEvent);
+        setVendorAdmin(!!eventsRes.isVendorAdmin);
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
@@ -123,9 +129,15 @@ export default function EventClient({ eventId }: { eventId: string }) {
           <ArrowLeft size={16} />
           {t("back_to_dashboard")}
         </Link>
-        {event && !event.paidAt && (
-          <DeleteEventButton eventId={event.id} eventTitle={event.title} />
-        )}
+        {event && (() => {
+          const sentInvites = (event.inviteCountSent ?? 0) + (event.inviteCountDelivered ?? 0) +
+            (event.inviteCountRead ?? 0) + (event.inviteCountConfirmed ?? 0) +
+            (event.inviteCountDeclined ?? 0) + (event.inviteCountNoReply ?? 0);
+          const canDelete = isVendorMode
+            ? vendorAdmin && sentInvites === 0
+            : !event.paidAt;
+          return canDelete ? <DeleteEventButton eventId={event.id} eventTitle={event.title} /> : null;
+        })()}
       </div>
 
       {isLoading && (
@@ -142,7 +154,7 @@ export default function EventClient({ eventId }: { eventId: string }) {
 
       {!isLoading && !loadError && event && (
         <RealtimeProvider eventId={event.id} enabled={!!event.paidAt}>
-          <EventPanelClient key={event.id} event={event} />
+          <EventPanelClient key={event.id} event={event} isVendorAdmin={vendorAdmin} />
         </RealtimeProvider>
       )}
     </div>

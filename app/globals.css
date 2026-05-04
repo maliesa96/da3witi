@@ -22,6 +22,10 @@
   }
 }
 
+button, [role="button"], input[type="submit"], input[type="reset"], input[type="button"] {
+    cursor: pointer;
+}
+
 /* Custom scrollbar for upscale feel */
 ::-webkit-scrollbar {
     width: 6px;

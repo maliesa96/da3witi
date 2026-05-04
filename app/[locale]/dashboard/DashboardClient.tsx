@@ -8,6 +8,7 @@ import { Calendar, Clock, MapPin, Users, Plus, QrCode, CheckCircle2, Image as Im
 
 import { Link } from "@/navigation";
 import { isVendorMode } from "@/lib/vendorClient";
+import DeleteEventButton from "@/app/components/DeleteEventButton";
 
 type EventCardData = {
   id: string;
@@ -22,7 +23,12 @@ type EventCardData = {
   paidAt: string | null;
   guestCountTotal?: number;
   inviteCountTotal?: number;
+  inviteCountSent?: number;
+  inviteCountDelivered?: number;
+  inviteCountRead?: number;
   inviteCountConfirmed?: number;
+  inviteCountDeclined?: number;
+  inviteCountNoReply?: number;
 };
 
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
@@ -50,115 +56,138 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promi
   return (await res.json()) as T;
 }
 
-function EventCard({ event }: { event: EventCardData }) {
+function EventCard({ event, onDeleted, isVendorAdmin = false }: { event: EventCardData; onDeleted?: (id: string) => void; isVendorAdmin?: boolean }) {
   const t = useTranslations("Dashboard");
   const isPdf = event.imageUrl?.toLowerCase().endsWith(".pdf");
   const hasImage = !!event.imageUrl && !isPdf;
   const guestCount = event.inviteCountTotal ?? 0;
   const confirmedCount = event.inviteCountConfirmed ?? 0;
+  const sentInvites = (event.inviteCountSent ?? 0) + (event.inviteCountDelivered ?? 0) +
+    (event.inviteCountRead ?? 0) + (event.inviteCountConfirmed ?? 0) +
+    (event.inviteCountDeclined ?? 0) + (event.inviteCountNoReply ?? 0);
+  const canDelete = isVendorMode
+    ? isVendorAdmin && sentInvites === 0
+    : !event.paidAt;
 
   return (
-    <Link
-      href={`/events/${event.id}`}
-      className="group block bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-stone-300 hover:-translate-y-1"
-    >
-      {/* Image/Media Section */}
-      <div className="relative aspect-video bg-stone-100 overflow-hidden">
-        {hasImage ? (
-          <Image
-            src={event.imageUrl!}
-            alt={event.title}
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+    <div className="relative group">
+      <Link
+        href={`/events/${event.id}`}
+        className="block bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-stone-300 hover:-translate-y-1"
+      >
+        {/* Image/Media Section */}
+        <div className="relative aspect-video bg-stone-100 overflow-hidden">
+          {hasImage ? (
+            <Image
+              src={event.imageUrl!}
+              alt={event.title}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : isPdf ? (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-linear-to-br from-red-50 to-red-100">
+              <div className="w-16 h-20 bg-white rounded-lg shadow-md flex items-center justify-center border border-red-100">
+                <span className="text-xs font-bold text-red-500">PDF</span>
+              </div>
+              <span className="mt-3 text-xs text-red-400 font-medium">{t("pdf_document")}</span>
+            </div>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-linear-to-br from-stone-50 to-stone-100">
+              <ImageIcon size={40} className="text-stone-300" />
+              <span className="mt-2 text-xs text-stone-400">{t("no_image")}</span>
+            </div>
+          )}
+          
+          {/* Status Badges */}
+          <div className="absolute top-2 left-2 flex flex-wrap gap-1.5">
+            {event.paidAt && !isVendorMode && (
+              <span className="px-2 py-0.5 rounded-full bg-green-500/90 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm flex items-center gap-1">
+                <BadgeCheck size={10} />
+                {t("paid")}
+              </span>
+            )}
+            {event.isScheduled && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm">
+                {t("scheduled")}
+              </span>
+            )}
+            {event.qrEnabled && (
+              <span className="px-2 py-0.5 rounded-full bg-stone-900/80 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm flex items-center gap-1">
+                <QrCode size={10} />
+                QR
+              </span>
+            )}
+          </div>
+
+          {/* Guest Count Pill */}
+          <div className="absolute bottom-2 right-2">
+            <div className="flex items-center gap-1 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full shadow-sm">
+              <Users size={12} className="text-stone-600" />
+              <span className="text-xs font-semibold text-stone-900 tabular-nums">{guestCount}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Section */}
+        <div className="p-3">
+          <h3 className="text-base font-semibold text-stone-900 truncate group-hover:text-stone-700 transition-colors">
+            {event.title}
+          </h3>
+          
+          {/* Event Details */}
+          <div className="mt-2 space-y-1.5">
+            {event.date && (
+              <div className="flex items-center gap-1.5 text-xs text-stone-600">
+                <Calendar size={12} className="text-stone-400 shrink-0" />
+                <span className="truncate">{event.date}</span>
+                {event.time && (
+                  <>
+                    <span className="text-stone-300">•</span>
+                    <Clock size={12} className="text-stone-400 shrink-0" />
+                    <span>{event.time}</span>
+                  </>
+                )}
+              </div>
+            )}
+            {event.locationName && (
+              <div className="flex items-center gap-1.5 text-xs text-stone-600">
+                <MapPin size={12} className="text-stone-400 shrink-0" />
+                <span className="truncate">{event.locationName}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Stats Row */}
+          {guestCount > 0 && (
+            <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between">
+              <div className="flex items-center gap-1 text-xs text-stone-500">
+                <CheckCircle2 size={12} className="text-green-500" />
+                <span className="tabular-nums">{confirmedCount}</span>
+                <span>{t("confirmed")}</span>
+              </div>
+              <div className="text-[10px] text-stone-400">
+                {guestCount > 0 && `${Math.round((confirmedCount / guestCount) * 100)}%`}
+              </div>
+            </div>
+          )}
+        </div>
+      </Link>
+
+      {/* Delete button - floats over the card, visible on hover */}
+      {canDelete && (
+        <div
+          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          onClick={(e) => e.preventDefault()}
+        >
+          <DeleteEventButton
+            eventId={event.id}
+            eventTitle={event.title}
+            variant="icon"
+            onDeleted={() => onDeleted?.(event.id)}
           />
-        ) : isPdf ? (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-linear-to-br from-red-50 to-red-100">
-            <div className="w-16 h-20 bg-white rounded-lg shadow-md flex items-center justify-center border border-red-100">
-              <span className="text-xs font-bold text-red-500">PDF</span>
-            </div>
-            <span className="mt-3 text-xs text-red-400 font-medium">{t("pdf_document")}</span>
-          </div>
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-linear-to-br from-stone-50 to-stone-100">
-            <ImageIcon size={40} className="text-stone-300" />
-            <span className="mt-2 text-xs text-stone-400">{t("no_image")}</span>
-          </div>
-        )}
-        
-        {/* Status Badges */}
-        <div className="absolute top-2 left-2 flex flex-wrap gap-1.5">
-          {event.paidAt && !isVendorMode && (
-            <span className="px-2 py-0.5 rounded-full bg-green-500/90 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm flex items-center gap-1">
-              <BadgeCheck size={10} />
-              {t("paid")}
-            </span>
-          )}
-          {event.isScheduled && (
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm">
-              {t("scheduled")}
-            </span>
-          )}
-          {event.qrEnabled && (
-            <span className="px-2 py-0.5 rounded-full bg-stone-900/80 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm flex items-center gap-1">
-              <QrCode size={10} />
-              QR
-            </span>
-          )}
         </div>
-
-        {/* Guest Count Pill */}
-        <div className="absolute bottom-2 right-2">
-          <div className="flex items-center gap-1 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full shadow-sm">
-            <Users size={12} className="text-stone-600" />
-            <span className="text-xs font-semibold text-stone-900 tabular-nums">{guestCount}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Content Section */}
-      <div className="p-3">
-        <h3 className="text-base font-semibold text-stone-900 truncate group-hover:text-stone-700 transition-colors">
-          {event.title}
-        </h3>
-        
-        {/* Event Details */}
-        <div className="mt-2 space-y-1.5">
-          {event.date && (
-            <div className="flex items-center gap-1.5 text-xs text-stone-600">
-              <Calendar size={12} className="text-stone-400 shrink-0" />
-              <span className="truncate">{event.date}</span>
-              {event.time && (
-                <>
-                  <span className="text-stone-300">•</span>
-                  <Clock size={12} className="text-stone-400 shrink-0" />
-                  <span>{event.time}</span>
-                </>
-              )}
-            </div>
-          )}
-          {event.locationName && (
-            <div className="flex items-center gap-1.5 text-xs text-stone-600">
-              <MapPin size={12} className="text-stone-400 shrink-0" />
-              <span className="truncate">{event.locationName}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Stats Row */}
-        {guestCount > 0 && (
-          <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between">
-            <div className="flex items-center gap-1 text-xs text-stone-500">
-              <CheckCircle2 size={12} className="text-green-500" />
-              <span className="tabular-nums">{confirmedCount}</span>
-              <span>{t("confirmed")}</span>
-            </div>
-            <div className="text-[10px] text-stone-400">
-              {guestCount > 0 && `${Math.round((confirmedCount / guestCount) * 100)}%`}
-            </div>
-          </div>
-        )}
-      </div>
-    </Link>
+      )}
+    </div>
   );
 }
 
@@ -181,6 +210,7 @@ export default function DashboardClient() {
   const router = useRouter();
 
   const [events, setEvents] = useState<EventCardData[]>([]);
+  const [vendorAdmin, setVendorAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -192,10 +222,11 @@ export default function DashboardClient() {
       setLoadError(null);
 
       try {
-        const eventsRes = await fetchJson<{ events: EventCardData[]; defaultEventId: string | null }>("/api/events");
+        const eventsRes = await fetchJson<{ events: EventCardData[]; defaultEventId: string | null; isVendorAdmin?: boolean }>("/api/events");
         if (cancelled) return;
 
         setEvents(eventsRes.events);
+        setVendorAdmin(!!eventsRes.isVendorAdmin);
         setIsLoading(false);
       } catch (err) {
         if (cancelled) return;
@@ -250,7 +281,12 @@ export default function DashboardClient() {
       {!isLoading && !loadError && events.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {events.map((event) => (
-            <EventCard key={event.id} event={event} />
+            <EventCard
+              key={event.id}
+              event={event}
+              isVendorAdmin={vendorAdmin}
+              onDeleted={(id) => setEvents((prev) => prev.filter((e) => e.id !== id))}
+            />
           ))}
         </div>
       )}
@@ -267,14 +303,16 @@ export default function DashboardClient() {
               ? (locale === 'ar' ? 'لم يتم إنشاء أي فعالية بعد' : 'No events have been created for you yet')
               : t("no_events_desc")}
           </p>
-          <Link
-            href="/wizard"
-            prefetch={false}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors"
-          >
-            <Plus size={18} />
-            {t("create_event")}
-          </Link>
+          {(!isVendorMode || vendorAdmin) && (
+            <Link
+              href="/wizard"
+              prefetch={false}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors"
+            >
+              <Plus size={18} />
+              {t("create_event")}
+            </Link>
+          )}
         </div>
       )}
     </div>

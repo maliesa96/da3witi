@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { isVendorMode } from '@/lib/vendor';
 import Link from 'next/link';
 import SignupForm from './SignupForm';
 
@@ -20,6 +21,11 @@ export default async function SignupPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { locale } = await params;
+
+  if (isVendorMode) {
+    redirect(`/${locale}/login`);
+  }
+
   const t = await getTranslations('Auth');
 
   // If already authenticated, bounce straight to dashboard
