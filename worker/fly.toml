@@ -16,7 +16,6 @@ primary_region = 'ams'
   WORKER_CONCURRENCY = '10'
   WORKER_MAX_RETRIES = '5'
   WORKER_RPS = '40'
-  ECRYPTION_KEY = 'b4d592c74109a616cbda00ae3aa55707cc8452b0bb48e83311bb47dfb2134fb7'
 
 [processes]
   worker = 'npm start'
