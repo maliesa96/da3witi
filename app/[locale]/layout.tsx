@@ -5,7 +5,8 @@ import { getMessages, getTranslations } from 'next-intl/server';
 import "../globals.css";
 import { SITE_NAME as VENDOR_SITE_NAME, FAVICON_URL as VENDOR_FAVICON_URL, isVendorMode } from "@/lib/vendor";
 
-const SITE_URL = new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.da3witi.com");
+const rawUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.da3witi.com";
+const SITE_URL = new URL(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`);
 
 const bricolageGrotesque = Bricolage_Grotesque({
   subsets: ["latin"],
