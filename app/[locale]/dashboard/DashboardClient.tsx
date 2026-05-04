@@ -87,7 +87,7 @@ function EventCard({ event }: { event: EventCardData }) {
         
         {/* Status Badges */}
         <div className="absolute top-2 left-2 flex flex-wrap gap-1.5">
-          {event.paidAt && (
+          {event.paidAt && !isVendorMode && (
             <span className="px-2 py-0.5 rounded-full bg-green-500/90 backdrop-blur-sm text-[10px] font-medium text-white shadow-sm flex items-center gap-1">
               <BadgeCheck size={10} />
               {t("paid")}

@@ -60,7 +60,7 @@ async function bootstrapVendorEnv() {
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
-  distDir: isVendor ? '.next-vendor' : '.next',
+  distDir: isVendor && !process.env.VERCEL ? '.next-vendor' : '.next',
   images: {
     remotePatterns: [
       {
