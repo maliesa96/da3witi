@@ -1492,16 +1492,17 @@ export default function EventPanelClient({
                 </button>
                 <div className="p-4 overflow-visible" style={{ isolation: 'isolate' }}>
                   <InvitePreview
-                  title={event.title}
-                  date={event.date || ""}
-                  time={event.time || undefined}
-                  locationName={event.locationName || ""}
-                  location={event.location || undefined}
-                  message={event.message || ""}
-                  imageUrl={event.imageUrl || undefined}
-                  showQr={event.qrEnabled}
-                  guestsEnabled={event.guestsEnabled}
-                  locale={(event.locale as "en" | "ar") || (locale as "en" | "ar")}
+                    title={event.title}
+                    date={event.date || ""}
+                    time={event.time || undefined}
+                    locationName={event.locationName || ""}
+                    location={event.location || undefined}
+                    message={event.message || ""}
+                    imageUrl={event.imageUrl || undefined}
+                    showQr={event.qrEnabled}
+                    guestsEnabled={event.guestsEnabled}
+                    reminderEnabled={event.reminderEnabled}
+                    locale={(event.locale as "en" | "ar") || (locale as "en" | "ar")}
                   />
                 </div>
               </motion.div>

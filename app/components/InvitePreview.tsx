@@ -21,10 +21,12 @@ interface InvitePreviewProps {
   mediaSize?: number;
   showQr?: boolean;
   guestsEnabled?: boolean;
+  reminderEnabled?: boolean;
   locale?: 'en' | 'ar'; // Optional: override locale for user-specific preferences
 }
 
 function InvitePreviewContent({
+  title,
   date,
   time,
   locationName,
@@ -36,6 +38,7 @@ function InvitePreviewContent({
   mediaSize,
   showQr = true,
   guestsEnabled = false,
+  reminderEnabled = false,
   locale: customLocale,
 }: InvitePreviewProps) {
   const t = useTranslations('InvitePreview');
@@ -53,16 +56,26 @@ function InvitePreviewContent({
     return null;
   }
   
+  const eventName = title?.trim() || t('default_event_name');
+
   const renderedMessage = templateFn ? templateFn({
     invitee: t('default_invitee'),
     greeting_text: message || t('default_message_preview'),
     date: date || t('default_date'),
     time: time || timeString,
     location_name: locationName || t('default_location_name'),
-    event_name: isVendorMode && SITE_NAME ? SITE_NAME : t('app_name'),
+    event_name: eventName,
     rsvp_date: date || t('default_rsvp_date'),
     ...(guestsEnabled && { invite_count: '2' }),
   }) : message;
+
+  const reminderTemplateName = `reminder_${locale}` as keyof typeof TEMPLATES;
+  const reminderTemplateFn = TEMPLATES[reminderTemplateName];
+  const reminderMessage = reminderEnabled && reminderTemplateFn ? reminderTemplateFn({
+    event_name: eventName,
+    location_name: locationName || t('default_location_name'),
+    time: time || timeString,
+  }) : null;
 
   const thankYouMsg = t('thank_you_message');
     
@@ -156,7 +169,7 @@ function InvitePreviewContent({
             
             {/* Message Bubble (Incoming) - Dark Mode */}
             <div className="self-start" dir="ltr">
-              <div className="bg-[#1f2c34] rounded-tl-none rounded-bl-none p-1 pb-0 shadow-sm max-w-[85%] relative group border-b border-[#101a20]">
+              <div className="bg-[#1f2c34] rounded-lg rounded-tl-none p-1 pb-0 shadow-sm max-w-[85%] relative group border-b border-[#101a20]">
               
               {/* Media Header */}
               {mediaType === 'document' ? (
@@ -261,7 +274,7 @@ function InvitePreviewContent({
 
             {/* Business Thank You Bubble (Incoming) */}
             <div className="self-start" dir="ltr">
-              <div className="bg-[#1f2c34] rounded-tl-none rounded-bl-none p-1 pb-0 shadow-sm max-w-[85%] relative mb-4">
+              <div className="bg-[#1f2c34] rounded-lg rounded-tl-none p-1 pb-0 shadow-sm max-w-[85%] relative mb-4">
               {showQr && (
                 <div className="bg-[#2a3942] rounded-lg overflow-hidden relative aspect-square mb-1">
                   <Image
@@ -284,6 +297,21 @@ function InvitePreviewContent({
               </div>
               </div>
             </div>
+
+            {reminderMessage && (
+              <div className="self-start" dir="ltr">
+                <div className="bg-[#1f2c34] rounded-lg rounded-tl-none p-1 pb-0 shadow-sm max-w-[85%] relative mb-4">
+                  <div className="px-3 pt-1 pb-5 text-start" dir="auto">
+                    <p className="text-[14px] text-[#e9edef] leading-relaxed whitespace-pre-wrap font-sans overflow-hidden wrap-anywhere">
+                      {reminderMessage}
+                    </p>
+                  </div>
+                  <div className="absolute bottom-1 right-2 flex items-center gap-1">
+                    <span className="text-[10px] text-[#8696a0]">{timeString}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
           </div>
           

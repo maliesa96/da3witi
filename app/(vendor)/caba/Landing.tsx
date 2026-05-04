@@ -1,13 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { Cormorant_Garamond } from "next/font/google";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 
-const ACCENT = "#0d4f3f";
-const ACCENT_DARK = "#083d31";
+const ACCENT = "#1c1917";
+const ACCENT_DARK = "#0c0a09";
+const CHAMPAGNE = "#c8b89a";
+const CHAMPAGNE_DARK = "#8f8068";
+const cabaWordmark = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  style: ["italic"],
+  display: "swap",
+});
 
 function pseudoRandom(seed: number) {
   const x = Math.sin(seed * 9999.1) * 43758.5453;
@@ -41,14 +50,16 @@ export default function CabaLanding({
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
               className="text-center lg:text-start space-y-7 order-2 lg:order-1"
             >
-              <div className="flex justify-start">
+              <div className="flex justify-center lg:justify-start">
                 <span
                   dir="ltr"
                   lang="en"
-                  className="font-serif italic tracking-tight text-6xl md:text-7xl lg:text-8xl leading-none"
-                  style={{ color: ACCENT }}
+                  className={`${cabaWordmark.className} relative inline-flex items-center gap-3 text-7xl md:text-8xl lg:text-9xl leading-none tracking-[-0.08em]`}
+                  style={{ color: ACCENT, textShadow: "0 10px 30px rgba(28, 25, 23, 0.12)" }}
                 >
-                  CABA
+                  <span className="h-px w-8" style={{ backgroundColor: CHAMPAGNE }} aria-hidden />
+                  <span>CABA</span>
+                  <span className="h-px w-8" style={{ backgroundColor: CHAMPAGNE }} aria-hidden />
                 </span>
               </div>
 
@@ -62,12 +73,12 @@ export default function CabaLanding({
                 {isAr ? (
                   <>
                     <span className="text-stone-900">ابعث دعواتك بأناقة </span>
-                    <span style={{ color: ACCENT }}>تليق بمناسبتك</span>
+                    <span style={{ color: CHAMPAGNE_DARK }}>تليق بمناسبتك</span>
                   </>
                 ) : (
                   <>
                     <span className="text-stone-900">Send invitations with the elegance</span>{" "}
-                    <span style={{ color: ACCENT }}>your event deserves</span>
+                    <span style={{ color: CHAMPAGNE_DARK }}>your event deserves</span>
                   </>
                 )}
               </h1>
@@ -148,7 +159,7 @@ export default function CabaLanding({
             <span
               dir="ltr"
               lang="en"
-              className="font-serif italic tracking-tight text-xl leading-none"
+              className={`${cabaWordmark.className} tracking-[-0.06em] text-3xl leading-none`}
               style={{ color: ACCENT }}
             >
               CABA
@@ -192,7 +203,7 @@ const SPARKLES = Array.from({ length: 6 }, (_, i) => ({
   delay: r2(pseudoRandom(i + 2.3) * 5),
   duration: r2(4 + pseudoRandom(i + 3.1) * 4),
   size: Math.round(4 + pseudoRandom(i + 4.9) * 5),
-  hue: ["#b49b67", "#0d4f3f", "#d6c5a8"][i % 3],
+  hue: [CHAMPAGNE, ACCENT, "#efe4d1"][i % 3],
 }));
 
 function BackgroundLayers() {
@@ -201,7 +212,7 @@ function BackgroundLayers() {
   const geometricPattern =
     "data:image/svg+xml;utf8," +
     encodeURIComponent(
-      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80' fill='none' stroke='%235d4a36' stroke-width='0.6' opacity='0.9'>
+      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80' fill='none' stroke='%23${CHAMPAGNE.slice(1)}' stroke-width='0.6' opacity='0.9'>
         <path d='M40 4 L52 16 L68 16 L68 32 L80 40 L68 48 L68 64 L52 64 L40 76 L28 64 L12 64 L12 48 L0 40 L12 32 L12 16 L28 16 Z'/>
         <path d='M40 16 L56 28 L56 44 L40 56 L24 44 L24 28 Z'/>
         <circle cx='40' cy='40' r='6'/>
@@ -224,7 +235,7 @@ function BackgroundLayers() {
         className="pointer-events-none absolute -top-40 -right-40 w-160 h-160 rounded-full"
         style={{
           background:
-            "radial-gradient(circle, rgba(180,155,103,0.18), rgba(180,155,103,0) 70%)",
+            "radial-gradient(circle, rgba(200,184,154,0.20), rgba(200,184,154,0) 70%)",
         }}
         animate={reduceMotion ? undefined : { scale: [1, 1.06, 1], opacity: [0.6, 0.9, 0.6] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
@@ -234,7 +245,7 @@ function BackgroundLayers() {
         className="pointer-events-none absolute -bottom-40 -left-40 w-xl h-144 rounded-full"
         style={{
           background:
-            "radial-gradient(circle, rgba(13,79,63,0.07), rgba(13,79,63,0) 70%)",
+            "radial-gradient(circle, rgba(28,25,23,0.06), rgba(28,25,23,0) 70%)",
         }}
       />
 
@@ -328,7 +339,7 @@ function InvitationGallery({ isAr }: { isAr: boolean }) {
           className="absolute -inset-12 rounded-[3rem]"
           style={{
             background:
-              "radial-gradient(ellipse at center, rgba(180,155,103,0.30), rgba(180,155,103,0) 70%)",
+              "radial-gradient(ellipse at center, rgba(200,184,154,0.34), rgba(200,184,154,0) 70%)",
           }}
           animate={
             reduceMotion ? undefined : { scale: [1, 1.04, 1], opacity: [0.55, 0.8, 0.55] }
@@ -452,7 +463,7 @@ function CardShell({
         className="absolute -inset-px rounded-4xl opacity-70"
         style={{
           background:
-            "linear-gradient(135deg, #d6c5a8 0%, #8b6f47 50%, #d6c5a8 100%)",
+            "linear-gradient(135deg, #eee3d0 0%, #c8b89a 50%, #f6efe3 100%)",
         }}
       />
       <div
@@ -488,7 +499,7 @@ function ClassicCard({ isAr }: { isAr: boolean }) {
         className="absolute inset-0 opacity-30"
         style={{
           backgroundImage:
-            "radial-gradient(circle at 20% 20%, rgba(180,155,103,0.25), transparent 40%), radial-gradient(circle at 80% 80%, rgba(13,79,63,0.10), transparent 40%)",
+            "radial-gradient(circle at 20% 20%, rgba(200,184,154,0.28), transparent 40%), radial-gradient(circle at 80% 80%, rgba(28,25,23,0.08), transparent 40%)",
         }}
       />
 
@@ -508,7 +519,7 @@ function ClassicCard({ isAr }: { isAr: boolean }) {
           className="mt-3 text-3xl md:text-4xl font-display text-stone-900 leading-tight"
           dir="rtl"
         >
-          أحمد <span style={{ color: ACCENT }} className="mx-1">❋</span> نورة
+          أحمد <span style={{ color: CHAMPAGNE_DARK }} className="mx-1">❋</span> نورة
         </h3>
 
         <div className="mt-4 mb-3 flex items-center gap-2 text-stone-500">
@@ -537,11 +548,11 @@ function ClassicCard({ isAr }: { isAr: boolean }) {
           <span className="relative flex h-1.5 w-1.5">
             <span
               className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-              style={{ backgroundColor: "#a7d4c5" }}
+                      style={{ backgroundColor: CHAMPAGNE }}
             />
             <span
               className="relative inline-flex h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: "#a7d4c5" }}
+              style={{ backgroundColor: CHAMPAGNE }}
             />
           </span>
           RSVP
@@ -558,14 +569,14 @@ function ModernCard({ isAr }: { isAr: boolean }) {
     >
       <div className="relative h-full flex flex-col px-10 py-10">
         <div className="flex items-center gap-3">
-          <span className="h-px flex-1" style={{ backgroundColor: ACCENT, opacity: 0.6 }} />
+          <span className="h-px flex-1" style={{ backgroundColor: CHAMPAGNE, opacity: 0.85 }} />
           <span
             className="text-[9px] tracking-[0.5em] uppercase"
-            style={{ color: ACCENT }}
+            style={{ color: CHAMPAGNE_DARK }}
           >
             {isAr ? "دعوة زفاف" : "Wedding"}
           </span>
-          <span className="h-px flex-1" style={{ backgroundColor: ACCENT, opacity: 0.6 }} />
+          <span className="h-px flex-1" style={{ backgroundColor: CHAMPAGNE, opacity: 0.85 }} />
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center text-center">
@@ -587,7 +598,7 @@ function ModernCard({ isAr }: { isAr: boolean }) {
                   <span className="h-px w-6 bg-stone-300" />
                   <span
                     className="text-[10px] tracking-[0.4em] uppercase"
-                    style={{ color: ACCENT }}
+                    style={{ color: CHAMPAGNE_DARK }}
                   >
                     &
                   </span>
@@ -602,7 +613,7 @@ function ModernCard({ isAr }: { isAr: boolean }) {
                   <span className="h-px w-6 bg-stone-300" />
                   <span
                     className="text-[10px] tracking-[0.4em] uppercase"
-                    style={{ color: ACCENT }}
+                    style={{ color: CHAMPAGNE_DARK }}
                   >
                     &
                   </span>
@@ -627,7 +638,7 @@ function ModernCard({ isAr }: { isAr: boolean }) {
         <div className="flex items-center justify-between">
           <span
             className="text-[9px] tracking-[0.3em] uppercase"
-            style={{ color: ACCENT }}
+            style={{ color: CHAMPAGNE_DARK }}
           >
             RSVP
           </span>
@@ -654,7 +665,7 @@ function FloralCard({ isAr }: { isAr: boolean }) {
       >
         <path
           d="M30 90 Q 28 70 38 56 Q 48 42 64 36 Q 80 30 96 22"
-          stroke={ACCENT}
+          stroke={CHAMPAGNE_DARK}
           strokeWidth="1.4"
           strokeLinecap="round"
           opacity="0.9"
@@ -662,9 +673,9 @@ function FloralCard({ isAr }: { isAr: boolean }) {
         <ellipse cx="42" cy="58" rx="6" ry="9" transform="rotate(-30 42 58)" fill="#e8a8a8" opacity="0.85" />
         <ellipse cx="56" cy="44" rx="5" ry="8" transform="rotate(-20 56 44)" fill="#d68888" opacity="0.85" />
         <ellipse cx="74" cy="34" rx="5" ry="7" transform="rotate(-10 74 34)" fill="#e8a8a8" opacity="0.85" />
-        <circle cx="44" cy="74" r="3" fill={ACCENT} opacity="0.7" />
-        <circle cx="62" cy="62" r="2.5" fill={ACCENT} opacity="0.7" />
-        <circle cx="84" cy="46" r="2" fill={ACCENT} opacity="0.7" />
+        <circle cx="44" cy="74" r="3" fill={CHAMPAGNE_DARK} opacity="0.7" />
+        <circle cx="62" cy="62" r="2.5" fill={CHAMPAGNE_DARK} opacity="0.7" />
+        <circle cx="84" cy="46" r="2" fill={CHAMPAGNE_DARK} opacity="0.7" />
       </svg>
 
       <svg
@@ -676,7 +687,7 @@ function FloralCard({ isAr }: { isAr: boolean }) {
       >
         <path
           d="M30 90 Q 28 70 38 56 Q 48 42 64 36 Q 80 30 96 22"
-          stroke={ACCENT}
+          stroke={CHAMPAGNE_DARK}
           strokeWidth="1.4"
           strokeLinecap="round"
           opacity="0.9"
@@ -687,7 +698,7 @@ function FloralCard({ isAr }: { isAr: boolean }) {
       </svg>
 
       <div className="relative h-full flex flex-col items-center justify-center px-10 text-center">
-        <p className="text-[10px] tracking-[0.5em] uppercase" style={{ color: ACCENT }}>
+        <p className="text-[10px] tracking-[0.5em] uppercase" style={{ color: CHAMPAGNE_DARK }}>
           {isAr ? "بطاقة دعوة" : "You're invited"}
         </p>
 
@@ -699,7 +710,7 @@ function FloralCard({ isAr }: { isAr: boolean }) {
           أحمد
           <span
             className="mx-3 align-middle inline-block"
-            style={{ color: ACCENT, fontFamily: "serif", fontStyle: "italic" }}
+            style={{ color: CHAMPAGNE_DARK, fontFamily: "serif", fontStyle: "italic" }}
           >
             &amp;
           </span>
@@ -707,7 +718,7 @@ function FloralCard({ isAr }: { isAr: boolean }) {
         </h3>
 
         <div className="mt-5 mb-3 flex items-center gap-3">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill={ACCENT} opacity="0.8">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill={CHAMPAGNE_DARK} opacity="0.8">
             <path d="M7 1 C 9 4 11 5 13 7 C 11 9 9 10 7 13 C 5 10 3 9 1 7 C 3 5 5 4 7 1 Z" />
           </svg>
         </div>
@@ -778,11 +789,11 @@ function CornerOrnament({
           strokeWidth="1"
           strokeLinecap="round"
         />
-        <circle cx="14" cy="14" r="1.5" fill="#5d4a36" />
+        <circle cx="14" cy="14" r="1.5" fill={CHAMPAGNE_DARK} />
         <defs>
           <linearGradient id="cornerGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#5d4a36" />
-            <stop offset="100%" stopColor="#8b6f47" />
+            <stop offset="0%" stopColor={CHAMPAGNE_DARK} />
+            <stop offset="100%" stopColor={CHAMPAGNE} />
           </linearGradient>
         </defs>
       </svg>
@@ -795,13 +806,13 @@ function CenterMedallion() {
     <svg width="92" height="92" viewBox="0 0 100 100" fill="none">
       <defs>
         <linearGradient id="medGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#8b6f47" />
-          <stop offset="50%" stopColor="#5d4a36" />
-          <stop offset="100%" stopColor="#3d2e20" />
+          <stop offset="0%" stopColor={CHAMPAGNE} />
+          <stop offset="50%" stopColor={CHAMPAGNE_DARK} />
+          <stop offset="100%" stopColor={ACCENT} />
         </linearGradient>
         <radialGradient id="medFill" cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0%" stopColor="rgba(180,155,103,0.30)" />
-          <stop offset="100%" stopColor="rgba(180,155,103,0)" />
+          <stop offset="0%" stopColor="rgba(200,184,154,0.34)" />
+          <stop offset="100%" stopColor="rgba(200,184,154,0)" />
         </radialGradient>
       </defs>
       <circle cx="50" cy="50" r="48" fill="url(#medFill)" />
@@ -843,7 +854,7 @@ function FeaturePills({ isAr }: { isAr: boolean }) {
         >
           <span
             className="h-1.5 w-1.5 rounded-full"
-            style={{ backgroundColor: ACCENT }}
+            style={{ backgroundColor: CHAMPAGNE_DARK }}
           />
           {label}
         </span>

@@ -30,6 +30,7 @@ export default function Wizard() {
   const [details, setDetails] = useState<EventDetails>({
     eventName: "",
     date: "",
+    eventDate: undefined,
     time: "",
     location: "",
     locationName: "",
@@ -37,7 +38,8 @@ export default function Wizard() {
     messageLocale: locale,
     qrEnabled: true,
     guestsEnabled: false,
-    reminderEnabled: false,
+    reminderEnabled: true,
+    reminderDaysBefore: 1,
     imageUrl: "",
     mediaType: undefined as MediaType | undefined,
     mediaFilename: "",
@@ -120,8 +122,9 @@ export default function Wizard() {
         return;
       }
       const result = await createEvent({
-        title: details.eventName || "Event",
+        title: details.eventName.trim(),
         date: details.date,
+        eventDate: details.eventDate,
         time: details.time,
         location: details.location,
         locationName: details.locationName,
@@ -129,6 +132,7 @@ export default function Wizard() {
         qrEnabled: details.qrEnabled,
         guestsEnabled: details.guestsEnabled,
         reminderEnabled: details.reminderEnabled,
+        reminderDaysBefore: details.reminderDaysBefore,
         imageUrl: details.imageUrl,
         mediaType: details.mediaType,
         mediaFilename: details.mediaFilename,
@@ -494,6 +498,7 @@ export default function Wizard() {
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             {/* Phone Preview */}
             <InvitePreview
+              title={details.eventName}
               date={details.date}
               time={details.time}
               locationName={details.locationName}
@@ -505,6 +510,7 @@ export default function Wizard() {
               mediaSize={details.mediaSize}
               showQr={details.qrEnabled}
               guestsEnabled={details.guestsEnabled}
+              reminderEnabled={details.reminderEnabled}
               locale={details.messageLocale}
             />
 

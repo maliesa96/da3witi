@@ -146,6 +146,15 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ e
     if (typeof body.qrEnabled === "boolean") updateData.qrEnabled = body.qrEnabled;
     if (typeof body.guestsEnabled === "boolean") updateData.guestsEnabled = body.guestsEnabled;
     if (typeof body.reminderEnabled === "boolean") updateData.reminderEnabled = body.reminderEnabled;
+    if (typeof body.reminderDaysBefore === "number" && body.reminderDaysBefore >= 1) {
+      updateData.reminderDaysBefore = body.reminderDaysBefore;
+    }
+    if (body.eventDate !== undefined) {
+      updateData.eventDate = typeof body.eventDate === "string" && body.eventDate
+        ? new Date(body.eventDate + "T00:00:00Z")
+        : null;
+      if (!updateData.eventDate) updateData.reminderSentAt = null;
+    }
     if (typeof body.imageUrl === "string") updateData.imageUrl = body.imageUrl;
     if (typeof body.mediaType === "string") updateData.mediaType = body.mediaType;
     if (typeof body.mediaFilename === "string") updateData.mediaFilename = body.mediaFilename;

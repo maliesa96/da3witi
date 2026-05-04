@@ -18,6 +18,12 @@ export type WhatsAppOutboxMeta =
       locale: "en" | "ar";
     }
   | {
+      kind: "reminder";
+      guestId: string;
+      eventId: string;
+      locale: "en" | "ar";
+    }
+  | {
       kind: "webhook_followup";
       guestId?: string;
       repliedMessageId?: string;

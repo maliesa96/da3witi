@@ -40,6 +40,8 @@ const MapPicker = dynamic(() => import("./MapPicker"), {
 export type EventDetails = {
   eventName: string;
   date: string;
+  /** Raw YYYY-MM-DD value from the date picker (undefined for free-text dates) */
+  eventDate?: string;
   time: string;
   location: string;
   locationName: string;
@@ -48,6 +50,7 @@ export type EventDetails = {
   qrEnabled: boolean;
   guestsEnabled: boolean;
   reminderEnabled: boolean;
+  reminderDaysBefore: number;
   imageUrl: string;
   mediaType: MediaType | undefined;
   mediaFilename: string;
@@ -143,6 +146,7 @@ export default function EventDetailsForm({
   const [details, setDetails] = useState<EventDetails>({
     eventName: "",
     date: "",
+    eventDate: undefined,
     time: "",
     location: "",
     locationName: "",
@@ -150,7 +154,8 @@ export default function EventDetailsForm({
     messageLocale: locale,
     qrEnabled: true,
     guestsEnabled: false,
-    reminderEnabled: false,
+    reminderEnabled: true,
+    reminderDaysBefore: 1,
     imageUrl: "",
     mediaType: undefined,
     mediaFilename: "",
@@ -456,6 +461,7 @@ export default function EventDetailsForm({
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
+    if (!details.eventName.trim()) newErrors.eventName = t("errors.required");
     if (!details.imageUrl) newErrors.imageUrl = t("errors.required");
     if (!details.message.trim()) {
       newErrors.message = t("errors.required");
@@ -470,6 +476,7 @@ export default function EventDetailsForm({
       }
     }
     if (!details.date) newErrors.date = t("errors.required");
+    if (!details.eventDate) newErrors.eventDate = t("errors.required");
     if (!details.time) newErrors.time = t("errors.required");
     if (!details.locationName.trim())
       newErrors.locationName = t("errors.required");
@@ -739,7 +746,10 @@ export default function EventDetailsForm({
             {/* Event Name */}
             <div>
               <label className="text-xs font-medium text-stone-700 mb-1.5 flex justify-between">
-                <span>{t("step2.event_name_label")}</span>
+                <span>
+                  {t("step2.event_name_label")}{" "}
+                  <span className="text-red-500">*</span>
+                </span>
                 {errors.eventName && (
                   <span className="text-red-500 text-[10px]">
                     {errors.eventName}
@@ -818,6 +828,7 @@ export default function EventDetailsForm({
                         date: raw
                           ? formatDateFromPicker(raw, details.messageLocale)
                           : "",
+                        eventDate: raw || undefined,
                       });
                       if (errors.date)
                         setErrors((prev) => {
@@ -831,23 +842,52 @@ export default function EventDetailsForm({
                     }`}
                   />
                 ) : (
-                  <input
-                    type="text"
-                    value={details.date}
-                    onChange={(e) => {
-                      setDetails({ ...details, date: e.target.value });
-                      if (errors.date)
-                        setErrors((prev) => {
-                          const next = { ...prev };
-                          delete next.date;
-                          return next;
-                        });
-                    }}
-                    placeholder={t("step2.date_placeholder")}
-                    className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none focus:bg-white focus:border-stone-400 transition-all ${
-                      errors.date ? "border-red-300" : "border-stone-200"
-                    }`}
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={details.date}
+                      onChange={(e) => {
+                        setDetails({ ...details, date: e.target.value });
+                        if (errors.date)
+                          setErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.date;
+                            return next;
+                          });
+                      }}
+                      placeholder={t("step2.date_placeholder")}
+                      className={`w-full px-4 py-2.5 rounded-lg bg-stone-50 border text-sm outline-none focus:bg-white focus:border-stone-400 transition-all ${
+                        errors.date ? "border-red-300" : "border-stone-200"
+                      }`}
+                    />
+                    <div>
+                      <label className="text-[10px] text-stone-400 mb-0.5 flex">
+                        {t("step2.actual_date_label")}
+                        <span className="text-red-500 ml-1">*</span>
+                        {errors.eventDate && (
+                          <span className="text-red-500 text-[10px] ml-2 font-normal">
+                            {errors.eventDate}
+                          </span>
+                        )}
+                      </label>
+                      <input
+                        type="date"
+                        value={details.eventDate || ""}
+                        onChange={(e) => {
+                          setDetails({ ...details, eventDate: e.target.value || undefined });
+                          if (errors.eventDate)
+                            setErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.eventDate;
+                              return next;
+                            });
+                        }}
+                        className={`w-full px-4 py-2 rounded-lg bg-stone-50 border text-sm outline-none text-stone-600 ${
+                          errors.eventDate ? "border-red-300" : "border-stone-200"
+                        }`}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
               <div>
@@ -1097,30 +1137,48 @@ export default function EventDetailsForm({
               </label>
             </div>
             <hr className="border-stone-100" />
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium text-stone-900">
-                  <span className="inline-flex items-center gap-2">
-                    <span>{t("step2.reminder_toggle")}</span>
-                    <span className="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] font-semibold text-stone-600">
-                      {t("step2.coming_soon")}
-                    </span>
-                  </span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-stone-900">
+                    {t("step2.reminder_toggle")}
+                  </div>
+                  <div className="text-[11px] text-stone-500">
+                    {t("step2.reminder_desc")}
+                  </div>
                 </div>
-                <div className="text-[11px] text-stone-500">
-                  {t("step2.reminder_desc")}
-                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={details.reminderEnabled}
+                    onChange={(e) =>
+                      setDetails({ ...details, reminderEnabled: e.target.checked })
+                    }
+                    className="sr-only peer custom-checkbox"
+                  />
+                  <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
+                </label>
               </div>
-              <label className="relative inline-flex items-center cursor-not-allowed opacity-60">
-                <input
-                  type="checkbox"
-                  checked={false}
-                  disabled
-                  readOnly
-                  className="sr-only peer custom-checkbox"
-                />
-                <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
-              </label>
+              {details.reminderEnabled && (
+                <div className="flex items-center gap-2">
+                  <label className="text-[11px] text-stone-500 whitespace-nowrap">
+                    {t("step2.reminder_days_label")}
+                  </label>
+                  <select
+                    value={details.reminderDaysBefore}
+                    onChange={(e) =>
+                      setDetails({ ...details, reminderDaysBefore: Number(e.target.value) })
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-200 text-sm text-stone-700 outline-none"
+                  >
+                    {[1, 2, 3, 5, 7].map((d) => (
+                      <option key={d} value={d}>
+                        {t("step2.reminder_days_option", { count: d })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1201,6 +1259,7 @@ export default function EventDetailsForm({
         <div className="hidden lg:block lg:col-span-2 sticky top-24 h-fit">
           <div className="flex justify-center">
             <InvitePreview
+              title={details.eventName}
               date={details.date}
               time={details.time}
               locationName={details.locationName}
@@ -1212,6 +1271,7 @@ export default function EventDetailsForm({
               mediaSize={details.mediaSize}
               showQr={details.qrEnabled}
               guestsEnabled={details.guestsEnabled}
+              reminderEnabled={details.reminderEnabled}
               locale={details.messageLocale}
             />
           </div>
@@ -1280,6 +1340,7 @@ export default function EventDetailsForm({
                   <div className="flex justify-center">
                     <div className="w-full max-w-[400px]">
                       <InvitePreview
+                        title={details.eventName}
                         date={details.date}
                         time={details.time}
                         locationName={details.locationName}
@@ -1291,6 +1352,7 @@ export default function EventDetailsForm({
                         mediaSize={details.mediaSize}
                         showQr={details.qrEnabled}
                         guestsEnabled={details.guestsEnabled}
+                        reminderEnabled={details.reminderEnabled}
                         locale={details.messageLocale}
                       />
                     </div>

@@ -15,6 +15,7 @@ import { getAppOrigin } from '@/lib/getAppOrigin';
 export async function createEvent(formData: {
   title: string;
   date: string;
+  eventDate?: string;
   time: string;
   location: string;
   locationName: string;
@@ -22,6 +23,7 @@ export async function createEvent(formData: {
   qrEnabled: boolean;
   guestsEnabled: boolean;
   reminderEnabled: boolean;
+  reminderDaysBefore?: number;
   imageUrl?: string;
   mediaType?: MediaType;
   mediaFilename?: string;
@@ -111,6 +113,7 @@ export async function createEvent(formData: {
         userId: user.id,
         title: formData.title,
         date: formData.date,
+        eventDate: formData.eventDate ? new Date(formData.eventDate + 'T00:00:00Z') : null,
         time: formData.time,
         location: formData.location,
         locationName: formData.locationName,
@@ -118,6 +121,7 @@ export async function createEvent(formData: {
         qrEnabled: formData.qrEnabled,
         guestsEnabled: formData.guestsEnabled,
         reminderEnabled: formData.reminderEnabled,
+        reminderDaysBefore: formData.reminderDaysBefore ?? 1,
         imageUrl: formData.imageUrl,
         mediaType: formData.mediaType,
         mediaFilename: formData.mediaFilename,

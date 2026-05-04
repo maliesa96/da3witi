@@ -149,4 +149,31 @@ export const TEMPLATES = {
     "invite_doc_guests_ar": (params: any) => {
         return TEMPLATES.invite_img_guests_ar(params);
     },
+    "reminder_ar": (params: any) => {
+        return dedent`
+        نود تذكيركم بموعد
+        ${params.event_name}
+
+        في: ${params.location_name}
+        الساعه: ${params.time}
+
+        الرجاء الاحتفاظ بالدعوة الالكترونية و إبرازها عند الدخول
+
+        حضوركم يشرفنا
+        `;
+    },
+    "reminder_en": (params: any) => {
+        return dedent`
+        A friendly reminder about this upcoming event:
+
+        ${params.event_name}
+
+        Location: ${params.location_name}
+        Time: ${params.time}
+
+        Please save your digital invitation and show it at the entrance.
+
+        We look forward to welcoming you.
+        `;
+    },
 };
