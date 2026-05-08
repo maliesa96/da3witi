@@ -13,6 +13,7 @@
     "description": "Da3witi lets you send beautiful WhatsApp invitations in minutes. Add your event details, upload your guest list and card, then we handle the sending and RSVP tracking automatically.",
     "cta_create": "Create New Invitation",
     "cta_example": "View Example",
+    "cta_business": "For Businesses",
     "how_it_works": {
       "title": "How It Works",
       "subtitle": "Add details, upload guests + card, then send — we’ll track replies."
@@ -79,6 +80,14 @@
           "Entry validation"
         ]
       }
+    },
+    "business_cta": {
+      "eyebrow": "For businesses",
+      "title": "White-label invite management",
+      "description": "Offer Da3witi under your own brand for venues, event planners, agencies, and businesses that send invitations at scale.",
+      "cta": "Talk to us",
+      "visual_label": "White Label",
+      "cta_card": "Your Brand Here"
     },
     "phone_mockup": {
       "app_name": "Da3witi",

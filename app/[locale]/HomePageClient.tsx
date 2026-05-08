@@ -11,7 +11,9 @@ import {
   Users,
   Send,
   Check,
-  QrCode
+  QrCode,
+  Building2,
+  CheckCheck
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import InvitePreview from "../components/InvitePreview";
@@ -178,6 +180,13 @@ export default function HomePageClient() {
               >
                 <span>{t('cta_create')}</span>
                 {isArabic ? <ArrowLeft size={20} /> : <ArrowRight size={20} />}
+              </Link>
+              <Link
+                href="/contact"
+                className="bg-white/80 text-stone-800 px-8 py-4 rounded-full font-medium border border-stone-200 shadow-sm hover:bg-white hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-lg cursor-pointer"
+              >
+                <Building2 size={20} />
+                <span>{t('cta_business')}</span>
               </Link>
             </motion.div>
           </div>
@@ -435,7 +444,7 @@ export default function HomePageClient() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-6 relative overflow-hidden">
+      <section id="pricing" className="py-24 pb-36 px-6 relative overflow-visible">
          {/* Abstract background blobs for Pricing */}
          <motion.div 
            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
@@ -586,6 +595,114 @@ export default function HomePageClient() {
                </motion.div>
             </div>
          </div>
+      </section>
+
+      {/* Business / White Label CTA */}
+      <section className="relative py-20 px-6 overflow-visible">
+        <div className="absolute -inset-y-48 inset-x-0 pointer-events-none">
+          <div className="absolute inset-0 bg-linear-to-br from-[#FDFCF8] via-purple-50/80 to-amber-50/80 mask-[linear-gradient(to_bottom,transparent_0%,black_25%,black_75%,transparent_100%)]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-7xl h-320 rounded-full bg-[#FDFCF8]/60 blur-3xl" />
+          <div className="absolute -right-32 top-1/4 w-120 h-120 rounded-full bg-purple-200/35 blur-[120px]" />
+          <div className="absolute -left-32 bottom-1/4 w-120 h-120 rounded-full bg-amber-200/35 blur-[120px]" />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="relative z-10 max-w-6xl mx-auto grid lg:grid-cols-[1fr_auto] gap-10 lg:gap-16 items-center"
+        >
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 border border-stone-200 px-4 py-2 text-sm font-bold uppercase tracking-wider text-stone-600 shadow-sm">
+              <Building2 size={16} />
+              {t('business_cta.eyebrow')}
+            </div>
+
+            <div className="space-y-4 max-w-3xl">
+              <h2 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold tracking-tighter text-stone-900 leading-[0.9]">
+                {t('business_cta.title')}
+              </h2>
+              <p className="text-lg md:text-2xl text-stone-600 leading-relaxed font-light max-w-2xl">
+                {t('business_cta.description')}
+              </p>
+            </div>
+
+            <Link
+              href="/contact"
+              className="inline-flex items-center gap-2 bg-stone-900 text-white px-9 py-4 rounded-full font-bold text-lg hover:bg-stone-800 transition-all hover:-translate-y-1 shadow-xl shadow-stone-900/15"
+            >
+              <span>{t('business_cta.cta')}</span>
+              {isArabic ? <ArrowLeft size={20} /> : <ArrowRight size={20} />}
+            </Link>
+          </div>
+
+          <div className="relative hidden lg:flex w-80 h-80 items-center justify-center">
+            {/* Stacked branded invite cards */}
+            {/* Back card - teal brand */}
+            <motion.div
+              initial={{ opacity: 0, rotate: 12, y: 20 }}
+              whileInView={{ opacity: 1, rotate: 10, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="absolute w-52 h-64 rounded-3xl bg-linear-to-br from-teal-400 to-teal-600 shadow-xl p-5 flex flex-col justify-between top-4 left-4"
+            >
+              <div className="w-8 h-8 rounded-lg bg-white/25 backdrop-blur-sm" />
+              <div className="space-y-2">
+                <div className="h-2 w-3/4 rounded-full bg-white/40" />
+                <div className="h-2 w-1/2 rounded-full bg-white/25" />
+              </div>
+            </motion.div>
+
+            {/* Middle card - amber brand */}
+            <motion.div
+              initial={{ opacity: 0, rotate: -2, y: 20 }}
+              whileInView={{ opacity: 1, rotate: -3, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="absolute w-52 h-64 rounded-3xl bg-linear-to-br from-amber-400 to-orange-500 shadow-xl p-5 flex flex-col justify-between top-8 left-12"
+            >
+              <div className="w-8 h-8 rounded-lg bg-white/25 backdrop-blur-sm" />
+              <div className="space-y-2">
+                <div className="h-2 w-2/3 rounded-full bg-white/40" />
+                <div className="h-2 w-1/3 rounded-full bg-white/25" />
+              </div>
+            </motion.div>
+
+            {/* Front card - primary dark with invite preview */}
+            <motion.div
+              initial={{ opacity: 0, rotate: 0, y: 20 }}
+              whileInView={{ opacity: 1, rotate: -1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.7, duration: 0.6 }}
+              className="absolute w-52 h-64 rounded-3xl bg-stone-900 shadow-2xl p-5 flex flex-col justify-between top-12 left-20 border border-stone-800"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-md bg-white/10 border border-white/15 flex items-center justify-center">
+                  <Building2 size={14} className="text-white/80" />
+                </div>
+                <div className="h-2 w-16 rounded-full bg-white/20" />
+              </div>
+              <div className="space-y-3">
+                <div className="h-20 rounded-xl overflow-hidden bg-[#0b141a] p-2 flex flex-col justify-end">
+                  <div className="bg-[#005c4b] rounded-lg px-2.5 py-1.5 self-start max-w-[95%]">
+                    <p className="text-[8px] text-white/90 leading-relaxed">You are invited to The Grand Opening ✨ Join us this Friday at 8 PM. Kindly confirm your attendance.</p>
+                    <div className="flex justify-end mt-0.5">
+                      <span className="text-[6px] text-white/50 flex items-center gap-0.5">10:30 PM <CheckCheck size={7} className="text-blue-400" /></span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="h-1.5 w-full rounded-full bg-white/15" />
+                  <div className="h-1.5 w-4/5 rounded-full bg-white/10" />
+                </div>
+                <div className="h-8 rounded-lg bg-white flex items-center justify-center">
+                  <span className="text-[9px] font-bold text-stone-900 uppercase tracking-wider">{t('business_cta.cta_card')}</span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </motion.div>
       </section>
 
       {/* Community / Final CTA */}
