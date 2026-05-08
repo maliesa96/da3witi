@@ -2,8 +2,11 @@ import createMiddleware from 'next-intl/middleware';
 import {routing} from './i18n/routing';
 import { type NextRequest } from 'next/server';
 import { updateSession } from './lib/supabase/middleware';
+import { AFFILIATE_REF_COOKIE, normalizeAffiliateRef } from './lib/affiliateRef';
 
 const i18nMiddleware = createMiddleware(routing);
+
+const AFFILIATE_COOKIE_MAX_AGE = 60 * 60 * 24 * 60; // 60 days
 
 export async function middleware(request: NextRequest) {
   // Update Supabase session
@@ -26,6 +29,26 @@ export async function middleware(request: NextRequest) {
       // Ensure options are passed correctly if needed
     });
   });
+
+  // Primary site only: last-touch affiliate ref cookie + best-effort click ping
+  if (!process.env.VENDOR_ID) {
+    const refRaw = request.nextUrl.searchParams.get("ref");
+    const code = normalizeAffiliateRef(refRaw);
+    if (code) {
+      response.cookies.set(AFFILIATE_REF_COOKIE, code, {
+        maxAge: AFFILIATE_COOKIE_MAX_AGE,
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+      const origin = request.nextUrl.origin;
+      void fetch(`${origin}/api/affiliate/click`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      }).catch(() => {});
+    }
+  }
 
   return response;
 }

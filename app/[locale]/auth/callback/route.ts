@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 // The client you created from the server-side auth instructions
 import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/prisma'
+import { AFFILIATE_REF_COOKIE, getCookieValue, normalizeAffiliateRef } from '@/lib/affiliateRef'
 
 export async function GET(request: Request) {
   const { searchParams, origin, pathname } = new URL(request.url)
@@ -32,14 +34,43 @@ export async function GET(request: Request) {
     if (!error) {
       const forwardedHost = request.headers.get('x-forwarded-host') // buddy check for proxy
       const isLocalEnv = process.env.NODE_ENV === 'development'
-      if (isLocalEnv) {
-        // we can be sure that it's safe to use the origin directly
-        return NextResponse.redirect(`${origin}${next}`)
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
-      } else {
-        return NextResponse.redirect(`${origin}${next}`)
+      const targetUrl = isLocalEnv
+        ? `${origin}${next}`
+        : forwardedHost
+          ? `https://${forwardedHost}${next}`
+          : `${origin}${next}`
+
+      const response = NextResponse.redirect(targetUrl)
+
+      // Primary site: lock affiliate attribution from ref cookie (first signup only)
+      if (!process.env.VENDOR_ID) {
+        const refRaw = getCookieValue(request.headers.get('cookie'), AFFILIATE_REF_COOKIE)
+        const refCode = normalizeAffiliateRef(refRaw)
+        if (refCode) {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser()
+          if (user?.id) {
+            const affiliate = await prisma.affiliate.findFirst({
+              where: { code: refCode, active: true },
+              select: { id: true },
+            })
+            if (affiliate) {
+              await prisma.affiliateAttribution.upsert({
+                where: { userId: user.id },
+                create: { userId: user.id, affiliateId: affiliate.id },
+                update: {},
+              })
+            }
+          }
+        }
+        response.cookies.set(AFFILIATE_REF_COOKIE, '', {
+          path: '/',
+          maxAge: 0,
+        })
       }
+
+      return response
     }
 
     return redirectToAuthError('exchange_failed')

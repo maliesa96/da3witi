@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
+import { recordAffiliateCommissionForPaidEvent } from '@/lib/affiliateCommission';
 import { normalizePhoneToE164 } from '@/lib/phone';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -97,6 +98,8 @@ async function markEventAsPaid(session: Stripe.Checkout.Session) {
   } else {
     console.log('Event already paid:', metadata.eventId);
   }
+
+  await recordAffiliateCommissionForPaidEvent(metadata.eventId);
 }
 
 async function createEventIfNotExists(session: Stripe.Checkout.Session) {

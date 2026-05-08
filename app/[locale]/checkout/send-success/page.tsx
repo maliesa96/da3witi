@@ -6,6 +6,7 @@ import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { sendInvitesForEvent } from "@/app/[locale]/dashboard/actions";
+import { recordAffiliateCommissionForPaidEvent } from "@/lib/affiliateCommission";
 
 export const metadata: Metadata = {
   robots: {
@@ -43,6 +44,8 @@ async function markEventAsPaidAndSendInvites(session: Stripe.Checkout.Session, e
       },
     });
   }
+
+  await recordAffiliateCommissionForPaidEvent(eventId);
 
   // Send invites
   try {

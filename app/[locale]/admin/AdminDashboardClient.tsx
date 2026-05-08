@@ -22,7 +22,11 @@ import {
   X,
   Pencil,
   Save,
+  Link2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { isVendorMode } from "@/lib/vendorClient";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -79,6 +83,36 @@ type AdminStats = {
   timeSeries: TimeSeriesEntry[];
   statusBreakdown: StatusEntry[];
   recentEvents: RecentEvent[];
+};
+
+type AffiliateSummary = {
+  id: string;
+  createdAt: string;
+  code: string;
+  name: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  commissionFils: number;
+  active: boolean;
+  notes: string | null;
+  clickCount: number;
+  signups: number;
+  conversions: number;
+  owedFils: number;
+  paidFils: number;
+};
+
+type AffiliateCommissionRow = {
+  id: string;
+  createdAt: string;
+  amountFils: number;
+  status: string;
+  paidAt: string | null;
+  payoutNote: string | null;
+  userId: string;
+  eventId: string;
+  eventTitle: string;
+  customerEmail: string | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -148,6 +182,14 @@ function formatNumber(n: number): string {
 function formatChartDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatFilsAsKwd(fils: number): string {
+  const kd = fils / 1000;
+  return `${kd.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  })} KD`;
 }
 
 function timeAgo(dateStr: string): string {
@@ -620,7 +662,41 @@ export default function AdminDashboardClient() {
   const [forbidden, setForbidden] = useState(false);
   const [activeChart, setActiveChart] = useState<ChartKey>("events");
   const [vendors, setVendors] = useState<VendorSummary[]>([]);
-  const [activeTab, setActiveTab] = useState<"overview" | "vendors">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "vendors" | "affiliates">("overview");
+
+  const [affiliates, setAffiliates] = useState<AffiliateSummary[]>([]);
+  const [affiliatesLoading, setAffiliatesLoading] = useState(false);
+  const [affiliatesError, setAffiliatesError] = useState<string | null>(null);
+  const [appOrigin, setAppOrigin] = useState("");
+
+  const [showCreateAffiliate, setShowCreateAffiliate] = useState(false);
+  const [newAfName, setNewAfName] = useState("");
+  const [newAfCode, setNewAfCode] = useState("");
+  const [newAfEmail, setNewAfEmail] = useState("");
+  const [newAfPhone, setNewAfPhone] = useState("");
+  const [newAfCommissionFils, setNewAfCommissionFils] = useState(10000);
+  const [newAfNotes, setNewAfNotes] = useState("");
+  const [creatingAf, setCreatingAf] = useState(false);
+  const [createAfError, setCreateAfError] = useState<string | null>(null);
+
+  const [editingAffiliateId, setEditingAffiliateId] = useState<string | null>(null);
+  const [afEditName, setAfEditName] = useState("");
+  const [afEditCode, setAfEditCode] = useState("");
+  const [afEditEmail, setAfEditEmail] = useState("");
+  const [afEditPhone, setAfEditPhone] = useState("");
+  const [afEditCommissionFils, setAfEditCommissionFils] = useState(10000);
+  const [afEditNotes, setAfEditNotes] = useState("");
+  const [afEditActive, setAfEditActive] = useState(true);
+  const [savingAf, setSavingAf] = useState(false);
+  const [editAfError, setEditAfError] = useState<string | null>(null);
+
+  const [commissionsExpandedId, setCommissionsExpandedId] = useState<string | null>(null);
+  const [commissionsByAffiliate, setCommissionsByAffiliate] = useState<
+    Record<string, AffiliateCommissionRow[]>
+  >({});
+  const [commissionsLoadingId, setCommissionsLoadingId] = useState<string | null>(null);
+  const [commissionPatchingId, setCommissionPatchingId] = useState<string | null>(null);
+  const [payoutNoteDraft, setPayoutNoteDraft] = useState<Record<string, string>>({});
 
   const [showCreateVendor, setShowCreateVendor] = useState(false);
   const [newVendorName, setNewVendorName] = useState("");
@@ -685,6 +761,219 @@ export default function AdminDashboardClient() {
   useEffect(() => {
     void fetchStats();
   }, [fetchStats]);
+
+  useEffect(() => {
+    setAppOrigin(
+      typeof window !== "undefined"
+        ? (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+            window.location.origin)
+        : ""
+    );
+  }, []);
+
+  const fetchAffiliates = useCallback(async () => {
+    if (isVendorMode) return;
+    setAffiliatesLoading(true);
+    setAffiliatesError(null);
+    try {
+      const res = await fetch("/api/admin/affiliates", {
+        cache: "no-store",
+        credentials: "include",
+      });
+      if (res.status === 403) {
+        setAffiliatesError("Forbidden");
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(`Request failed: ${res.status}`);
+      }
+      const data = (await res.json()) as { affiliates: AffiliateSummary[] };
+      setAffiliates(data.affiliates);
+    } catch (err) {
+      setAffiliatesError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAffiliatesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "affiliates" && !isVendorMode) {
+      void fetchAffiliates();
+    }
+  }, [activeTab, fetchAffiliates]);
+
+  const refreshDashboard = useCallback(() => {
+    void fetchStats();
+    if (!isVendorMode && activeTab === "affiliates") {
+      void fetchAffiliates();
+    }
+  }, [fetchStats, fetchAffiliates, activeTab]);
+
+  const handleCreateAffiliate = async () => {
+    setCreateAfError(null);
+    setCreatingAf(true);
+    try {
+      const res = await fetch("/api/admin/affiliates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: newAfName,
+          code: newAfCode.trim() || undefined,
+          contactEmail: newAfEmail.trim() || undefined,
+          contactPhone: newAfPhone.trim() || undefined,
+          commissionFils: newAfCommissionFils,
+          notes: newAfNotes.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateAfError(data.error || "Failed to create affiliate");
+        return;
+      }
+      setShowCreateAffiliate(false);
+      setNewAfName("");
+      setNewAfCode("");
+      setNewAfEmail("");
+      setNewAfPhone("");
+      setNewAfCommissionFils(10000);
+      setNewAfNotes("");
+      void fetchAffiliates();
+    } catch (err) {
+      setCreateAfError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCreatingAf(false);
+    }
+  };
+
+  const startEditingAffiliate = (a: AffiliateSummary) => {
+    setEditingAffiliateId(a.id);
+    setAfEditName(a.name);
+    setAfEditCode(a.code);
+    setAfEditEmail(a.contactEmail || "");
+    setAfEditPhone(a.contactPhone || "");
+    setAfEditCommissionFils(a.commissionFils);
+    setAfEditNotes(a.notes || "");
+    setAfEditActive(a.active);
+    setEditAfError(null);
+  };
+
+  const cancelEditingAffiliate = () => {
+    setEditingAffiliateId(null);
+    setEditAfError(null);
+  };
+
+  const handleSaveAffiliate = async () => {
+    if (!editingAffiliateId) return;
+    setEditAfError(null);
+    setSavingAf(true);
+    try {
+      const res = await fetch("/api/admin/affiliates", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          id: editingAffiliateId,
+          name: afEditName,
+          code: afEditCode,
+          contactEmail: afEditEmail.trim() || null,
+          contactPhone: afEditPhone.trim() || null,
+          commissionFils: afEditCommissionFils,
+          active: afEditActive,
+          notes: afEditNotes.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditAfError(data.error || "Failed to update affiliate");
+        return;
+      }
+      setEditingAffiliateId(null);
+      void fetchAffiliates();
+    } catch (err) {
+      setEditAfError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingAf(false);
+    }
+  };
+
+  const toggleAffiliateActive = async (a: AffiliateSummary) => {
+    try {
+      const res = await fetch("/api/admin/affiliates", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id: a.id, active: !a.active }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        console.error(data.error || "Toggle failed");
+        return;
+      }
+      void fetchAffiliates();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const loadCommissionsForAffiliate = async (affiliateId: string) => {
+    setCommissionsLoadingId(affiliateId);
+    try {
+      const res = await fetch(`/api/admin/affiliates/${affiliateId}/commissions`, {
+        cache: "no-store",
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { commissions: AffiliateCommissionRow[] };
+      setCommissionsByAffiliate((prev) => ({
+        ...prev,
+        [affiliateId]: data.commissions,
+      }));
+      const drafts: Record<string, string> = {};
+      for (const c of data.commissions) {
+        drafts[c.id] = c.payoutNote || "";
+      }
+      setPayoutNoteDraft((prev) => ({ ...prev, ...drafts }));
+    } finally {
+      setCommissionsLoadingId(null);
+    }
+  };
+
+  const toggleCommissionsExpanded = async (affiliateId: string) => {
+    if (commissionsExpandedId === affiliateId) {
+      setCommissionsExpandedId(null);
+      return;
+    }
+    setCommissionsExpandedId(affiliateId);
+    if (!commissionsByAffiliate[affiliateId]) {
+      await loadCommissionsForAffiliate(affiliateId);
+    }
+  };
+
+  const patchCommission = async (
+    affiliateId: string,
+    commissionId: string,
+    status: "paid" | "void"
+  ) => {
+    setCommissionPatchingId(commissionId);
+    try {
+      const res = await fetch(`/api/admin/affiliates/${affiliateId}/commissions`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          commissionId,
+          status,
+          payoutNote: payoutNoteDraft[commissionId]?.trim() || null,
+        }),
+      });
+      if (!res.ok) return;
+      await loadCommissionsForAffiliate(affiliateId);
+      void fetchAffiliates();
+    } finally {
+      setCommissionPatchingId(null);
+    }
+  };
 
   const handleCreateVendor = async () => {
     setCreateError(null);
@@ -858,7 +1147,7 @@ export default function AdminDashboardClient() {
         </h1>
         <p className="text-stone-500 mb-6 text-sm">{error}</p>
         <button
-          onClick={fetchStats}
+          onClick={refreshDashboard}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-full text-sm font-semibold hover:bg-stone-800 transition-colors cursor-pointer"
         >
           <RefreshCw size={16} />
@@ -893,7 +1182,7 @@ export default function AdminDashboardClient() {
           </p>
         </div>
         <button
-          onClick={fetchStats}
+          onClick={refreshDashboard}
           className="text-stone-400 hover:text-stone-600 p-2 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer"
           title="Refresh"
         >
@@ -940,6 +1229,29 @@ export default function AdminDashboardClient() {
             </span>
           )}
         </button>
+        {!isVendorMode && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("affiliates")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === "affiliates"
+                ? "bg-stone-900 text-white"
+                : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+            }`}
+          >
+            <Link2 size={14} />
+            Affiliates
+            {affiliates.length > 0 && (
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  activeTab === "affiliates" ? "bg-white/20" : "bg-stone-200"
+                }`}
+              >
+                {affiliates.length}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {activeTab === "vendors" && (
@@ -1442,6 +1754,618 @@ export default function AdminDashboardClient() {
               No vendors yet. Create your first one above.
             </div>
           )}
+        </motion.div>
+      )}
+
+      {activeTab === "affiliates" && !isVendorMode && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4 mb-8"
+        >
+          <p className="text-sm text-stone-500">
+            Share links with{" "}
+            <code className="text-xs bg-stone-100 px-1.5 py-0.5 rounded">
+              ?ref=CODE
+            </code>
+            . Attribution locks when the customer confirms their email (first
+            affiliate wins). First paid event earns{" "}
+            <span className="font-semibold text-stone-700">10 KD</span> by
+            default (editable per affiliate).
+          </p>
+
+          {affiliatesLoading && affiliates.length === 0 && (
+            <div className="flex items-center gap-2 text-sm text-stone-400 py-8">
+              <Loader2 size={18} className="animate-spin" />
+              Loading affiliates…
+            </div>
+          )}
+
+          {affiliatesError && (
+            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+              <AlertTriangle size={14} />
+              {affiliatesError}
+            </div>
+          )}
+
+          {showCreateAffiliate ? (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl border border-stone-200/60 p-5 md:p-6 shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-semibold text-stone-900">
+                  New affiliate
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateAffiliate(false);
+                    setCreateAfError(null);
+                  }}
+                  className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newAfName}
+                    onChange={(e) => setNewAfName(e.target.value)}
+                    placeholder="Business or influencer name"
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Code <span className="text-stone-400">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newAfCode}
+                    onChange={(e) =>
+                      setNewAfCode(
+                        e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "")
+                      )
+                    }
+                    placeholder="Auto-generated if empty"
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Commission (fils)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    value={newAfCommissionFils}
+                    onChange={(e) =>
+                      setNewAfCommissionFils(Number(e.target.value) || 0)
+                    }
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                  />
+                  <p className="text-[11px] text-stone-400 mt-1">
+                    10000 fils = 10 KD
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Contact email
+                  </label>
+                  <input
+                    type="email"
+                    value={newAfEmail}
+                    onChange={(e) => setNewAfEmail(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Contact phone
+                  </label>
+                  <input
+                    type="text"
+                    value={newAfPhone}
+                    onChange={(e) => setNewAfPhone(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                    Notes
+                  </label>
+                  <textarea
+                    value={newAfNotes}
+                    onChange={(e) => setNewAfNotes(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                  />
+                </div>
+              </div>
+              {createAfError && (
+                <div className="mt-4 flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                  <AlertTriangle size={14} />
+                  {createAfError}
+                </div>
+              )}
+              <div className="mt-5 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleCreateAffiliate}
+                  disabled={creatingAf || !newAfName.trim()}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {creatingAf ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Plus size={16} />
+                  )}
+                  Create
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateAffiliate(false);
+                    setCreateAfError(null);
+                  }}
+                  className="px-4 py-2.5 text-sm text-stone-500 hover:text-stone-700 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateAffiliate(true);
+                setCreateAfError(null);
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors cursor-pointer shadow-sm"
+            >
+              <Plus size={16} />
+              New affiliate
+            </button>
+          )}
+
+          {affiliates.map((a, i) => (
+            <motion.div
+              key={a.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="bg-white rounded-2xl border border-stone-200/60 p-5 md:p-6 shadow-sm"
+            >
+              {editingAffiliateId === a.id ? (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-stone-900">
+                      Edit affiliate
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={cancelEditingAffiliate}
+                      className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                        Name
+                      </label>
+                      <input
+                        type="text"
+                        value={afEditName}
+                        onChange={(e) => setAfEditName(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                        Code
+                      </label>
+                      <input
+                        type="text"
+                        value={afEditCode}
+                        onChange={(e) =>
+                          setAfEditCode(
+                            e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "")
+                          )
+                        }
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                        Commission (fils)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={100}
+                        value={afEditCommissionFils}
+                        onChange={(e) =>
+                          setAfEditCommissionFils(Number(e.target.value) || 0)
+                        }
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 pt-6">
+                      <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={afEditActive}
+                          onChange={(e) => setAfEditActive(e.target.checked)}
+                          className="rounded border-stone-300"
+                        />
+                        Active
+                      </label>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                        Contact email
+                      </label>
+                      <input
+                        type="email"
+                        value={afEditEmail}
+                        onChange={(e) => setAfEditEmail(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                        Contact phone
+                      </label>
+                      <input
+                        type="text"
+                        value={afEditPhone}
+                        onChange={(e) => setAfEditPhone(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                        Notes
+                      </label>
+                      <textarea
+                        value={afEditNotes}
+                        onChange={(e) => setAfEditNotes(e.target.value)}
+                        rows={2}
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400"
+                      />
+                    </div>
+                  </div>
+                  {editAfError && (
+                    <div className="mt-4 flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                      <AlertTriangle size={14} />
+                      {editAfError}
+                    </div>
+                  )}
+                  <div className="mt-5 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSaveAffiliate}
+                      disabled={
+                        savingAf || !afEditName.trim() || !afEditCode.trim()
+                      }
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {savingAf ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Save size={16} />
+                      )}
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditingAffiliate}
+                      className="px-4 py-2.5 text-sm text-stone-500 hover:text-stone-700 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg font-semibold text-stone-900">
+                          {a.name}
+                        </h3>
+                        {!a.active && (
+                          <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-stone-500 mt-1 font-mono">
+                        {a.code}
+                      </p>
+                      {(a.contactEmail || a.contactPhone) && (
+                        <p className="text-xs text-stone-400 mt-1">
+                          {[a.contactEmail, a.contactPhone]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      )}
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-stone-500 truncate max-w-full">
+                          {appOrigin ? (
+                            <>
+                              <span className="font-mono text-stone-700">
+                                {appOrigin}/?ref={a.code}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  copyToClipboard(
+                                    `${appOrigin}/?ref=${a.code}`,
+                                    `af-link-${a.id}`
+                                  )
+                                }
+                                className="inline-flex items-center gap-1 ml-2 text-stone-400 hover:text-stone-600 cursor-pointer"
+                                title="Copy link"
+                              >
+                                {copiedField === `af-link-${a.id}` ? (
+                                  <Check size={12} className="text-emerald-500" />
+                                ) : (
+                                  <Copy size={12} />
+                                )}
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-stone-400">
+                              Set NEXT_PUBLIC_APP_URL for full link preview
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => toggleAffiliateActive(a)}
+                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${
+                          a.active
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            : "border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100"
+                        }`}
+                      >
+                        {a.active ? "Active" : "Paused"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => startEditingAffiliate(a)}
+                        className="text-stone-400 hover:text-stone-600 p-1.5 rounded-lg hover:bg-stone-100 cursor-pointer"
+                        title="Edit"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mt-4">
+                    <div className="rounded-xl bg-stone-50 p-3 text-center">
+                      <div className="text-lg font-bold text-stone-900 tabular-nums">
+                        {a.clickCount}
+                      </div>
+                      <div className="text-[10px] text-stone-500 mt-0.5">
+                        Clicks
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 p-3 text-center">
+                      <div className="text-lg font-bold text-stone-900 tabular-nums">
+                        {a.signups}
+                      </div>
+                      <div className="text-[10px] text-stone-500 mt-0.5">
+                        Signups
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 p-3 text-center">
+                      <div className="text-lg font-bold text-stone-900 tabular-nums">
+                        {a.conversions}
+                      </div>
+                      <div className="text-[10px] text-stone-500 mt-0.5">
+                        Conversions
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-amber-50 p-3 text-center">
+                      <div className="text-lg font-bold text-amber-900 tabular-nums">
+                        {formatFilsAsKwd(a.owedFils)}
+                      </div>
+                      <div className="text-[10px] text-amber-700/80 mt-0.5">
+                        Owed
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-emerald-50 p-3 text-center">
+                      <div className="text-lg font-bold text-emerald-900 tabular-nums">
+                        {formatFilsAsKwd(a.paidFils)}
+                      </div>
+                      <div className="text-[10px] text-emerald-700/80 mt-0.5">
+                        Paid out
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 p-3 text-center col-span-2 sm:col-span-1">
+                      <div className="text-lg font-bold text-stone-900 tabular-nums">
+                        {formatFilsAsKwd(a.commissionFils)}
+                      </div>
+                      <div className="text-[10px] text-stone-500 mt-0.5">
+                        Per conversion
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 border-t border-stone-100 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => void toggleCommissionsExpanded(a.id)}
+                      className="flex items-center gap-2 text-sm font-medium text-stone-700 hover:text-stone-900 cursor-pointer"
+                    >
+                      {commissionsExpandedId === a.id ? (
+                        <ChevronUp size={16} />
+                      ) : (
+                        <ChevronDown size={16} />
+                      )}
+                      View commissions
+                      {commissionsLoadingId === a.id && (
+                        <Loader2 size={14} className="animate-spin text-stone-400" />
+                      )}
+                    </button>
+                    {commissionsExpandedId === a.id &&
+                      commissionsByAffiliate[a.id] && (
+                        <div className="mt-3 overflow-x-auto rounded-xl border border-stone-200">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-stone-50 text-left text-xs text-stone-500 uppercase tracking-wide">
+                                <th className="px-3 py-2 font-medium">
+                                  Event
+                                </th>
+                                <th className="px-3 py-2 font-medium">
+                                  Customer
+                                </th>
+                                <th className="px-3 py-2 font-medium">Amount</th>
+                                <th className="px-3 py-2 font-medium">Status</th>
+                                <th className="px-3 py-2 font-medium">Note</th>
+                                <th className="px-3 py-2 font-medium">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {commissionsByAffiliate[a.id].length === 0 ? (
+                                <tr>
+                                  <td
+                                    colSpan={6}
+                                    className="px-3 py-6 text-center text-stone-400"
+                                  >
+                                    No commissions yet
+                                  </td>
+                                </tr>
+                              ) : (
+                                commissionsByAffiliate[a.id].map((c) => (
+                                  <tr
+                                    key={c.id}
+                                    className="border-t border-stone-100"
+                                  >
+                                    <td className="px-3 py-2 max-w-[180px]">
+                                      <span className="font-medium text-stone-800 truncate block">
+                                        {c.eventTitle}
+                                      </span>
+                                      <span className="text-[10px] font-mono text-stone-400">
+                                        {c.eventId.slice(0, 8)}…
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2 text-xs text-stone-600">
+                                      {c.customerEmail || "—"}
+                                      <div className="font-mono text-[10px] text-stone-400 mt-0.5">
+                                        {c.userId.slice(0, 8)}…
+                                      </div>
+                                    </td>
+                                    <td className="px-3 py-2 tabular-nums font-medium">
+                                      {formatFilsAsKwd(c.amountFils)}
+                                    </td>
+                                    <td className="px-3 py-2">
+                                      <span
+                                        className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${
+                                          c.status === "paid"
+                                            ? "bg-emerald-100 text-emerald-700"
+                                            : c.status === "void"
+                                              ? "bg-stone-100 text-stone-500"
+                                              : "bg-amber-100 text-amber-800"
+                                        }`}
+                                      >
+                                        {c.status}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2 min-w-[140px]">
+                                      <input
+                                        type="text"
+                                        value={
+                                          payoutNoteDraft[c.id] ??
+                                          c.payoutNote ??
+                                          ""
+                                        }
+                                        onChange={(e) =>
+                                          setPayoutNoteDraft((prev) => ({
+                                            ...prev,
+                                            [c.id]: e.target.value,
+                                          }))
+                                        }
+                                        placeholder="Payout note"
+                                        disabled={
+                                          c.status === "void" ||
+                                          c.status === "paid"
+                                        }
+                                        className="w-full px-2 py-1 text-xs border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:bg-stone-50"
+                                      />
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
+                                      <div className="flex flex-wrap gap-1">
+                                        <button
+                                          type="button"
+                                          disabled={
+                                            c.status !== "owed" ||
+                                            commissionPatchingId === c.id
+                                          }
+                                          onClick={() =>
+                                            void patchCommission(
+                                              a.id,
+                                              c.id,
+                                              "paid"
+                                            )
+                                          }
+                                          className="text-[11px] font-semibold px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                                        >
+                                          Mark paid
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={
+                                            c.status !== "owed" ||
+                                            commissionPatchingId === c.id
+                                          }
+                                          onClick={() =>
+                                            void patchCommission(
+                                              a.id,
+                                              c.id,
+                                              "void"
+                                            )
+                                          }
+                                          className="text-[11px] font-semibold px-2 py-1 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                                        >
+                                          Void
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                  </div>
+                </>
+              )}
+            </motion.div>
+          ))}
+
+          {!affiliatesLoading &&
+            affiliates.length === 0 &&
+            !showCreateAffiliate && (
+              <div className="text-center py-12 text-stone-400 text-sm">
+                No affiliates yet. Create one to generate referral links.
+              </div>
+            )}
         </motion.div>
       )}
 

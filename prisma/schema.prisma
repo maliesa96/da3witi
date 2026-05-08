@@ -77,12 +77,60 @@ model Event {
   inviteCountFailed    Int @default(0) @map("invite_count_failed")
   inviteCountNoReply   Int @default(0) @map("invite_count_no_reply")
 
+  affiliateCommission AffiliateCommission?
+
   @@index([userId, createdAt])
   @@index([vendorId])
   @@index([customerEmail])
   @@index([customerUserId])
   @@index([eventDate, reminderEnabled])
   @@map("events")
+}
+
+model Affiliate {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  code           String   @unique
+  name           String
+  contactEmail   String?  @map("contact_email")
+  contactPhone   String?  @map("contact_phone")
+  commissionFils Int      @default(10000) @map("commission_fils")
+  active         Boolean  @default(true)
+  notes          String?
+  clickCount     Int      @default(0) @map("click_count")
+
+  attributions AffiliateAttribution[]
+  commissions  AffiliateCommission[]
+
+  @@map("affiliates")
+}
+
+model AffiliateAttribution {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  userId      String    @unique @map("user_id") @db.Uuid
+  affiliateId String    @map("affiliate_id") @db.Uuid
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@map("affiliate_attributions")
+}
+
+model AffiliateCommission {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  affiliateId String  @map("affiliate_id") @db.Uuid
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
+  userId      String    @unique @map("user_id") @db.Uuid
+  eventId     String    @unique @map("event_id") @db.Uuid
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  amountFils  Int       @map("amount_fils")
+  status      String    @default("owed")
+  paidAt      DateTime? @map("paid_at") @db.Timestamptz(6)
+  payoutNote  String?   @map("payout_note")
+
+  @@index([affiliateId, status])
+  @@map("affiliate_commissions")
 }
 
 model Guest {
