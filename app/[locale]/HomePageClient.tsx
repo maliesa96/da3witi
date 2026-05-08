@@ -294,14 +294,14 @@ export default function HomePageClient() {
                <p className="text-2xl text-stone-500 font-light italic font-serif">
                  {t('feature_showcase.subtitle')}
                </p>
-               <motion.a
+               <motion.button
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
-                 href="#how-it-works"
+                 onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
                  className="px-8 py-4 rounded-full border-2 border-stone-900 text-stone-900 font-medium hover:bg-stone-900 hover:text-white transition-colors text-lg cursor-pointer"
                >
                  {t('feature_showcase.cta')}
-               </motion.a>
+               </motion.button>
              </motion.div>
 
              {/* Right Content - Live Dashboard Demo */}

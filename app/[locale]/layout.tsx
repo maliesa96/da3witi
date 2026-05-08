@@ -148,7 +148,7 @@ export default async function RootLayout({
   const direction = locale === 'ar' ? 'rtl' : 'ltr';
 
   return (
-    <html lang={locale} dir={direction} className="scroll-smooth">
+    <html lang={locale} dir={direction}>
       <head>
         <JsonLd locale={locale} />
       </head>

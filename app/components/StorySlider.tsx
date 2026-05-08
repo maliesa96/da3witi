@@ -498,14 +498,16 @@ export default function StorySlider() {
                       </p>
                       
                       {/* Active Progress Bar */}
-                      {isActive && (
-                        <motion.div 
-                          className="h-1 bg-stone-900 mt-4 rounded-full origin-left"
-                          initial={{ width: 0 }}
-                          animate={{ width: "100%" }}
-                          transition={{ duration: 4, ease: "linear" }}
-                        />
-                      )}
+                      <div className="h-1 mt-4 rounded-full overflow-hidden">
+                        {isActive && (
+                          <motion.div 
+                            className="h-full bg-stone-900 rounded-full origin-left"
+                            initial={{ width: 0 }}
+                            animate={{ width: "100%" }}
+                            transition={{ duration: 4, ease: "linear" }}
+                          />
+                        )}
+                      </div>
                    </div>
                 </button>
              );
