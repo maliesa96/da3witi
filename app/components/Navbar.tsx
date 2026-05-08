@@ -308,7 +308,7 @@ export function Navbar() {
               <form action={signOut} className="w-full">
                 <button
                   type="submit"
-                  className={`w-full flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 px-4 py-3 rounded-lg hover:bg-red-50 transition-all cursor-pointer ${locale === 'ar' ? 'flex-row-reverse' : ''}`}
+                  className="w-full flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 px-4 py-3 rounded-lg hover:bg-red-50 transition-all cursor-pointer"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <LogOut size={18} />
@@ -319,7 +319,7 @@ export function Navbar() {
           ) : (
             <Link
               href="/login"
-              className={`flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer ${locale === 'ar' ? 'flex-row-reverse' : ''}`}
+              className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-3 rounded-lg hover:bg-stone-50 transition-all cursor-pointer"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <User size={18} />
