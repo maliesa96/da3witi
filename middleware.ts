@@ -35,18 +35,24 @@ export async function middleware(request: NextRequest) {
     const refRaw = request.nextUrl.searchParams.get("ref");
     const code = normalizeAffiliateRef(refRaw);
     if (code) {
+      const existingRef = request.cookies.get(AFFILIATE_REF_COOKIE)?.value;
+      const isNewClick = existingRef !== code;
+
       response.cookies.set(AFFILIATE_REF_COOKIE, code, {
         maxAge: AFFILIATE_COOKIE_MAX_AGE,
         path: "/",
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
       });
-      const origin = request.nextUrl.origin;
-      void fetch(`${origin}/api/affiliate/click`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
-      }).catch(() => {});
+
+      if (isNewClick) {
+        const origin = request.nextUrl.origin;
+        void fetch(`${origin}/api/affiliate/click`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        }).catch(() => {});
+      }
     }
   }
 
