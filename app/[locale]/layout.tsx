@@ -157,7 +157,7 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider messages={messages}>
           <Navbar />
-          <main className="relative overflow-hidden flex-1">
+          <main className="relative overflow-x-clip flex-1">
             {children}
           </main>
           {!isVendorMode && <Footer />}

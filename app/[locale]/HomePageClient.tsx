@@ -34,7 +34,7 @@ export default function HomePageClient() {
   const containerRef = useRef(null);
   
   return (
-    <div className="min-h-screen bg-[#FDFCF8] text-stone-900 font-sans selection:bg-purple-100 selection:text-purple-900 overflow-x-hidden">
+    <div className="min-h-screen bg-[#FDFCF8] text-stone-900 font-sans selection:bg-purple-100 selection:text-purple-900 overflow-x-clip">
 
       <RamadanBanner />
 
@@ -598,7 +598,7 @@ export default function HomePageClient() {
       </section>
 
       {/* Business / White Label CTA */}
-      <section className="relative py-20 px-6 overflow-visible">
+      <section className="relative pt-10 pb-20 lg:py-20 px-6 overflow-visible">
         <div className="absolute -inset-y-48 inset-x-0 pointer-events-none">
           <div className="absolute inset-0 bg-linear-to-br from-[#FDFCF8] via-purple-50/80 to-amber-50/80 mask-[linear-gradient(to_bottom,transparent_0%,black_25%,black_75%,transparent_100%)]" />
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-7xl h-320 rounded-full bg-[#FDFCF8]/60 blur-3xl" />
@@ -637,7 +637,7 @@ export default function HomePageClient() {
             </Link>
           </div>
 
-          <div className="relative hidden lg:flex w-80 h-80 items-center justify-center">
+          <div className="relative flex w-56 h-56 sm:w-64 sm:h-64 lg:w-80 lg:h-80 items-center justify-center mx-auto lg:mx-0 mb-20 lg:mb-0">
             {/* Stacked branded invite cards */}
             {/* Back card - teal brand */}
             <motion.div
