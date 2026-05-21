@@ -464,6 +464,7 @@
     "already_have_account": "Already have an account?",
     "remember_password": "Remember your password?",
     "sign_out": "Sign Out",
+    "signing_in": "Signing in...",
     "error_login": "Invalid email or password. Please try again.",
     "error_invalid_credentials": "The email or password you entered is incorrect. Please check and try again.",
     "error_signup": "We couldn't create your account. Please try again or contact support if the problem persists.",

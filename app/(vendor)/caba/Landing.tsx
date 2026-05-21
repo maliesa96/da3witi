@@ -175,7 +175,7 @@ export default function CabaLanding({
 
             <div className="space-y-1">
               <p dir="rtl" lang="ar" className="text-sm font-semibold text-stone-700">
-                شركة بلك ليت ودنق لتنظيم الحفلات والمناسبات الخاصة
+                شركة بلاك لايت ودنق لتنظيم الحفلات والمناسبات الخاصة 
               </p>
               <p dir="ltr" lang="en" className="text-sm text-stone-500">
                 Black Light Wedding Company for Events &amp; Special Occasions
