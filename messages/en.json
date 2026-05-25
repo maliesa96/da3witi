@@ -1,8 +1,8 @@
 {
   "HomePage": {
-    "ramadan_banner": {
-      "highlight": "Ramadan Offer",
-      "message": "60% off all invitations for the first week of Ramadan only!",
+    "promo_banner": {
+      "highlight": "Eid Al Adha Offer",
+      "message": "30 KD off all invitations for Eid Al Adha!",
       "cta": "Claim Offer"
     },
     "badge": "The First Automated Invitation System in the Gulf",

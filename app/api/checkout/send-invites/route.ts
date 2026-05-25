@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
-import { isRamadanPromoActive, RAMADAN_COUPON_ID } from '@/lib/promo';
+import { PROMO_COUPON_ID, isPromoActive } from '@/lib/promo';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
       success_url: `${origin}/${locale}/checkout/send-success?session_id={CHECKOUT_SESSION_ID}&eventId=${eventId}`,
       cancel_url: `${origin}/${locale}/dashboard?eventId=${eventId}`,
       customer_email: user.email,
-      ...(isRamadanPromoActive()
-        ? { discounts: [{ coupon: RAMADAN_COUPON_ID }] }
+      ...(isPromoActive()
+        ? { discounts: [{ coupon: PROMO_COUPON_ID }] }
         : { allow_promotion_codes: true }),
       metadata: {
         userId: user.id,

@@ -19,24 +19,24 @@ import { useTranslations, useLocale } from "next-intl";
 import InvitePreview from "../components/InvitePreview";
 import LiveDashboardDemo from "../components/LiveDashboardDemo";
 import StorySlider from "../components/StorySlider";
-import RamadanBanner from "../components/RamadanBanner";
+import PromoBanner from "../components/PromoBanner";
 import { motion } from "framer-motion";
 import { useRef } from "react";
 import { MAX_GUESTS_PER_EVENT } from "@/lib/limits";
-import { isRamadanPromoActive } from "@/lib/promo";
+import { isPromoActive } from "@/lib/promo";
 
 export default function HomePageClient() {
   const t = useTranslations('HomePage');
   const locale = useLocale();
   const isArabic = locale === 'ar';
-  const promoActive = isRamadanPromoActive();
+  const promoActive = isPromoActive();
   
   const containerRef = useRef(null);
   
   return (
     <div className="min-h-screen bg-[#FDFCF8] text-stone-900 font-sans selection:bg-purple-100 selection:text-purple-900 overflow-x-clip">
 
-      <RamadanBanner />
+      <PromoBanner />
 
       {/* Hero Section */}
       <section className="relative py-16 lg:pt-20 lg:pb-24 px-6 overflow-hidden">
