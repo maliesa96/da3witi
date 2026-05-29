@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, ShieldCheck, User, Mail } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldCheck, User, Mail, LockOpen, Lock } from "lucide-react";
 import EventPanelClient from "@/app/[locale]/dashboard/EventPanelClient";
 import { RealtimeProvider } from "@/lib/supabase/RealtimeProvider";
 
@@ -33,6 +33,7 @@ type AdminEvent = {
   inviteCountDeclined: number;
   inviteCountFailed: number;
   inviteCountNoReply: number;
+  editingUnlocked: boolean;
   ownerEmail: string | null;
   ownerName: string | null;
 };
@@ -43,6 +44,7 @@ export default function AdminEventViewClient({ eventId }: { eventId: string }) {
   const [event, setEvent] = useState<AdminEvent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [unlockLoading, setUnlockLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +89,33 @@ export default function AdminEventViewClient({ eventId }: { eventId: string }) {
     };
   }, [eventId, router]);
 
+  const hasSentInvites = event
+    ? event.inviteCountSent + event.inviteCountDelivered + event.inviteCountRead +
+      event.inviteCountConfirmed + event.inviteCountDeclined + event.inviteCountNoReply > 0
+    : false;
+
+  async function toggleEditingUnlocked() {
+    if (!event) return;
+    setUnlockLoading(true);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ editingUnlocked: !event.editingUnlocked }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Request failed: ${res.status}`);
+      }
+      setEvent({ ...event, editingUnlocked: !event.editingUnlocked });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setUnlockLoading(false);
+    }
+  }
+
   return (
     <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pt-8 pb-24 animate-fade-in">
       {/* Back button */}
@@ -101,9 +130,9 @@ export default function AdminEventViewClient({ eventId }: { eventId: string }) {
       </div>
 
       {/* Admin banner */}
-      <div className="mb-6 flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm">
-        <ShieldCheck size={18} className="text-amber-600 mt-0.5 shrink-0" />
-        <div className="flex flex-col gap-1 min-w-0">
+      <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm">
+        <ShieldCheck size={18} className="text-amber-600 shrink-0" />
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
           <span className="font-semibold text-amber-800">Admin View</span>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-amber-700">
             {event?.ownerName && (
@@ -123,6 +152,27 @@ export default function AdminEventViewClient({ eventId }: { eventId: string }) {
             )}
           </div>
         </div>
+        {event && hasSentInvites && (
+          <button
+            type="button"
+            onClick={toggleEditingUnlocked}
+            disabled={unlockLoading}
+            className={`shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              event.editingUnlocked
+                ? "bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200"
+                : "bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200"
+            } ${unlockLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            {unlockLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : event.editingUnlocked ? (
+              <LockOpen size={14} />
+            ) : (
+              <Lock size={14} />
+            )}
+            {event.editingUnlocked ? "Editing Unlocked" : "Unlock Editing"}
+          </button>
+        )}
       </div>
 
       {isLoading && (

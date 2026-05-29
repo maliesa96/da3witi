@@ -77,6 +77,8 @@ model Event {
   inviteCountFailed    Int @default(0) @map("invite_count_failed")
   inviteCountNoReply   Int @default(0) @map("invite_count_no_reply")
 
+  editingUnlocked      Boolean @default(false) @map("editing_unlocked")
+
   affiliateCommission AffiliateCommission?
 
   @@index([userId, createdAt])

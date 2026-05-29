@@ -50,6 +50,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
         customerEmail: true,
         customerUserId: true,
         customerPermissions: true,
+        editingUnlocked: true,
       },
     });
 
@@ -77,6 +78,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
       locale: event.locale ?? null,
       paidAt: event.paidAt ? event.paidAt.toISOString() : null,
       customerPermissions: event.customerPermissions ?? null,
+      editingUnlocked: event.editingUnlocked,
     });
   } catch (error) {
     console.error("GET /api/events/[eventId] failed:", error);
@@ -104,6 +106,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ e
         customerEmail: true, customerUserId: true,
         inviteCountSent: true, inviteCountDelivered: true, inviteCountRead: true,
         inviteCountConfirmed: true, inviteCountDeclined: true, inviteCountNoReply: true,
+        editingUnlocked: true,
       },
     });
 
@@ -125,13 +128,15 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ e
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Block editing if any invites have been sent
-    const sentInvites = event.inviteCountSent + event.inviteCountDelivered +
-      event.inviteCountRead + event.inviteCountConfirmed +
-      event.inviteCountDeclined + event.inviteCountNoReply;
+    // Block editing if any invites have been sent (unless admin unlocked editing)
+    if (!event.editingUnlocked) {
+      const sentInvites = event.inviteCountSent + event.inviteCountDelivered +
+        event.inviteCountRead + event.inviteCountConfirmed +
+        event.inviteCountDeclined + event.inviteCountNoReply;
 
-    if (sentInvites > 0) {
-      return NextResponse.json({ error: "Cannot edit event after invites have been sent" }, { status: 400 });
+      if (sentInvites > 0) {
+        return NextResponse.json({ error: "Cannot edit event after invites have been sent" }, { status: 400 });
+      }
     }
 
     const body = await request.json();

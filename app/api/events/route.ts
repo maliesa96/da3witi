@@ -56,6 +56,7 @@ export async function GET() {
         customerEmail: true,
         customerUserId: true,
         customerPermissions: true,
+        editingUnlocked: true,
       },
     });
 
@@ -106,6 +107,7 @@ export async function GET() {
         inviteCountNoReply: e.inviteCountNoReply,
         customerPermissions: e.customerPermissions ?? null,
         customerEmail: e.customerEmail ?? null,
+        editingUnlocked: e.editingUnlocked,
       })),
       defaultEventId: events[0]?.id ?? null,
     });

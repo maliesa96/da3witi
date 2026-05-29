@@ -47,6 +47,7 @@ type EventForClient = {
   paidAt: string | null; // ISO
   customerPermissions?: CustomerPermissions;
   customerEmail?: string | null;
+  editingUnlocked?: boolean;
 
   // Denormalized counters from `GET /api/events`
   guestCountTotal?: number;
@@ -1037,7 +1038,7 @@ export default function EventPanelClient({
     );
   }, [serverStats]);
 
-  const canEditEvent = sentInvitesCount === 0;
+  const canEditEvent = sentInvitesCount === 0 || !!event.editingUnlocked;
 
   // Mobile activity sheet state
   const [showMobileActivity, setShowMobileActivity] = useState(false);

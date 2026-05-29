@@ -1,7 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin, isAdmin } from "@/lib/admin";
 import { VENDOR_ID } from "@/lib/vendor";
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ eventId: string }> }
+) {
+  try {
+    const { user, response } = await requireAdmin();
+    if (response) return response;
+
+    if (!isAdmin(user!.email)) {
+      return NextResponse.json({ error: "Only platform admins can unlock editing" }, { status: 403 });
+    }
+
+    const { eventId } = await context.params;
+    const body = await request.json();
+
+    if (typeof body.editingUnlocked !== "boolean") {
+      return NextResponse.json({ error: "editingUnlocked must be a boolean" }, { status: 400 });
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true },
+    });
+
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { editingUnlocked: body.editingUnlocked },
+    });
+
+    return NextResponse.json({ success: true, editingUnlocked: body.editingUnlocked });
+  } catch (error) {
+    console.error("PATCH /api/admin/events/[eventId] failed:", error);
+    return NextResponse.json({ error: "Failed to update event" }, { status: 500 });
+  }
+}
 
 export async function GET(
   _request: NextRequest,
@@ -46,6 +86,7 @@ export async function GET(
         inviteCountDeclined: true,
         inviteCountFailed: true,
         inviteCountNoReply: true,
+        editingUnlocked: true,
       },
     });
 
@@ -100,6 +141,7 @@ export async function GET(
       inviteCountDeclined: event.inviteCountDeclined,
       inviteCountFailed: event.inviteCountFailed,
       inviteCountNoReply: event.inviteCountNoReply,
+      editingUnlocked: event.editingUnlocked,
       ownerEmail,
       ownerName,
     });
