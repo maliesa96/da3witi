@@ -1,10 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { dedent } from "../utils/string";
 
-export const TEMPLATE_OVERRIDES: Record<string, string> = {
-    "invite_img_qr_ar": "invite_img_qr_ar_2",
-    "invite_doc_qr_ar": "invite_doc_qr_ar_2",
+const VENDOR_TEMPLATE_OVERRIDES: Record<string, Record<string, string>> = {
+    // Default (primary site) overrides
+    default: {
+        "invite_img_qr_ar": "invite_img_qr_ar_2",
+        "invite_doc_qr_ar": "invite_doc_qr_ar_2",
+    },
+    // Caba vendor
+    "f3b1c291-ca9b-4c7b-a4fa-9e840181a74f": {
+        "invite_img_ar": "invite_img_ar_2",
+        "invite_img_qr_guests_ar": "invite_img_qr_guests_ar_2",
+    },
 };
+
+const vendorId = process.env.VENDOR_ID || "default";
+export const TEMPLATE_OVERRIDES: Record<string, string> =
+    VENDOR_TEMPLATE_OVERRIDES[vendorId] ?? VENDOR_TEMPLATE_OVERRIDES["default"] ?? {};
 
 // string to function mapping
 export const TEMPLATES = {
