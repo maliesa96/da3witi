@@ -36,7 +36,7 @@ export default function HomePageClient() {
   return (
     <div className="min-h-screen bg-[#FDFCF8] text-stone-900 font-sans selection:bg-purple-100 selection:text-purple-900 overflow-x-clip">
 
-      <PromoBanner />
+      {/* <PromoBanner /> */}
 
       {/* Hero Section */}
       <section className="relative py-16 lg:pt-20 lg:pb-24 px-6 overflow-hidden">
