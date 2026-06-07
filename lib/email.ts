@@ -184,7 +184,7 @@ export async function sendExistingCustomerInvitationEmail({
  * If `vendorAdminEmails` is provided, the email goes to the vendor instead of
  * the platform admin, and the dashboard link is omitted (vendors have no admin UI).
  */
-export function sendWhatsAppMessageNotification({
+export async function sendWhatsAppMessageNotification({
   phone,
   senderName,
   body,
@@ -235,6 +235,5 @@ export function sendWhatsAppMessageNotification({
 
   const to = isVendor ? vendorAdminEmails : undefined;
 
-  // Fire-and-forget so we don't slow down the webhook
-  sendEmailNotification({ subject, html, to });
+  await sendEmailNotification({ subject, html, to });
 }

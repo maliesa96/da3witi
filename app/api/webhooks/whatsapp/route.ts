@@ -251,13 +251,17 @@ export async function POST(request: Request) {
 
                 // Send email notification for messages that need admin attention
                 if (stored.needsReply) {
-                  sendWhatsAppMessageNotification({
-                    phone: from,
-                    senderName: senderName,
-                    body: stored.body,
-                    vendorAdminEmails: vendor?.adminEmails,
-                    vendorName: vendor?.name,
-                  });
+                  try {
+                    await sendWhatsAppMessageNotification({
+                      phone: from,
+                      senderName: senderName,
+                      body: stored.body,
+                      vendorAdminEmails: vendor?.adminEmails,
+                      vendorName: vendor?.name,
+                    });
+                  } catch (emailErr) {
+                    console.error('Failed to send email notification:', emailErr);
+                  }
                 }
               } catch (storeErr) {
                 console.error('Failed to store inbound message:', storeErr);
