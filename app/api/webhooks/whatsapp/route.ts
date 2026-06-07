@@ -6,6 +6,18 @@ import { broadcastGuestUpdate, broadcastWhatsAppMessage } from '@/lib/supabase/b
 import { sendWhatsAppMessageNotification } from '@/lib/email';
 
 const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
+const VENDOR_ID = process.env.VENDOR_ID || null;
+
+let _vendorCache: { id: string; name: string; adminEmails: string[] } | null | undefined;
+async function getVendor() {
+  if (_vendorCache !== undefined) return _vendorCache;
+  if (!VENDOR_ID) { _vendorCache = null; return null; }
+  _vendorCache = await prisma.vendor.findUnique({
+    where: { id: VENDOR_ID },
+    select: { id: true, name: true, adminEmails: true },
+  });
+  return _vendorCache;
+}
 
 async function isValidVerifyToken(token: string): Promise<boolean> {
   if (WHATSAPP_VERIFY_TOKEN && token === WHATSAPP_VERIFY_TOKEN) {
@@ -80,6 +92,7 @@ export async function POST(request: Request) {
     // https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components
     
     if (body.object === 'whatsapp_business_account') {
+      const vendor = await getVendor();
       // Log the full body for deep debugging if needed (can be noisy)
       // console.log('WhatsApp Webhook Body:', JSON.stringify(body, null, 2));
 
@@ -242,6 +255,8 @@ export async function POST(request: Request) {
                     phone: from,
                     senderName: senderName,
                     body: stored.body,
+                    vendorAdminEmails: vendor?.adminEmails,
+                    vendorName: vendor?.name,
                   });
                 }
               } catch (storeErr) {

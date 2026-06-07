@@ -25,19 +25,21 @@ export async function hasAdminAccess(email: string | null | undefined): Promise<
 }
 
 /**
- * Authenticate the current user and verify they are an admin.
- * In vendor mode only vendor admins are accepted; on the primary site
- * only platform super-admins (ADMIN_EMAILS) are accepted.
+ * Authenticate the current user and verify they are a platform super-admin.
+ * Vendor deployments have no admin dashboard — all admin APIs are blocked.
  */
 export async function requireAdmin() {
+  const { isVendorMode } = await import("@/lib/vendor");
+  if (isVendorMode) {
+    return { user: null, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const allowed = user ? await hasAdminAccess(user.email) : false;
-
-  if (!user || !allowed) {
+  if (!user || !isAdmin(user.email)) {
     return { user: null, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
 

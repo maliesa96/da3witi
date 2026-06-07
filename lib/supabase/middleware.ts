@@ -73,6 +73,15 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Vendor sites have no admin dashboard — block /admin entirely
+  if (_isVendorMode && pathname.includes('/admin')) {
+    const segments = pathname.split('/');
+    const locale = segments[1] === 'ar' || segments[1] === 'en' ? segments[1] : 'en';
+    const url = request.nextUrl.clone()
+    url.pathname = `/${locale}`
+    return NextResponse.redirect(url)
+  }
+
   const requiresAuth = pathname.includes('/wizard') || pathname.includes('/dashboard') || pathname.includes('/admin')
 
   if (!user && requiresAuth) {

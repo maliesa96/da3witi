@@ -181,20 +181,38 @@ export async function sendExistingCustomerInvitationEmail({
 
 /**
  * Send an email notification for an inbound WhatsApp message that needs a reply.
+ * If `vendorAdminEmails` is provided, the email goes to the vendor instead of
+ * the platform admin, and the dashboard link is omitted (vendors have no admin UI).
  */
 export function sendWhatsAppMessageNotification({
   phone,
   senderName,
   body,
+  vendorAdminEmails,
+  vendorName,
 }: {
   phone: string;
   senderName: string | null;
   body: string;
+  vendorAdminEmails?: string[];
+  vendorName?: string;
 }) {
   const displayName = senderName || phone;
   const preview = body.length > 60 ? body.slice(0, 60) + "…" : body;
+  const isVendor = vendorAdminEmails && vendorAdminEmails.length > 0;
 
   const subject = `💬 ${displayName}: ${preview}`;
+
+  const whatsappLink = `https://wa.me/${phone}`;
+
+  const dashboardButton = isVendor
+    ? ""
+    : `
+        <a href="https://da3witi.com/en/admin/whatsapp" style="display: inline-block; padding: 10px 24px; background: #1c1917; color: white; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600;">
+          Reply in Dashboard
+        </a>`;
+
+  const footerName = vendorName || "Da3witi";
 
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto;">
@@ -205,16 +223,18 @@ export function sendWhatsAppMessageNotification({
         <div style="font-size: 15px; color: #1c1917; line-height: 1.5; white-space: pre-wrap;">${body}</div>
       </div>
       <div style="margin-top: 16px; text-align: center;">
-        <a href="https://da3witi.com/en/admin/whatsapp" style="display: inline-block; padding: 10px 24px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600;">
-          Reply in Dashboard
+        <a href="${whatsappLink}" style="display: inline-block; padding: 10px 24px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600;">
+          Reply in WhatsApp
         </a>
-      </div>
+      </div>${dashboardButton ? `\n      <div style="margin-top: 8px; text-align: center;">${dashboardButton}\n      </div>` : ""}
       <div style="margin-top: 16px; font-size: 11px; color: #a8a29e; text-align: center;">
-        Da3witi WhatsApp Notifications
+        ${footerName} WhatsApp Notifications
       </div>
     </div>
   `.trim();
 
+  const to = isVendor ? vendorAdminEmails : undefined;
+
   // Fire-and-forget so we don't slow down the webhook
-  sendEmailNotification({ subject, html });
+  sendEmailNotification({ subject, html, to });
 }
