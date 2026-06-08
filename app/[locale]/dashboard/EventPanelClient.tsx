@@ -1184,7 +1184,7 @@ export default function EventPanelClient({
           </div>
 
           <div className="flex flex-col gap-3 min-w-[200px]">
-            {(!isVendorMode || !event.customerPermissions || (event.customerPermissions as { canSendInvites?: boolean }).canSendInvites !== false) && (
+            {(!isCustomerView || (event.customerPermissions as { canSendInvites?: boolean })?.canSendInvites !== false) && (
               <ConfirmSendInvitesButton 
                 pendingToSend={pendingToSend} 
                 onSent={handleInvitesSent}
