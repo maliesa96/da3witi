@@ -2,20 +2,32 @@
  * Sync da3witi WABA templates to a vendor WABA account.
  *
  * Usage:
- *   npx tsx scripts/sync-templates.ts <DEST_WABA_ID>
+ *   npx tsx scripts/sync-templates.ts <DEST_WABA_ID> --footer|--no-footer
  *
- * Environment variables (loaded from .env.local and .env.vendor):
- *   META_ACCESS_TOKEN — used as the SOURCE token (da3witi)
- *   VENDOR_META_ACCESS_TOKEN — used as the DEST token (vendor)
- *
- * Or override explicitly:
- *   SOURCE_TOKEN=... DEST_TOKEN=... npx tsx scripts/sync-templates.ts <DEST_WABA_ID>
+ * Tokens are resolved in order:
+ *   1. SOURCE_TOKEN / DEST_TOKEN env vars (explicit override)
+ *   2. META_ACCESS_TOKEN from .env.local (source) / .env.vendor (dest)
  */
 
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
 const API_VERSION = "v25.0";
+
+function loadEnvFile(filePath: string): Record<string, string> {
+  if (!existsSync(filePath)) return {};
+  const vars: Record<string, string> = {};
+  for (const line of readFileSync(filePath, "utf-8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const raw = trimmed.slice(eqIdx + 1).trim();
+    vars[key] = raw.replace(/^["']|["']$/g, "");
+  }
+  return vars;
+}
 const SOURCE_WABA_ID = "2177304666347178"; // da3witi
 
 const SAMPLES_DIR = join(import.meta.dirname!, "..", "samples");
@@ -138,32 +150,34 @@ async function fetchAllTemplates(
 }
 
 const MESSAGE_SEND_TTL_SECONDS = 43200; // 12 hours
-
 function buildCreatePayload(
   t: Template,
-  mediaHandles: { image?: string; document?: string }
+  mediaHandles: { image?: string; document?: string },
+  includeFooter: boolean
 ) {
-  const components = t.components.map((c) => {
-    const clean: Record<string, unknown> = { type: c.type };
-    if (c.format) clean.format = c.format;
-    if (c.text) clean.text = c.text;
-    if (c.buttons) clean.buttons = c.buttons;
+  const components = t.components
+    .filter((c) => includeFooter || c.type !== "FOOTER")
+    .map((c) => {
+      const clean: Record<string, unknown> = { type: c.type };
+      if (c.format) clean.format = c.format;
+      if (c.text) clean.text = c.text;
+      if (c.buttons) clean.buttons = c.buttons;
 
-    if (
-      c.type === "HEADER" &&
-      (c.format === "IMAGE" || c.format === "DOCUMENT")
-    ) {
-      const handle =
-        c.format === "IMAGE" ? mediaHandles.image : mediaHandles.document;
-      if (handle) {
-        clean.example = { header_handle: [handle] };
+      if (
+        c.type === "HEADER" &&
+        (c.format === "IMAGE" || c.format === "DOCUMENT")
+      ) {
+        const handle =
+          c.format === "IMAGE" ? mediaHandles.image : mediaHandles.document;
+        if (handle) {
+          clean.example = { header_handle: [handle] };
+        }
+      } else if (c.example) {
+        clean.example = c.example;
       }
-    } else if (c.example) {
-      clean.example = c.example;
-    }
 
-    return clean;
-  });
+      return clean;
+    });
 
   return {
     name: t.name,
@@ -216,27 +230,49 @@ async function createTemplate(
 async function main() {
   const destWabaId = process.argv[2];
   if (!destWabaId) {
-    console.error("Usage: npx tsx scripts/sync-templates.ts <DEST_WABA_ID>");
+    console.error(
+      "Usage: npx tsx scripts/sync-templates.ts <DEST_WABA_ID> --footer|--no-footer"
+    );
     process.exit(1);
   }
 
+  const hasFooterFlag = process.argv.includes("--footer");
+  const hasNoFooterFlag = process.argv.includes("--no-footer");
+  if (!hasFooterFlag && !hasNoFooterFlag) {
+    console.error("Missing required flag: --footer or --no-footer");
+    process.exit(1);
+  }
+  if (hasFooterFlag && hasNoFooterFlag) {
+    console.error("Cannot use both --footer and --no-footer");
+    process.exit(1);
+  }
+  const includeFooter = hasFooterFlag;
+
+  const rootDir = join(import.meta.dirname!, "..");
+  const envLocal = loadEnvFile(join(rootDir, ".env.local"));
+  const envVendor = loadEnvFile(join(rootDir, ".env.vendor"));
+
   const sourceToken =
-    process.env.SOURCE_TOKEN || process.env.META_ACCESS_TOKEN;
+    process.env.SOURCE_TOKEN || envLocal.META_ACCESS_TOKEN;
   const destToken =
-    process.env.DEST_TOKEN || process.env.VENDOR_META_ACCESS_TOKEN;
+    process.env.DEST_TOKEN || envVendor.META_ACCESS_TOKEN;
 
   if (!sourceToken) {
     console.error(
-      "Missing source token. Set META_ACCESS_TOKEN or SOURCE_TOKEN."
+      "Missing source token. Set SOURCE_TOKEN or add META_ACCESS_TOKEN to .env.local."
     );
     process.exit(1);
   }
   if (!destToken) {
     console.error(
-      "Missing destination token. Set VENDOR_META_ACCESS_TOKEN or DEST_TOKEN."
+      "Missing destination token. Set DEST_TOKEN or add META_ACCESS_TOKEN to .env.vendor."
     );
     process.exit(1);
   }
+
+  console.log(
+    `Footer: ${includeFooter ? "included" : "excluded"} (${includeFooter ? "--footer" : "--no-footer"})\n`
+  );
 
   // --- Pre-fetch destination templates to know which to skip ---------------
   console.log(
@@ -388,7 +424,7 @@ async function main() {
   let failed = 0;
 
   for (const t of toCreate) {
-    const payload = buildCreatePayload(t, mediaHandles);
+    const payload = buildCreatePayload(t, mediaHandles, includeFooter);
     const label = `${t.name} (${t.language})`;
     process.stdout.write(`Creating ${label}...`);
 
