@@ -21,11 +21,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check 24h messaging window
+    // Check 24h messaging window + resolve vendor from conversation history
     const lastInbound = await prisma.whatsAppMessage.findFirst({
       where: { phone, direction: "inbound" },
       orderBy: { createdAt: "desc" },
-      select: { createdAt: true },
+      select: { createdAt: true, vendorId: true },
     });
 
     const windowOpen =
@@ -39,10 +39,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const vendorId = lastInbound?.vendorId ?? null;
+    let vendorName: string | null = null;
+    if (vendorId) {
+      const vendor = await prisma.vendor.findUnique({
+        where: { id: vendorId },
+        select: { name: true },
+      });
+      vendorName = vendor?.name ?? null;
+    }
+
     // Enqueue the outbound message via BullMQ -> worker
     const payload = buildWhatsAppTextPayload(phone, message);
     await enqueueWhatsAppOutbox(payload, {
       kind: "webhook_followup",
+      vendorId: vendorId || undefined,
     });
 
     // Store the outbound message in the chat history
@@ -53,6 +64,7 @@ export async function POST(request: NextRequest) {
         body: message,
         messageType: "text",
         status: "sent",
+        vendorId: vendorId || undefined,
       },
     });
 
@@ -69,6 +81,8 @@ export async function POST(request: NextRequest) {
       status: stored.status,
       needsReply: false,
       createdAt: stored.createdAt.toISOString(),
+      vendorId: vendorId,
+      vendorName: vendorName,
     };
 
     // Broadcast to admin chat UI via Supabase Realtime

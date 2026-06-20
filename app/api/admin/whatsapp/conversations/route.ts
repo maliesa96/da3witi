@@ -18,6 +18,8 @@ export async function GET() {
         last_inbound_at: Date | null;
         unread_count: number;
         total_count: number;
+        vendor_id: string | null;
+        vendor_name: string | null;
       }[]
     >`
       SELECT
@@ -40,7 +42,18 @@ export async function GET() {
         ) as last_direction,
         MAX(m.created_at) FILTER (WHERE m.direction = 'inbound') as last_inbound_at,
         COUNT(*) FILTER (WHERE m.needs_reply = true)::int as unread_count,
-        COUNT(*)::int as total_count
+        COUNT(*)::int as total_count,
+        (
+          SELECT wm.vendor_id FROM whatsapp_messages wm
+          WHERE wm.phone = m.phone AND wm.vendor_id IS NOT NULL
+          ORDER BY wm.created_at DESC LIMIT 1
+        ) as vendor_id,
+        (
+          SELECT v.name FROM whatsapp_messages wm
+          JOIN vendors v ON v.id = wm.vendor_id
+          WHERE wm.phone = m.phone AND wm.vendor_id IS NOT NULL
+          ORDER BY wm.created_at DESC LIMIT 1
+        ) as vendor_name
       FROM whatsapp_messages m
       GROUP BY m.phone
       ORDER BY MAX(m.created_at) DESC
@@ -56,6 +69,8 @@ export async function GET() {
         lastInboundAt: c.last_inbound_at,
         unreadCount: c.unread_count,
         totalCount: c.total_count,
+        vendorId: c.vendor_id,
+        vendorName: c.vendor_name,
       }))
     );
   } catch (error) {

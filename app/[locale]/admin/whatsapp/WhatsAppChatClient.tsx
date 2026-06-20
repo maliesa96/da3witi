@@ -36,6 +36,8 @@ type Conversation = {
   lastInboundAt: string | null;
   unreadCount: number;
   totalCount: number;
+  vendorId: string | null;
+  vendorName: string | null;
 };
 
 type Message = {
@@ -51,7 +53,11 @@ type Message = {
   status: string;
   needsReply: boolean;
   createdAt: string;
+  vendorId?: string | null;
+  vendorName?: string | null;
 };
+
+type VendorFilter = "all" | "da3witi" | string; // string = vendorId
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -218,27 +224,56 @@ function StatusIcon({ status }: { status: string }) {
 /*  ConversationList                                                   */
 /* ------------------------------------------------------------------ */
 
+function VendorBadge({ vendorName }: { vendorName: string | null }) {
+  if (vendorName) {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 border border-amber-200/60">
+        {vendorName}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 border border-blue-200/60">
+      Da3witi
+    </span>
+  );
+}
+
 function ConversationList({
   conversations,
   selectedPhone,
   onSelect,
   searchQuery,
   onSearchChange,
+  vendorFilter,
+  onVendorFilterChange,
+  vendorOptions,
 }: {
   conversations: Conversation[];
   selectedPhone: string | null;
   onSelect: (phone: string) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  vendorFilter: VendorFilter;
+  onVendorFilterChange: (f: VendorFilter) => void;
+  vendorOptions: { id: string; name: string }[];
 }) {
   const filtered = conversations.filter((c) => {
+    // Vendor filter
+    if (vendorFilter === "da3witi" && c.vendorId !== null) return false;
+    if (vendorFilter !== "all" && vendorFilter !== "da3witi" && c.vendorId !== vendorFilter) return false;
+
+    // Text search
     const q = searchQuery.toLowerCase();
+    if (!q) return true;
     return (
       c.phone.includes(q) ||
       c.guestName?.toLowerCase().includes(q) ||
       c.lastMessage.toLowerCase().includes(q)
     );
   });
+
+  const hasVendors = vendorOptions.length > 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -255,6 +290,45 @@ function ConversationList({
           />
         </div>
       </div>
+
+      {/* Vendor filter tabs */}
+      {hasVendors && (
+        <div className="flex items-center gap-1 px-3 py-2 border-b border-stone-200 overflow-x-auto">
+          <button
+            onClick={() => onVendorFilterChange("all")}
+            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors whitespace-nowrap cursor-pointer ${
+              vendorFilter === "all"
+                ? "bg-stone-800 text-white"
+                : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => onVendorFilterChange("da3witi")}
+            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors whitespace-nowrap cursor-pointer ${
+              vendorFilter === "da3witi"
+                ? "bg-blue-600 text-white"
+                : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+            }`}
+          >
+            Da3witi
+          </button>
+          {vendorOptions.map((v) => (
+            <button
+              key={v.id}
+              onClick={() => onVendorFilterChange(v.id)}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors whitespace-nowrap cursor-pointer ${
+                vendorFilter === v.id
+                  ? "bg-amber-600 text-white"
+                  : "bg-amber-50 text-amber-600 hover:bg-amber-100"
+              }`}
+            >
+              {v.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* List */}
       <div className="flex-1 overflow-y-auto">
@@ -275,16 +349,23 @@ function ConversationList({
               }`}
             >
               {/* Avatar */}
-              <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-400 to-green-600 flex items-center justify-center text-white text-sm font-bold shrink-0 mt-0.5">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 mt-0.5 ${
+                conv.vendorId
+                  ? "bg-linear-to-br from-amber-400 to-amber-600"
+                  : "bg-linear-to-br from-green-400 to-green-600"
+              }`}>
                 {conv.guestName ? conv.guestName.charAt(0).toUpperCase() : <User size={18} />}
               </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-sm text-stone-900 truncate">
-                    {conv.guestName || formatPhone(conv.phone)}
-                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-semibold text-sm text-stone-900 truncate">
+                      {conv.guestName || formatPhone(conv.phone)}
+                    </span>
+                    <VendorBadge vendorName={conv.vendorName} />
+                  </div>
                   <span className="text-[11px] text-stone-400 whitespace-nowrap shrink-0">
                     {timeAgo(conv.lastMessageAt)}
                   </span>
@@ -475,7 +556,10 @@ function ChatView({
           {conv?.guestName ? conv.guestName.charAt(0).toUpperCase() : <User size={16} />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate">{displayName}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-semibold text-sm truncate">{displayName}</p>
+            <VendorBadge vendorName={conv?.vendorName ?? null} />
+          </div>
           <p className="text-[11px] text-stone-500 truncate">
             {conv?.guestName ? formatPhone(phone) : ""}
           </p>
@@ -613,6 +697,18 @@ export default function WhatsAppChatClient() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const selectedPhoneRef = useRef<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [vendorFilter, setVendorFilter] = useState<VendorFilter>("all");
+
+  // Derive unique vendor options from conversations
+  const vendorOptions = (() => {
+    const seen = new Map<string, string>();
+    for (const c of conversations) {
+      if (c.vendorId && c.vendorName && !seen.has(c.vendorId)) {
+        seen.set(c.vendorId, c.vendorName);
+      }
+    }
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  })();
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -707,6 +803,8 @@ export default function WhatsAppChatClient() {
             lastInboundAt: msg.direction === "inbound" ? msg.createdAt : null,
             unreadCount: msg.needsReply && !isViewing ? 1 : 0,
             totalCount: 1,
+            vendorId: msg.vendorId ?? null,
+            vendorName: msg.vendorName ?? null,
           },
           ...prev,
         ];
@@ -866,6 +964,9 @@ export default function WhatsAppChatClient() {
                 onSelect={handleSelectPhone}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
+                vendorFilter={vendorFilter}
+                onVendorFilterChange={setVendorFilter}
+                vendorOptions={vendorOptions}
               />
             </div>
 

@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
         status: m.status,
         needsReply: m.needsReply,
         createdAt: m.createdAt.toISOString(),
+        vendorId: m.vendorId,
       }))
     );
   } catch (error) {

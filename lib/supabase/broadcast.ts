@@ -152,6 +152,8 @@ export type BroadcastWhatsAppMessagePayload = {
   status: string;
   needsReply: boolean;
   createdAt: string;
+  vendorId: string | null;
+  vendorName: string | null;
 };
 
 const WHATSAPP_ADMIN_CHANNEL = "whatsapp:admin";

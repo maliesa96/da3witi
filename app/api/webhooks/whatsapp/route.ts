@@ -6,9 +6,12 @@ import { broadcastGuestUpdate, broadcastWhatsAppMessage } from '@/lib/supabase/b
 import { sendWhatsAppMessageNotification } from '@/lib/email';
 
 const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
+const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || null;
 const VENDOR_ID = process.env.VENDOR_ID || null;
 
-let _vendorCache: { id: string; name: string; adminEmails: string[] } | null | undefined;
+type VendorInfo = { id: string; name: string; adminEmails: string[] };
+
+let _vendorCache: VendorInfo | null | undefined;
 async function getVendor() {
   if (_vendorCache !== undefined) return _vendorCache;
   if (!VENDOR_ID) { _vendorCache = null; return null; }
@@ -17,6 +20,24 @@ async function getVendor() {
     select: { id: true, name: true, adminEmails: true },
   });
   return _vendorCache;
+}
+
+const _vendorByPhoneCache = new Map<string, VendorInfo | null>();
+async function resolveVendorByPhoneNumberId(phoneNumberId: string): Promise<VendorInfo | null> {
+  if (_vendorByPhoneCache.has(phoneNumberId)) return _vendorByPhoneCache.get(phoneNumberId)!;
+
+  // If this is the platform's own phone number, it's not a vendor
+  if (phoneNumberId === WHATSAPP_PHONE_NUMBER_ID) {
+    _vendorByPhoneCache.set(phoneNumberId, null);
+    return null;
+  }
+
+  const vendor = await prisma.vendor.findFirst({
+    where: { whatsappPhoneNumberId: phoneNumberId },
+    select: { id: true, name: true, adminEmails: true },
+  });
+  _vendorByPhoneCache.set(phoneNumberId, vendor);
+  return vendor;
 }
 
 async function isValidVerifyToken(token: string): Promise<boolean> {
@@ -92,15 +113,18 @@ export async function POST(request: Request) {
     // https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components
     
     if (body.object === 'whatsapp_business_account') {
-      const vendor = await getVendor();
-      // Log the full body for deep debugging if needed (can be noisy)
-      // console.log('WhatsApp Webhook Body:', JSON.stringify(body, null, 2));
-
       const entries = body.entry;
       for (const entry of entries) {
         const changes = entry.changes;
         for (const change of changes) {
           const value = change.value;
+
+          // Resolve vendor from the receiving phone number ID in the payload
+          const incomingPhoneNumberId = value.metadata?.phone_number_id as string | undefined;
+          const vendor = incomingPhoneNumberId
+            ? (await resolveVendorByPhoneNumberId(incomingPhoneNumberId) ?? await getVendor())
+            : await getVendor();
+          const vendorId = vendor?.id ?? null;
           
           // Handle statuses (sent, delivered, read, failed)
           if (value.statuses) {
@@ -229,7 +253,8 @@ export async function POST(request: Request) {
                     contextMessageId: repliedMessageId || undefined,
                     guestId: matchedGuest?.id || undefined,
                     guestName: senderName || undefined,
-                    needsReply: !isRsvp, // RSVP messages are auto-handled; everything else needs attention
+                    needsReply: !isRsvp,
+                    vendorId: vendorId || undefined,
                   },
                 });
 
@@ -247,6 +272,8 @@ export async function POST(request: Request) {
                   status: stored.status,
                   needsReply: stored.needsReply,
                   createdAt: stored.createdAt.toISOString(),
+                  vendorId: vendorId,
+                  vendorName: vendor?.name ?? null,
                 });
 
                 // Send email notification for messages that need admin attention
