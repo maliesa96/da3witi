@@ -17,6 +17,7 @@ import DeleteAllGuestsButton from "@/app/components/DeleteAllGuestsButton";
 import EditEventDialog from "@/app/components/EditEventDialog";
 import RecentActivity from "@/app/components/RecentActivity";
 import { GuestListClient, type GuestRowData } from "@/app/components/AnimatedGuestRows";
+import AttendantManager from "@/app/components/AttendantManager";
 import {
   useRealtimeSubscription,
   toClientGuest,
@@ -48,6 +49,7 @@ type EventForClient = {
   customerPermissions?: CustomerPermissions;
   customerEmail?: string | null;
   editingUnlocked?: boolean;
+  attendantEmails?: string[];
 
   // Denormalized counters from `GET /api/events`
   guestCountTotal?: number;
@@ -193,6 +195,7 @@ export default function EventPanelClient({
   initialStats,
   initialInviteTotals,
   isVendorAdmin = false,
+  isAttendant = false,
 }: {
   event: EventForClient;
   initialGuests?: GuestRowData[];
@@ -200,10 +203,12 @@ export default function EventPanelClient({
   initialStats?: GuestStats;
   initialInviteTotals?: InviteTotals;
   isVendorAdmin?: boolean;
+  isAttendant?: boolean;
 }) {
   const t = useTranslations("Dashboard");
   const locale = useLocale();
-  const isCustomerView = isVendorMode && !isVendorAdmin;
+  const isCustomerView = isVendorMode && !isVendorAdmin && !isAttendant;
+  const isAttendantView = isVendorMode && isAttendant && !isVendorAdmin;
 
   // Threshold: use client-side filtering for small lists, server-side for large
   const CLIENT_SIDE_THRESHOLD = 500;
@@ -1137,15 +1142,17 @@ export default function EventPanelClient({
             </div>
 
             <div className="flex flex-wrap gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowPreview(true)}
-                className="px-4 py-2 bg-white/70 hover:bg-white border border-stone-200 rounded-lg text-sm font-medium text-stone-700 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
-              >
-                <Eye size={16} />
-                {t("preview_invite") || "Preview Invite"}
-              </button>
-              {!isCustomerView && (
+              {!isAttendantView && (
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className="px-4 py-2 bg-white/70 hover:bg-white border border-stone-200 rounded-lg text-sm font-medium text-stone-700 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  <Eye size={16} />
+                  {t("preview_invite") || "Preview Invite"}
+                </button>
+              )}
+              {!isCustomerView && !isAttendantView && (
                 <div className="relative group/edit">
                   <button
                     type="button"
@@ -1183,26 +1190,28 @@ export default function EventPanelClient({
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 min-w-[200px]">
-            {(!isCustomerView || (event.customerPermissions as { canSendInvites?: boolean })?.canSendInvites !== false) && (
-              <ConfirmSendInvitesButton 
-                pendingToSend={pendingToSend} 
-                onSent={handleInvitesSent}
-                eventId={event.id}
-                isPaid={!!event.paidAt}
-              />
-            )}
-            {!isCustomerView && (
-              <div className="w-full">
-                <AddGuestForm
+          {!isAttendantView && (
+            <div className="flex flex-col gap-3 min-w-[200px]">
+              {(!isCustomerView || (event.customerPermissions as { canSendInvites?: boolean })?.canSendInvites !== false) && (
+                <ConfirmSendInvitesButton 
+                  pendingToSend={pendingToSend} 
+                  onSent={handleInvitesSent}
                   eventId={event.id}
-                  guestsEnabled={event.guestsEnabled}
-                  onGuestsAdded={handleGuestsAdded}
-                  buttonClassName="w-full px-6 py-3 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2 bg-white text-stone-900 border border-stone-200 hover:bg-stone-50 hover:-translate-y-0.5 cursor-pointer"
+                  isPaid={!!event.paidAt}
                 />
-              </div>
-            )}
-          </div>
+              )}
+              {!isCustomerView && (
+                <div className="w-full">
+                  <AddGuestForm
+                    eventId={event.id}
+                    guestsEnabled={event.guestsEnabled}
+                    onGuestsAdded={handleGuestsAdded}
+                    buttonClassName="w-full px-6 py-3 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2 bg-white text-stone-900 border border-stone-200 hover:bg-stone-50 hover:-translate-y-0.5 cursor-pointer"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1274,6 +1283,11 @@ export default function EventPanelClient({
             />
           </div>
 
+          {/* Attendant Management (vendor admin only) */}
+          {isVendorAdmin && event.qrEnabled && (
+            <AttendantManager eventId={event.id} initialEmails={event.attendantEmails ?? []} />
+          )}
+
           {/* Guest List Container */}
           <div className="bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden">
             <div className="px-4 md:px-6 py-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1285,28 +1299,30 @@ export default function EventPanelClient({
                     ({listTotalDisplay} {t("total_guests") || "total"})
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleExportCSV}
-                    disabled={isExporting || serverStats.total === 0}
-                    className="px-3 py-1.5 text-xs font-medium text-stone-600 bg-stone-50 border border-stone-200 rounded-lg hover:bg-stone-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    {isExporting ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Download size={14} />
+                {!isAttendantView && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExportCSV}
+                      disabled={isExporting || serverStats.total === 0}
+                      className="px-3 py-1.5 text-xs font-medium text-stone-600 bg-stone-50 border border-stone-200 rounded-lg hover:bg-stone-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {isExporting ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Download size={14} />
+                      )}
+                      {isExporting ? t("exporting") : t("export_csv")}
+                    </button>
+                    {!isCustomerView && (
+                      <DeleteAllGuestsButton
+                        eventId={event.id}
+                        pendingCount={serverStats.pending + serverStats.failed}
+                        onDeleted={handleAllGuestsDeleted}
+                      />
                     )}
-                    {isExporting ? t("exporting") : t("export_csv")}
-                  </button>
-                  {!isCustomerView && (
-                    <DeleteAllGuestsButton
-                      eventId={event.id}
-                      pendingCount={serverStats.pending + serverStats.failed}
-                      onDeleted={handleAllGuestsDeleted}
-                    />
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <details className="relative group">
@@ -1390,7 +1406,7 @@ export default function EventPanelClient({
               isLoading={isLoading}
               searchQuery={searchQuery}
               hasFilters={hasFilters}
-              readOnly={isCustomerView}
+              readOnly={isCustomerView || isAttendantView}
             />
           </div>
         </div>

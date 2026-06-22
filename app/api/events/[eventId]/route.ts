@@ -5,13 +5,14 @@ import { isAdmin } from "@/lib/admin";
 import { isVendorMode, isVendorAdmin as checkVendorAdmin } from "@/lib/vendor";
 
 function canAccessEvent(
-  event: { userId: string | null; customerEmail: string | null; customerUserId: string | null; vendorId: string | null },
+  event: { userId: string | null; customerEmail: string | null; customerUserId: string | null; vendorId: string | null; attendantEmails?: string[] },
   user: { id: string; email?: string | undefined }
 ): boolean {
   if (event.userId === user.id) return true;
   if (isAdmin(user.email)) return true;
   if (event.vendorId && event.customerEmail && user.email && event.customerEmail === user.email) return true;
   if (event.vendorId && event.customerUserId && event.customerUserId === user.id) return true;
+  if (event.vendorId && user.email && event.attendantEmails?.includes(user.email)) return true;
   return false;
 }
 
@@ -51,6 +52,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
         customerUserId: true,
         customerPermissions: true,
         editingUnlocked: true,
+        attendantEmails: true,
       },
     });
 

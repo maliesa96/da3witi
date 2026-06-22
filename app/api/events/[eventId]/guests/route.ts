@@ -58,6 +58,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
         vendorId: true,
         customerEmail: true,
         customerUserId: true,
+        attendantEmails: true,
       },
     });
 
@@ -70,8 +71,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
       event.vendorId &&
       ((event.customerEmail && user.email && event.customerEmail === user.email) ||
        (event.customerUserId && event.customerUserId === user.id));
+    const isAttendant =
+      event.vendorId && user.email && event.attendantEmails.includes(user.email);
 
-    if (!isOwner && !isAdmin(user.email) && !isCustomer) {
+    if (!isOwner && !isAdmin(user.email) && !isCustomer && !isAttendant) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

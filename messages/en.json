@@ -447,7 +447,17 @@
     "resend_email_sending": "Sending...",
     "resend_email_sent": "Email Sent",
     "resend_email_failed": "Send Failed",
-    "resend_email_tooltip": "Resend invitation email to {email}"
+    "resend_email_tooltip": "Resend invitation email to {email}",
+    "attendants": "Attendants",
+    "attendants_desc": "Staff who can scan QR codes at the door",
+    "add_attendant": "Add Attendant",
+    "add_attendant_placeholder": "Email address",
+    "attendant_adding": "Adding...",
+    "attendant_added": "Added",
+    "attendant_add_failed": "Failed to add",
+    "attendant_already_added": "Already added",
+    "attendant_remove": "Remove",
+    "attendant_none": "No attendants added yet"
   },
   "Auth": {
     "login": "Login",

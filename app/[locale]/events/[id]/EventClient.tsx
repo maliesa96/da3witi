@@ -39,6 +39,8 @@ type EventForClient = {
   inviteCountDeclined?: number;
   inviteCountFailed?: number;
   inviteCountNoReply?: number;
+  isAttendant?: boolean;
+  attendantEmails?: string[];
 };
 
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
@@ -154,7 +156,7 @@ export default function EventClient({ eventId }: { eventId: string }) {
 
       {!isLoading && !loadError && event && (
         <RealtimeProvider eventId={event.id} enabled={!!event.paidAt}>
-          <EventPanelClient key={event.id} event={event} isVendorAdmin={vendorAdmin} />
+          <EventPanelClient key={event.id} event={event} isVendorAdmin={vendorAdmin} isAttendant={event.isAttendant} />
         </RealtimeProvider>
       )}
     </div>

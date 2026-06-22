@@ -63,6 +63,7 @@ model Event {
   customerEmail       String?  @map("customer_email")
   customerUserId      String?  @map("customer_user_id") @db.Uuid
   customerPermissions Json?    @map("customer_permissions")
+  attendantEmails     String[] @default([]) @map("attendant_emails")
 
   // Denormalized counters (maintained via DB triggers on "guests")
   guestCountTotal      Int @default(0) @map("guest_count_total")

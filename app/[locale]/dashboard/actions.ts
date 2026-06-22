@@ -28,13 +28,14 @@ async function getAuthedUser() {
 }
 
 function canAccessEvent(
-  event: { userId: string | null; customerEmail: string | null; customerUserId: string | null; vendorId: string | null },
+  event: { userId: string | null; customerEmail: string | null; customerUserId: string | null; vendorId: string | null; attendantEmails?: string[] },
   user: { id: string; email?: string | undefined }
 ): boolean {
   if (event.userId === user.id) return true;
   if (isAdmin(user.email)) return true;
   if (event.vendorId && event.customerEmail && user.email && event.customerEmail === user.email) return true;
   if (event.vendorId && event.customerUserId && event.customerUserId === user.id) return true;
+  if (event.vendorId && user.email && event.attendantEmails?.includes(user.email)) return true;
   return false;
 }
 
@@ -567,5 +568,122 @@ export async function resendCustomerEmail(eventId: string, locale: 'en' | 'ar') 
   }
 
   return { success: true };
+}
+
+export async function addAttendant(eventId: string, email: string, locale: 'en' | 'ar') {
+  const user = await getAuthedUser();
+
+  if (!isVendorMode || !(await isVendorAdmin(user.email))) {
+    throw new Error('Forbidden');
+  }
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { id: true, title: true, vendorId: true, attendantEmails: true },
+  });
+
+  if (!event || !event.vendorId) {
+    throw new Error('Event not found');
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    throw new Error('INVALID_EMAIL');
+  }
+
+  if (event.attendantEmails.includes(normalizedEmail)) {
+    throw new Error('ALREADY_ADDED');
+  }
+
+  await prisma.event.update({
+    where: { id: eventId },
+    data: { attendantEmails: { push: normalizedEmail } },
+  });
+
+  const appUrl = await getAppOrigin();
+  const adminSupabase = createAdminClient();
+
+  const loginPath = `/${locale}/login`;
+  const inviteRedirectTo = `${appUrl}/${locale}/auth/callback?next=${encodeURIComponent(`/${locale}/dashboard`)}`;
+
+  const inviteResult = await adminSupabase.auth.admin.generateLink({
+    type: 'invite',
+    email: normalizedEmail,
+    options: { redirectTo: inviteRedirectTo },
+  });
+
+  if (inviteResult.error) {
+    await sendExistingCustomerInvitationEmail({
+      customerEmail: normalizedEmail,
+      eventTitle: event.title,
+      loginUrl: `${appUrl}${loginPath}`,
+      siteName: SITE_NAME || 'Da3witi',
+      locale,
+    });
+  } else {
+    const linkData = inviteResult.data;
+    if (linkData?.properties?.action_link) {
+      const supabaseLink = new URL(linkData.properties.action_link);
+      const token_hash = supabaseLink.searchParams.get('token_hash') || supabaseLink.searchParams.get('token');
+      const type = supabaseLink.searchParams.get('type') || 'invite';
+      const inviteUrl = `${appUrl}/${locale}/auth/confirm?token_hash=${token_hash}&type=${type}&next=${encodeURIComponent(`/${locale}/dashboard`)}`;
+
+      await sendCustomerInvitationEmail({
+        customerEmail: normalizedEmail,
+        eventTitle: event.title,
+        inviteUrl,
+        siteName: SITE_NAME || 'Da3witi',
+        locale,
+      });
+    }
+  }
+
+  return { success: true };
+}
+
+export async function removeAttendant(eventId: string, email: string) {
+  const user = await getAuthedUser();
+
+  if (!isVendorMode || !(await isVendorAdmin(user.email))) {
+    throw new Error('Forbidden');
+  }
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { id: true, vendorId: true, attendantEmails: true },
+  });
+
+  if (!event || !event.vendorId) {
+    throw new Error('Event not found');
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const updated = event.attendantEmails.filter((e) => e !== normalizedEmail);
+
+  await prisma.event.update({
+    where: { id: eventId },
+    data: { attendantEmails: updated },
+  });
+
+  return { success: true };
+}
+
+export async function getAttendants(eventId: string) {
+  const user = await getAuthedUser();
+
+  if (!isVendorMode || !(await isVendorAdmin(user.email))) {
+    throw new Error('Forbidden');
+  }
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { attendantEmails: true, vendorId: true },
+  });
+
+  if (!event || !event.vendorId) {
+    throw new Error('Event not found');
+  }
+
+  return { attendantEmails: event.attendantEmails };
 }
 

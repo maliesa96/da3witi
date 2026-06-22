@@ -15,11 +15,12 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Build query: owner events OR customer events (matched by email or userId)
+    // Build query: owner events OR customer events OR attendant events
     const orConditions: Prisma.EventWhereInput[] = [{ userId: user.id }];
     if (isVendorMode && user.email) {
       orConditions.push({ customerEmail: user.email, vendorId: { not: null } });
       orConditions.push({ customerUserId: user.id, vendorId: { not: null } });
+      orConditions.push({ attendantEmails: { has: user.email }, vendorId: { not: null } });
     }
 
     const events = await prisma.event.findMany({
@@ -57,6 +58,7 @@ export async function GET() {
         customerUserId: true,
         customerPermissions: true,
         editingUnlocked: true,
+        attendantEmails: true,
       },
     });
 
@@ -108,6 +110,8 @@ export async function GET() {
         customerPermissions: e.customerPermissions ?? null,
         customerEmail: e.customerEmail ?? null,
         editingUnlocked: e.editingUnlocked,
+        isAttendant: !!(isVendorMode && user.email && e.attendantEmails.includes(user.email)),
+        attendantEmails: vendorAdmin ? e.attendantEmails : undefined,
       })),
       defaultEventId: events[0]?.id ?? null,
     });

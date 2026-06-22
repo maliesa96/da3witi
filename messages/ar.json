@@ -447,7 +447,17 @@
     "resend_email_sending": "جاري الإرسال...",
     "resend_email_sent": "تم الإرسال",
     "resend_email_failed": "فشل الإرسال",
-    "resend_email_tooltip": "إعادة إرسال رسالة الدعوة إلى {email}"
+    "resend_email_tooltip": "إعادة إرسال رسالة الدعوة إلى {email}",
+    "attendants": "المسؤولات",
+    "attendants_desc": "الموظفات اللي يقدرون يمسحون رمز QR عند الباب",
+    "add_attendant": "إضافة مسؤولة",
+    "add_attendant_placeholder": "البريد الإلكتروني",
+    "attendant_adding": "جاري الإضافة...",
+    "attendant_added": "تمت الإضافة",
+    "attendant_add_failed": "فشلت الإضافة",
+    "attendant_already_added": "مضافة مسبقاً",
+    "attendant_remove": "حذف",
+    "attendant_none": "لم يتم إضافة مسؤولات بعد"
   },
   "Auth": {
     "login": "تسجيل الدخول",
