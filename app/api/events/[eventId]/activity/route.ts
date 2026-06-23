@@ -5,7 +5,7 @@ import { isAdmin } from "@/lib/admin";
 
 export type ActivityItem = {
   id: string;
-  type: "guest_added" | "invite_sent" | "invite_delivered" | "invite_read" | "invite_failed" | "confirmed" | "declined" | "checked_in";
+  type: "guest_added" | "invite_sent" | "invite_delivered" | "invite_read" | "invite_failed" | "confirmed" | "declined" | "checked_in" | "reminder_sent" | "reminder_delivered" | "reminder_read" | "reminder_failed";
   guestId: string;
   guestName: string;
   timestamp: string;
@@ -67,6 +67,10 @@ export async function GET(
         failedAt: true,
         checkedIn: true,
         checkedInAt: true,
+        noReplyReminderSentAt: true,
+        noReplyReminderDeliveredAt: true,
+        noReplyReminderReadAt: true,
+        noReplyReminderFailedAt: true,
       },
     });
 
@@ -155,6 +159,44 @@ export async function GET(
           guestId: guest.id,
           guestName: guest.name,
           timestamp: guest.failedAt.toISOString(),
+        });
+      }
+
+      // Reminder activities
+      if (guest.noReplyReminderSentAt) {
+        activities.push({
+          id: `${guest.id}-reminder-sent`,
+          type: "reminder_sent",
+          guestId: guest.id,
+          guestName: guest.name,
+          timestamp: guest.noReplyReminderSentAt.toISOString(),
+        });
+      }
+      if (guest.noReplyReminderDeliveredAt) {
+        activities.push({
+          id: `${guest.id}-reminder-delivered`,
+          type: "reminder_delivered",
+          guestId: guest.id,
+          guestName: guest.name,
+          timestamp: guest.noReplyReminderDeliveredAt.toISOString(),
+        });
+      }
+      if (guest.noReplyReminderReadAt) {
+        activities.push({
+          id: `${guest.id}-reminder-read`,
+          type: "reminder_read",
+          guestId: guest.id,
+          guestName: guest.name,
+          timestamp: guest.noReplyReminderReadAt.toISOString(),
+        });
+      }
+      if (guest.noReplyReminderFailedAt) {
+        activities.push({
+          id: `${guest.id}-reminder-failed`,
+          type: "reminder_failed",
+          guestId: guest.id,
+          guestName: guest.name,
+          timestamp: guest.noReplyReminderFailedAt.toISOString(),
         });
       }
     }

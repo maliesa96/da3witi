@@ -99,6 +99,35 @@ export function getInviteTemplateName(locale: string, qrEnabled: boolean, mediaT
 }
 
 
+interface SendNoReplyReminderParams {
+  to: string;
+  locale: 'en' | 'ar';
+  eventName: string;
+}
+
+export function buildNoReplyReminderPayload({
+  to,
+  locale,
+  eventName,
+}: SendNoReplyReminderParams) {
+  const baseName = `no_reply_reminder_${locale}`;
+  const templateName = TEMPLATE_OVERRIDES[baseName] ?? baseName;
+
+  return buildWhatsAppTemplatePayload({
+    to,
+    templateName,
+    languageCode: locale,
+    components: [
+      {
+        type: 'body',
+        parameters: [
+          { type: 'text', text: eventName, parameter_name: 'event_name' },
+        ],
+      },
+    ],
+  });
+}
+
 interface SendInviteTemplateParams {
   to: string;
   locale: 'en' | 'ar';

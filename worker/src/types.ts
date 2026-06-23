@@ -1,5 +1,5 @@
 export interface JobMeta {
-  kind?: "invite" | "webhook_followup";
+  kind?: "invite" | "no_reply_reminder" | "webhook_followup";
   guestId?: string;
   eventId?: string;
   locale?: "en" | "ar";

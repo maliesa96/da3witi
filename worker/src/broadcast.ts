@@ -13,6 +13,7 @@ export type BroadcastGuestPayload = {
   checkedIn?: boolean;
   whatsappMessageId?: string | null;
   oldStatus?: string;
+  reminderStatus?: "sent" | "delivered" | "read" | "failed";
 };
 
 /**

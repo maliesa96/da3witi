@@ -50,6 +50,7 @@ async function main() {
     async (job: Job<JobData>) => {
       const { payload, meta } = job.data;
       const isInvite = meta.kind === "invite" && meta.guestId;
+      const isNoReplyReminder = meta.kind === "no_reply_reminder" && meta.guestId;
 
       const summary = {
         to: payload.to,
@@ -68,9 +69,10 @@ async function main() {
       if (res.ok) {
         const messageId = whatsapp.extractMessageId(res.data);
 
-        // Update guest status if this is an invite
         if (isInvite) {
           await guests.markSent(meta.guestId!, messageId ?? null);
+        } else if (isNoReplyReminder) {
+          await guests.markReminderSent(meta.guestId!, messageId ?? null);
         }
 
         log.info({ jobId: job.id, messageId }, "Sent successfully");
@@ -82,6 +84,8 @@ async function main() {
       log.warn({ jobId: job.id, status: res.status, error: errorStr }, "WhatsApp API failed");
 
       if (isInvite) {
+        await guests.setError(meta.guestId!, errorStr);
+      } else if (isNoReplyReminder) {
         await guests.setError(meta.guestId!, errorStr);
       }
 
@@ -118,9 +122,10 @@ async function main() {
       "Job failed permanently"
     );
 
-    // Mark invite as failed in database
     if (meta.kind === "invite" && meta.guestId) {
       await guests.markFailed(meta.guestId, err.message);
+    } else if (meta.kind === "no_reply_reminder" && meta.guestId) {
+      await guests.markReminderFailed(meta.guestId, err.message);
     }
   });
 

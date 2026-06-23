@@ -151,7 +151,53 @@ export async function POST(request: Request) {
                 });
 
                 if (!guest) {
-                  console.log(`No guest found for messageId ${id}`);
+                  // Fallback: check if this is a no-reply reminder message
+                  const reminderGuest = await prisma.guest.findFirst({
+                    where: { noReplyReminderMessageId: id },
+                    select: { id: true, eventId: true, name: true, phone: true, status: true, inviteCount: true, checkedIn: true, whatsappMessageId: true }
+                  });
+
+                  if (reminderGuest) {
+                    const now = new Date();
+                    const reminderUpdateData: Record<string, Date | null> = {};
+                    let reminderStatusValue: "sent" | "delivered" | "read" | "failed" | undefined;
+
+                    if (messageStatus === 'sent') {
+                      reminderUpdateData.noReplyReminderSentAt = now;
+                      reminderStatusValue = "sent";
+                    } else if (messageStatus === 'delivered') {
+                      reminderUpdateData.noReplyReminderDeliveredAt = now;
+                      reminderStatusValue = "delivered";
+                    } else if (messageStatus === 'read') {
+                      reminderUpdateData.noReplyReminderReadAt = now;
+                      reminderStatusValue = "read";
+                    } else if (messageStatus === 'failed') {
+                      reminderUpdateData.noReplyReminderFailedAt = now;
+                      reminderStatusValue = "failed";
+                    }
+
+                    if (Object.keys(reminderUpdateData).length > 0) {
+                      await prisma.guest.update({
+                        where: { id: reminderGuest.id },
+                        data: reminderUpdateData,
+                      });
+                      console.log(`Updated reminder status for ${reminderGuest.name}: ${messageStatus}`);
+
+                      await broadcastGuestUpdate(reminderGuest.eventId, {
+                        id: reminderGuest.id,
+                        eventId: reminderGuest.eventId,
+                        name: reminderGuest.name,
+                        phone: reminderGuest.phone,
+                        status: reminderGuest.status,
+                        inviteCount: reminderGuest.inviteCount,
+                        checkedIn: reminderGuest.checkedIn,
+                        whatsappMessageId: reminderGuest.whatsappMessageId,
+                        reminderStatus: reminderStatusValue,
+                      });
+                    }
+                  } else {
+                    console.log(`No guest found for messageId ${id}`);
+                  }
                   continue;
                 }
 

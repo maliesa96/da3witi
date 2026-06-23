@@ -18,7 +18,11 @@ export type ActivityType =
   | "invite_failed"
   | "confirmed"
   | "declined"
-  | "checked_in";
+  | "checked_in"
+  | "reminder_sent"
+  | "reminder_delivered"
+  | "reminder_read"
+  | "reminder_failed";
 
 export type ActivityItem = {
   id: string;
@@ -38,6 +42,10 @@ const ACTIVITY_TO_STATUS: Record<ActivityType, StatusKey> = {
   invite_read: "read",
   invite_failed: "failed",
   checked_in: "checked_in",
+  reminder_sent: "sent",
+  reminder_delivered: "delivered",
+  reminder_read: "read",
+  reminder_failed: "failed",
 };
 
 function ActivityIcon({ type }: { type: ActivityType }) {
@@ -82,6 +90,14 @@ const ActivityRow = memo(function ActivityRow({
         return <>{t("activity_failed")} <span className="font-semibold">{item.guestName}</span></>;
       case "checked_in":
         return <><span className="font-semibold">{item.guestName}</span> {t("activity_checked_in")}</>;
+      case "reminder_sent":
+        return <>{t("activity_reminder_sent")} <span className="font-semibold">{item.guestName}</span></>;
+      case "reminder_delivered":
+        return <>{t("activity_reminder_delivered")} <span className="font-semibold">{item.guestName}</span></>;
+      case "reminder_read":
+        return <><span className="font-semibold">{item.guestName}</span> {t("activity_reminder_read")}</>;
+      case "reminder_failed":
+        return <>{t("activity_reminder_failed")} <span className="font-semibold">{item.guestName}</span></>;
       default:
         return <>{t("activity_update")}</>;
     }
@@ -204,6 +220,29 @@ export default function RecentActivity({
     (payload: RealtimeGuestPayload) => {
       const oldStatus = payload.oldStatus;
       const newStatus = payload.status;
+
+      // Handle reminder status updates
+      if (payload.reminderStatus) {
+        let type: ActivityType | null = null;
+        if (payload.reminderStatus === "sent") type = "reminder_sent";
+        else if (payload.reminderStatus === "delivered") type = "reminder_delivered";
+        else if (payload.reminderStatus === "read") type = "reminder_read";
+        else if (payload.reminderStatus === "failed") type = "reminder_failed";
+
+        if (type) {
+          const newActivity: ActivityItem = {
+            id: `${payload.id}-${type}-${Date.now()}`,
+            type,
+            guestId: payload.id,
+            guestName: payload.name,
+            timestamp: new Date().toISOString(),
+          };
+
+          setActivities((prev) => [newActivity, ...prev].slice(0, maxItems));
+          setNewActivityIds((prev) => new Set([...prev, newActivity.id]));
+        }
+        return;
+      }
 
       // Only create activity if status changed
       if (oldStatus && oldStatus !== newStatus) {

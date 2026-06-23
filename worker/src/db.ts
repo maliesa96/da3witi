@@ -76,6 +76,89 @@ export function createGuestRepository(prisma: PrismaClient) {
       });
     },
 
+    async markReminderSent(guestId: string, messageId: string | null): Promise<void> {
+      const guest = await prisma.guest.findUnique({
+        where: { id: guestId },
+        select: {
+          id: true,
+          eventId: true,
+          name: true,
+          phone: true,
+          status: true,
+          inviteCount: true,
+          checkedIn: true,
+          whatsappMessageId: true,
+        },
+      });
+
+      if (!guest) {
+        console.log(`[DB] Guest ${guestId} not found, skipping markReminderSent`);
+        return;
+      }
+
+      await prisma.guest.update({
+        where: { id: guestId },
+        data: {
+          noReplyReminderMessageId: messageId,
+          noReplyReminderSentAt: new Date(),
+          noReplyReminderFailedAt: null,
+        },
+      });
+
+      await broadcastGuestUpdate(guest.eventId, {
+        id: guest.id,
+        eventId: guest.eventId,
+        name: guest.name,
+        phone: guest.phone,
+        status: guest.status,
+        inviteCount: guest.inviteCount,
+        checkedIn: guest.checkedIn,
+        whatsappMessageId: guest.whatsappMessageId,
+        reminderStatus: "sent",
+      });
+    },
+
+    async markReminderFailed(guestId: string, error: string): Promise<void> {
+      const guest = await prisma.guest.findUnique({
+        where: { id: guestId },
+        select: {
+          id: true,
+          eventId: true,
+          name: true,
+          phone: true,
+          status: true,
+          inviteCount: true,
+          checkedIn: true,
+          whatsappMessageId: true,
+        },
+      });
+
+      if (!guest) {
+        console.log(`[DB] Guest ${guestId} not found, skipping markReminderFailed`);
+        return;
+      }
+
+      await prisma.guest.update({
+        where: { id: guestId },
+        data: {
+          noReplyReminderFailedAt: new Date(),
+          whatsappSendLastError: error,
+        },
+      });
+
+      await broadcastGuestUpdate(guest.eventId, {
+        id: guest.id,
+        eventId: guest.eventId,
+        name: guest.name,
+        phone: guest.phone,
+        status: guest.status,
+        inviteCount: guest.inviteCount,
+        checkedIn: guest.checkedIn,
+        whatsappMessageId: guest.whatsappMessageId,
+        reminderStatus: "failed",
+      });
+    },
+
     async markFailed(guestId: string, error: string): Promise<void> {
       // Fetch the guest to get old status and details for broadcasting
       const guest = await prisma.guest.findUnique({

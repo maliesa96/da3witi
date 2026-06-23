@@ -2,9 +2,9 @@
 
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
-import { buildInviteTemplatePayload, type MediaType } from '@/lib/whatsapp';
+import { buildInviteTemplatePayload, buildNoReplyReminderPayload, type MediaType } from '@/lib/whatsapp';
 import { normalizePhoneToE164 } from '@/lib/phone';
-import { enqueueWhatsAppOutboxBatch } from '@/lib/queue/whatsappOutbox';
+import { enqueueWhatsAppOutbox, enqueueWhatsAppOutboxBatch } from '@/lib/queue/whatsappOutbox';
 import { shouldEnqueueWhatsAppInvite } from '@/lib/whatsappSendEligibility';
 import { broadcastGuestInsert } from '@/lib/supabase/broadcast';
 import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
@@ -304,6 +304,11 @@ export async function getGuestsPaginated(
         status: true,
         checkedIn: true,
         whatsappMessageId: true,
+        sentAt: true,
+        noReplyReminderSentAt: true,
+        noReplyReminderDeliveredAt: true,
+        noReplyReminderReadAt: true,
+        noReplyReminderFailedAt: true,
       },
       orderBy: { createdAt: 'desc' },
       skip,
@@ -680,5 +685,108 @@ export async function getAttendants(eventId: string) {
   }
 
   return { attendantEmails: event.attendantEmails };
+}
+
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
+export async function sendNoReplyReminder(guestId: string, locale: 'en' | 'ar') {
+  const user = await getAuthedUser();
+
+  const guest = await prisma.guest.findUnique({
+    where: { id: guestId },
+    select: {
+      id: true,
+      phone: true,
+      status: true,
+      sentAt: true,
+      noReplyReminderSentAt: true,
+      noReplyReminderDeliveredAt: true,
+      noReplyReminderFailedAt: true,
+      event: {
+        select: {
+          id: true,
+          userId: true,
+          vendorId: true,
+          customerEmail: true,
+          customerUserId: true,
+          paidAt: true,
+          title: true,
+        },
+      },
+    },
+  });
+
+  if (!guest) {
+    throw new Error('Guest not found');
+  }
+
+  if (!canAccessEvent(guest.event, user)) {
+    throw new Error('Forbidden');
+  }
+
+  if (!(await canWriteEvent(guest.event, user))) {
+    throw new Error('Forbidden');
+  }
+
+  if (!guest.event.paidAt) {
+    throw new Error('Payment required');
+  }
+
+  // Guard: guest must have received the invite but not RSVP'd
+  const eligibleStatuses = ['sent', 'delivered', 'read'];
+  if (!eligibleStatuses.includes(guest.status)) {
+    throw new Error('Guest is not eligible for a reminder');
+  }
+
+  // Guard: invite must have been sent at least 24 hours ago
+  if (!guest.sentAt) {
+    throw new Error('Invite has not been sent yet');
+  }
+  const hoursSinceSent = Date.now() - new Date(guest.sentAt).getTime();
+  if (hoursSinceSent < TWENTY_FOUR_HOURS_MS) {
+    throw new Error('Must wait 24 hours after invite was sent');
+  }
+
+  // Guard: determine if sending is allowed
+  const canSend =
+    !guest.noReplyReminderSentAt ||
+    !!guest.noReplyReminderFailedAt ||
+    (!guest.noReplyReminderDeliveredAt &&
+      Date.now() - new Date(guest.noReplyReminderSentAt).getTime() >= TWELVE_HOURS_MS);
+
+  if (!canSend) {
+    throw new Error('Reminder already sent and awaiting delivery');
+  }
+
+  // Build payload
+  const payload = buildNoReplyReminderPayload({
+    to: guest.phone,
+    locale,
+    eventName: guest.event.title,
+  });
+
+  // Clear previous reminder state on resend
+  await prisma.guest.update({
+    where: { id: guest.id },
+    data: {
+      noReplyReminderSentAt: null,
+      noReplyReminderDeliveredAt: null,
+      noReplyReminderReadAt: null,
+      noReplyReminderFailedAt: null,
+      noReplyReminderMessageId: null,
+      whatsappSendLastError: null,
+    },
+  });
+
+  await enqueueWhatsAppOutbox(payload, {
+    kind: 'no_reply_reminder',
+    guestId: guest.id,
+    eventId: guest.event.id,
+    locale,
+    vendorId: guest.event.vendorId,
+  });
+
+  return { success: true };
 }
 

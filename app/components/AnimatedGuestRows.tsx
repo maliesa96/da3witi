@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Bell,
+  BellRing,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -16,11 +18,12 @@ import {
   X,
 } from "lucide-react";
 import { StatusIcon, getStatusPillClasses } from "@/lib/statusConfig";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import {
   deleteGuest as deleteGuestServerAction,
   updateGuest as updateGuestServerAction,
+  sendNoReplyReminder as sendNoReplyReminderAction,
 } from "@/app/[locale]/dashboard/actions";
 import AddGuestForm from "@/app/components/AddGuestForm";
 import { parseGuestError, guestErrorMessage } from "@/lib/utils/guestErrors";
@@ -33,6 +36,11 @@ export type GuestRowData = {
   status: string;
   checkedIn: boolean;
   whatsappMessageId: string | null;
+  sentAt?: string | null;
+  noReplyReminderSentAt?: string | null;
+  noReplyReminderDeliveredAt?: string | null;
+  noReplyReminderReadAt?: string | null;
+  noReplyReminderFailedAt?: string | null;
 };
 
 export type PaginationInfo = {
@@ -444,6 +452,131 @@ function PaginationControls({
   );
 }
 
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
+type ReminderState = "hidden" | "too_early" | "ready" | "awaiting" | "delivered" | "failed" | "timed_out";
+
+function getReminderState(guest: GuestRowData): ReminderState {
+  const eligibleStatuses = ["sent", "delivered", "read"];
+  if (!eligibleStatuses.includes(guest.status)) return "hidden";
+  if (!guest.sentAt) return "hidden";
+
+  const hoursSinceSent = Date.now() - new Date(guest.sentAt).getTime();
+  if (hoursSinceSent < TWENTY_FOUR_HOURS_MS) return "too_early";
+
+  if (!guest.noReplyReminderSentAt) return "ready";
+
+  if (guest.noReplyReminderFailedAt) return "failed";
+  if (guest.noReplyReminderDeliveredAt || guest.noReplyReminderReadAt) return "delivered";
+
+  const hoursSinceReminder = Date.now() - new Date(guest.noReplyReminderSentAt).getTime();
+  if (hoursSinceReminder >= TWELVE_HOURS_MS) return "timed_out";
+
+  return "awaiting";
+}
+
+function ReminderButton({
+  guest,
+  onUpdated,
+}: {
+  guest: GuestRowData;
+  onUpdated: (guest: GuestRowData) => void;
+}) {
+  const t = useTranslations("Dashboard");
+  const locale = useLocale() as "en" | "ar";
+  const [pending, setPending] = useState(false);
+  const state = getReminderState(guest);
+
+  if (state === "hidden") return null;
+
+  const handleSend = async () => {
+    setPending(true);
+    try {
+      await sendNoReplyReminderAction(guest.id, locale);
+      onUpdated({
+        ...guest,
+        noReplyReminderSentAt: new Date().toISOString(),
+        noReplyReminderDeliveredAt: null,
+        noReplyReminderReadAt: null,
+        noReplyReminderFailedAt: null,
+      });
+    } catch (err) {
+      console.error("Failed to send reminder:", err);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const isDisabled = state === "too_early" || state === "awaiting" || state === "delivered";
+  const isClickable = state === "ready" || state === "failed" || state === "timed_out";
+
+  let title: string;
+  let iconColor: string;
+  let borderColor: string;
+  let hoverClasses: string;
+
+  switch (state) {
+    case "too_early":
+      title = t("reminder_available_after_24h");
+      iconColor = "text-stone-300";
+      borderColor = "border-stone-100";
+      hoverClasses = "";
+      break;
+    case "ready":
+      title = t("send_reminder");
+      iconColor = "text-stone-400";
+      borderColor = "border-stone-100";
+      hoverClasses = "hover:text-amber-600 hover:border-amber-100 hover:bg-amber-50";
+      break;
+    case "awaiting":
+      title = t("reminder_awaiting_delivery");
+      iconColor = "text-amber-400";
+      borderColor = "border-amber-100";
+      hoverClasses = "";
+      break;
+    case "delivered":
+      title = t("reminder_delivered");
+      iconColor = "text-green-500";
+      borderColor = "border-green-100";
+      hoverClasses = "";
+      break;
+    case "failed":
+      title = t("reminder_failed_retry");
+      iconColor = "text-red-500";
+      borderColor = "border-red-100";
+      hoverClasses = "hover:text-red-700 hover:border-red-200 hover:bg-red-50";
+      break;
+    case "timed_out":
+      title = t("reminder_timed_out");
+      iconColor = "text-stone-400";
+      borderColor = "border-stone-100";
+      hoverClasses = "hover:text-amber-600 hover:border-amber-100 hover:bg-amber-50";
+      break;
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={isDisabled || pending}
+      className={`${iconColor} p-2 border ${borderColor} rounded-md transition-colors ${
+        isClickable && !pending ? `cursor-pointer ${hoverClasses}` : "cursor-not-allowed"
+      } ${pending ? "opacity-60" : ""}`}
+      title={title}
+      aria-label={title}
+      onClick={isClickable ? handleSend : undefined}
+    >
+      {pending ? (
+        <Loader2 size={16} className="animate-spin" />
+      ) : state === "delivered" ? (
+        <BellRing size={16} />
+      ) : (
+        <Bell size={16} />
+      )}
+    </button>
+  );
+}
+
 function EditButton({
   guest,
   guestsEnabled,
@@ -747,6 +880,9 @@ export function GuestListClient({
                   )}
 
                   <div className="flex items-center gap-2">
+                    {!readOnly && (
+                      <ReminderButton guest={guest} onUpdated={onGuestUpdated} />
+                    )}
                     {canEdit && (
                       <EditButton
                         guest={guest}
@@ -866,6 +1002,11 @@ export function GuestListClient({
                     )}
                     <td className="px-6 py-4 text-end">
                       <div className="flex items-center justify-end gap-2">
+                        {!readOnly && (
+                          <div className="scale-[0.92] origin-right">
+                            <ReminderButton guest={guest} onUpdated={onGuestUpdated} />
+                          </div>
+                        )}
                         {canEdit && (
                           <div className="scale-[0.92] origin-right">
                             <EditButton

@@ -17,6 +17,7 @@ export type BroadcastGuestPayload = {
   checkedIn?: boolean;
   whatsappMessageId?: string | null;
   oldStatus?: string;
+  reminderStatus?: "sent" | "delivered" | "read" | "failed";
 };
 
 /**
@@ -139,7 +140,19 @@ export type RealtimeEventPayload = BroadcastEventPayload;
  * Convert broadcast payload to client guest format compatible with GuestRowData.
  */
 export function toClientGuest(payload: BroadcastGuestPayload) {
-  return {
+  const base: {
+    id: string;
+    name: string;
+    phone: string;
+    status: string;
+    inviteCount: number;
+    checkedIn: boolean;
+    whatsappMessageId: string | null;
+    noReplyReminderSentAt?: string;
+    noReplyReminderDeliveredAt?: string;
+    noReplyReminderReadAt?: string;
+    noReplyReminderFailedAt?: string;
+  } = {
     id: payload.id,
     name: payload.name,
     phone: payload.phone,
@@ -148,6 +161,16 @@ export function toClientGuest(payload: BroadcastGuestPayload) {
     checkedIn: payload.checkedIn ?? false,
     whatsappMessageId: payload.whatsappMessageId ?? null,
   };
+
+  if (payload.reminderStatus) {
+    const now = new Date().toISOString();
+    if (payload.reminderStatus === "sent") base.noReplyReminderSentAt = now;
+    else if (payload.reminderStatus === "delivered") base.noReplyReminderDeliveredAt = now;
+    else if (payload.reminderStatus === "read") base.noReplyReminderReadAt = now;
+    else if (payload.reminderStatus === "failed") base.noReplyReminderFailedAt = now;
+  }
+
+  return base;
 }
 
 /**

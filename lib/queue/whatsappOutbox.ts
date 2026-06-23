@@ -26,6 +26,13 @@ export type WhatsAppOutboxMeta =
       vendorId?: string | null;
     }
   | {
+      kind: "no_reply_reminder";
+      guestId: string;
+      eventId: string;
+      locale: "en" | "ar";
+      vendorId?: string | null;
+    }
+  | {
       kind: "webhook_followup";
       guestId?: string;
       repliedMessageId?: string;
