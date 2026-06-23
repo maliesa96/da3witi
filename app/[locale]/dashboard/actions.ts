@@ -382,11 +382,6 @@ export async function deleteGuest(guestId: string) {
     throw new Error('Forbidden');
   }
 
-  // Only allow deleting if not sent or failed
-  if (guest.status !== 'pending' && guest.status !== 'failed') {
-    throw new Error('Cannot delete guest who has already been invited');
-  }
-
   await prisma.guest.delete({
     where: { id: guestId }
   });

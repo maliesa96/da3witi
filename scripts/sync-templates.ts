@@ -12,9 +12,9 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
-const API_VERSION = "v25.0";
+export const API_VERSION = "v25.0";
 
-function loadEnvFile(filePath: string): Record<string, string> {
+export function loadEnvFile(filePath: string): Record<string, string> {
   if (!existsSync(filePath)) return {};
   const vars: Record<string, string> = {};
   for (const line of readFileSync(filePath, "utf-8").split("\n")) {
@@ -205,7 +205,7 @@ async function deleteTemplate(
   return { ok: res.ok, status: res.status, body };
 }
 
-async function createTemplate(
+export async function createTemplate(
   wabaId: string,
   token: string,
   payload: ReturnType<typeof buildCreatePayload>

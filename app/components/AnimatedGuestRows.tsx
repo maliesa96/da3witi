@@ -146,42 +146,130 @@ function getStatusBadge(
 
 function DeleteButton({
   guestId,
+  guestName,
+  guestStatus,
   onDeleted,
 }: {
   guestId: string;
+  guestName: string;
+  guestStatus: string;
   onDeleted: () => void;
 }) {
   const t = useTranslations("Dashboard");
   const [pending, setPending] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const needsWarning = guestStatus !== "pending" && guestStatus !== "failed";
+
+  const statusLabels: Record<string, string> = {
+    pending: t("status_pending"),
+    sent: t("status_sent"),
+    delivered: t("status_delivered"),
+    read: t("status_read"),
+    confirmed: t("status_present"),
+    declined: t("status_declined"),
+    failed: t("status_failed"),
+    no_reply: t("status_no_reply"),
+  };
+
+  const handleDelete = async () => {
+    setPending(true);
+    try {
+      await deleteGuestServerAction(guestId);
+      setShowConfirm(false);
+      onDeleted();
+    } catch (err) {
+      console.error("Failed to delete guest:", err);
+      alert("Failed to delete guest. Please try again.");
+    } finally {
+      setPending(false);
+    }
+  };
 
   return (
-    <button
-      type="button"
-      disabled={pending}
-      className={`text-stone-400 hover:text-red-600 p-2 border border-stone-100 rounded-md hover:border-red-100 hover:bg-red-50 transition-colors cursor-pointer disabled:cursor-not-allowed ${
-        pending ? "opacity-60 cursor-not-allowed" : ""
-      }`}
-      title={t("delete_guest")}
-      aria-label={t("delete_guest")}
-      onClick={async () => {
-        setPending(true);
-        try {
-          await deleteGuestServerAction(guestId);
-          onDeleted();
-        } catch (err) {
-          console.error("Failed to delete guest:", err);
-          alert("Failed to delete guest. Please try again.");
-        } finally {
-          setPending(false);
-        }
-      }}
-    >
-      {pending ? (
-        <Loader2 size={16} className="animate-spin" />
-      ) : (
-        <Trash2 size={16} />
-      )}
-    </button>
+    <>
+      <button
+        type="button"
+        disabled={pending}
+        className={`text-stone-400 hover:text-red-600 p-2 border border-stone-100 rounded-md hover:border-red-100 hover:bg-red-50 transition-colors cursor-pointer disabled:cursor-not-allowed ${
+          pending ? "opacity-60 cursor-not-allowed" : ""
+        }`}
+        title={t("delete_guest")}
+        aria-label={t("delete_guest")}
+        onClick={() => {
+          if (needsWarning) {
+            setShowConfirm(true);
+          } else {
+            handleDelete();
+          }
+        }}
+      >
+        {pending ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <Trash2 size={16} />
+        )}
+      </button>
+
+      {showConfirm &&
+        mounted &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-9999 p-4 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center"
+            onClick={() => !pending && setShowConfirm(false)}
+          >
+            <div
+              className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+                    <Trash2 size={18} className="text-red-500" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-stone-900">{t("delete_guest_confirm_title")}</div>
+                    <div className="text-xs text-stone-500">{t("delete_all_subtitle")}</div>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 mb-4">
+                  <p className="text-xs text-amber-800 font-medium mb-1">{guestName}</p>
+                  <p className="text-xs text-amber-700">
+                    {t("delete_guest_confirm_warning", { status: statusLabels[guestStatus] || guestStatus })}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(false)}
+                    disabled={pending}
+                    className="px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm hover:bg-stone-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {t("cancel")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={pending}
+                    className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700 inline-flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {pending ? <Loader2 size={14} className="animate-spin" /> : null}
+                    {pending ? t("deleting") : t("delete_guest_confirm_btn")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
 
@@ -611,7 +699,7 @@ export function GuestListClient({
         >
           {guests.map((guest) => {
             const statusBadge = getStatusBadge(t, guest.status);
-            const canDelete = !readOnly && (guest.status === "pending" || guest.status === "failed");
+            const canDelete = !readOnly;
             const canEdit = !readOnly && (guest.status === "pending" || guest.status === "failed");
             return (
               <motion.div
@@ -667,7 +755,7 @@ export function GuestListClient({
                       />
                     )}
                     {canDelete && (
-                      <DeleteButton guestId={guest.id} onDeleted={() => onGuestDeleted(guest.id)} />
+                      <DeleteButton guestId={guest.id} guestName={guest.name} guestStatus={guest.status} onDeleted={() => onGuestDeleted(guest.id)} />
                     )}
                   </div>
                 </div>
@@ -738,7 +826,7 @@ export function GuestListClient({
             >
               {guests.map((guest) => {
                 const statusBadge = getStatusBadge(t, guest.status);
-                const canDelete = !readOnly && (guest.status === "pending" || guest.status === "failed");
+                const canDelete = !readOnly;
                 const canEdit = !readOnly && (guest.status === "pending" || guest.status === "failed");
                 return (
                   <motion.tr
@@ -791,6 +879,8 @@ export function GuestListClient({
                           <div className="scale-[0.92] origin-right">
                             <DeleteButton
                               guestId={guest.id}
+                              guestName={guest.name}
+                              guestStatus={guest.status}
                               onDeleted={() => onGuestDeleted(guest.id)}
                             />
                           </div>

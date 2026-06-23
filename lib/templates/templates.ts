@@ -202,4 +202,16 @@ export const TEMPLATES = {
         We look forward to welcoming you.
         `;
     },
-};
+    "no_reply_reminder_ar": (params: any) => {
+        return dedent`
+        تنويه
+        نذكركم بدعوة ${params.event_name}. يرجى اختيار (تأكيد الحضور) أو (اعتذر) في الرسالة السابقة.
+        `;
+    },
+    "no_reply_reminder_en": (params: any) => {
+        return dedent`
+        Reminder
+        You have a pending invitation to ${params.event_name}. Please confirm or decline your attendance using the previous message.
+        `;
+    },
+}
