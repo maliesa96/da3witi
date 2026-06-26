@@ -17,16 +17,17 @@ export type WhatsAppSendEligibilityOptions = {
 /**
  * Eligibility rules for enqueueing WhatsApp invite sends.
  *
- * - Never enqueue if already has `whatsappMessageId`.
  * - Only enqueue statuses: pending, failed
- * - Failed: always eligible (even if enqueuedAt is set/stuck)
+ * - Failed: always eligible (covers both worker-level failures where the API
+ *   rejected the request AND webhook-level failures where the API accepted the
+ *   message but delivery failed — in the latter case whatsappMessageId is set)
  * - Pending: eligible if never enqueued, or if enqueuedAt is stale
+ * - Any other status with a whatsappMessageId: already handled, skip
  */
 export function shouldEnqueueWhatsAppInvite(
   guest: WhatsAppSendEligibilityGuest,
   opts: WhatsAppSendEligibilityOptions = {}
 ) {
-  if (guest.whatsappMessageId) return false;
   if (guest.status !== "pending" && guest.status !== "failed") return false;
   if (guest.status === "failed") return true;
 

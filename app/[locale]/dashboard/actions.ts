@@ -240,6 +240,8 @@ export async function sendInvitesForEvent(eventId: string, locale: 'en' | 'ar') 
     meta: { kind: 'invite' as const, guestId: guest.id, eventId, locale, vendorId: event.vendorId },
   }));
 
+  const failedGuestIds = guestsToSend.filter((g) => g.status === 'failed').map((g) => g.id);
+
   await Promise.all([
     enqueueWhatsAppOutboxBatch(jobs),
     prisma.guest.updateMany({
@@ -249,6 +251,14 @@ export async function sendInvitesForEvent(eventId: string, locale: 'en' | 'ar') 
         whatsappSendLastError: null,
       },
     }),
+    // Clear old message IDs on failed guests so stale webhooks for the
+    // previous message don't interfere with the new send attempt.
+    failedGuestIds.length > 0
+      ? prisma.guest.updateMany({
+          where: { id: { in: failedGuestIds } },
+          data: { whatsappMessageId: null },
+        })
+      : Promise.resolve(),
   ]);
 
   return { success: true, queued: guestsToSend.length };

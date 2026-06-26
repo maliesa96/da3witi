@@ -81,13 +81,26 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ e
 
     // Enqueue first; only mark as enqueued if Redis enqueue succeeded.
     await enqueueWhatsAppOutboxBatch(jobs);
-    await prisma.guest.updateMany({
-      where: { id: { in: guestsToSend.map((g) => g.id) } },
-      data: {
-        whatsappSendEnqueuedAt: now,
-        whatsappSendLastError: null,
-      },
-    });
+
+    const failedGuestIds = guestsToSend.filter((g) => g.status === "failed").map((g) => g.id);
+
+    await Promise.all([
+      prisma.guest.updateMany({
+        where: { id: { in: guestsToSend.map((g) => g.id) } },
+        data: {
+          whatsappSendEnqueuedAt: now,
+          whatsappSendLastError: null,
+        },
+      }),
+      // Clear old message IDs on failed guests so stale webhooks for the
+      // previous message don't interfere with the new send attempt.
+      failedGuestIds.length > 0
+        ? prisma.guest.updateMany({
+            where: { id: { in: failedGuestIds } },
+            data: { whatsappMessageId: null },
+          })
+        : Promise.resolve(),
+    ]);
 
     return NextResponse.json({ success: true, queued: guestsToSend.length });
   } catch (error) {
