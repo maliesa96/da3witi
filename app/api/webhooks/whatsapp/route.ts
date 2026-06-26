@@ -211,14 +211,18 @@ export async function POST(request: Request) {
                 }
 
                 // Build the update data with the appropriate timestamp column
-                const updateData: { status: string; sentAt?: Date; deliveredAt?: Date; readAt?: Date; failedAt?: Date } = {
+                const updateData: { status: string; sentAt?: Date; deliveredAt?: Date; readAt?: Date; failedAt?: Date; whatsappMessageId?: null; whatsappSendEnqueuedAt?: null } = {
                   status: messageStatus,
                 };
                 const now = new Date();
                 if (messageStatus === 'sent') updateData.sentAt = now;
                 else if (messageStatus === 'delivered') updateData.deliveredAt = now;
                 else if (messageStatus === 'read') updateData.readAt = now;
-                else if (messageStatus === 'failed') updateData.failedAt = now;
+                else if (messageStatus === 'failed') {
+                  updateData.failedAt = now;
+                  updateData.whatsappMessageId = null;
+                  updateData.whatsappSendEnqueuedAt = null;
+                }
 
                 await prisma.guest.update({
                   where: { id: guest.id },
