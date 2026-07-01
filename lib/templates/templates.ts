@@ -9,22 +9,8 @@ const VENDOR_TEMPLATE_OVERRIDES: Record<string, Record<string, string>> = {
     },
     // Caba vendor
     "f3b1c291-ca9b-4c7b-a4fa-9e840181a74f": {
-        "invite_img_qr_ar": "invite_img_qr_ar_2_2",
-        "invite_doc_qr_ar": "invite_doc_qr_ar_2_2",
-        "invite_doc_guests_ar": "invite_doc_guests_ar_2",
-        "invite_img_guests_ar": "invite_img_guests_ar_2",
-        "invite_doc_qr_guests_ar": "invite_doc_qr_guests_ar_2",
-        "invite_img_qr_guests_ar": "invite_img_qr_guests_ar_2",
-        "invite_doc_guests_en": "invite_doc_guests_en_2",
-        "invite_img_guests_en": "invite_img_guests_en_2",
-        "invite_doc_qr_guests_en": "invite_doc_qr_guests_en_2",
-        "invite_img_qr_guests_en": "invite_img_qr_guests_en_2",
-        "invite_img_ar": "invite_img_ar_2",
-        "invite_img_en": "invite_img_en_2",
-        "invite_img_qr_en": "invite_img_qr_en_2",
-        "invite_doc_ar": "invite_doc_ar_2",
-        "invite_doc_en": "invite_doc_en_2",
-        "invite_doc_qr_en": "invite_doc_qr_en_2",
+        "invite_img_qr_ar": "invite_img_qr_ar_2",
+        "invite_doc_qr_ar": "invite_doc_qr_ar_2",
     },
 };
 
