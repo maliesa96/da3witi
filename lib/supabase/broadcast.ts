@@ -21,6 +21,7 @@ export type BroadcastGuestPayload = {
   phone: string;
   status: string;
   inviteCount: number;
+  inviteSide?: string | null;
   checkedIn?: boolean;
   whatsappMessageId?: string | null;
   oldStatus?: string;

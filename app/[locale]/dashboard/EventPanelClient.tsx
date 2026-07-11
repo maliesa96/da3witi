@@ -260,12 +260,13 @@ export default function EventPanelClient({
   );
 
   const fetchGuestsFromApi = useCallback(
-    async (options: { page?: number; pageSize?: number; search?: string; statuses?: string[] }) => {
+    async (options: { page?: number; pageSize?: number; search?: string; statuses?: string[]; side?: string }) => {
       const params = new URLSearchParams();
       params.set("page", String(options.page ?? 1));
       params.set("pageSize", String(options.pageSize ?? pageSize));
       if (options.search) params.set("search", options.search);
       if (options.statuses?.length) params.set("statuses", options.statuses.join(","));
+      if (options.side) params.set("side", options.side);
 
       const res = await fetch(`/api/events/${encodeURIComponent(event.id)}/guests?${params.toString()}`, {
         cache: "no-store",
@@ -299,6 +300,7 @@ export default function EventPanelClient({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedScope, setSelectedScope] = useState<'all' | 'bride' | 'groom'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(!initialPagination);
   const [showPreview, setShowPreview] = useState(false);
@@ -364,22 +366,42 @@ export default function EventPanelClient({
     if (!useClientSide) return [];
     const query = searchQuery.toLowerCase().trim();
     return allGuests.filter((g) => {
+      if (selectedScope !== 'all' && g.inviteSide !== selectedScope) return false;
       const statusOk = selectedStatuses.length === 0 || selectedStatuses.includes(g.status);
       if (!statusOk) return false;
       if (!query) return true;
       return g.name.toLowerCase().includes(query) || g.phone.toLowerCase().includes(query);
     });
-  }, [useClientSide, allGuests, searchQuery, selectedStatuses]);
+  }, [useClientSide, allGuests, searchQuery, selectedStatuses, selectedScope]);
+
+  const clientScopeGuests = useMemo(() => {
+    if (!useClientSide) return allGuests;
+    return selectedScope === 'all'
+      ? allGuests
+      : allGuests.filter((g) => g.inviteSide === selectedScope);
+  }, [useClientSide, allGuests, selectedScope]);
+
+  const clientScopeStats = useMemo<GuestStats | null>(() => {
+    if (!useClientSide) return null;
+    const result: GuestStats = { total: 0, pending: 0, sent: 0, delivered: 0, read: 0, confirmed: 0, declined: 0, failed: 0 };
+    for (const g of clientScopeGuests) {
+      const inv = Number.isFinite(g.inviteCount) ? (g.inviteCount as number) : 1;
+      result.total += inv;
+      const key = g.status as keyof GuestStats;
+      if (key !== 'total' && key in result) result[key] += inv;
+    }
+    return result;
+  }, [useClientSide, clientScopeGuests]);
 
   const clientInviteTotals = useMemo(() => {
     if (!useClientSide) return { all: 0, filtered: 0 };
     const sum = (arr: GuestRowData[]) =>
       arr.reduce((acc, g) => acc + (Number.isFinite(g.inviteCount) ? (g.inviteCount as number) : 1), 0);
     return {
-      all: sum(allGuests),
+      all: sum(clientScopeGuests),
       filtered: sum(clientFilteredGuests),
     };
-  }, [useClientSide, allGuests, clientFilteredGuests]);
+  }, [useClientSide, clientScopeGuests, clientFilteredGuests]);
 
   // === SERVER-SIDE MODE (for large lists) ===
   const [serverGuests, setServerGuests] = useState<GuestRowData[]>(
@@ -408,7 +430,7 @@ export default function EventPanelClient({
 
   // Fetch from server when search/page changes (server-side mode only)
   const fetchFromServer = useCallback(
-    async (page: number, search: string, statuses: string[]) => {
+    async (page: number, search: string, statuses: string[], side: string | null) => {
       setIsLoading(true);
       try {
         const result = await fetchGuestsFromApi({
@@ -416,6 +438,7 @@ export default function EventPanelClient({
           pageSize,
           search,
           statuses,
+          ...(side ? { side } : {}),
         });
         setServerGuests(result.guests);
         setServerPagination(result.pagination);
@@ -437,10 +460,25 @@ export default function EventPanelClient({
     const hasAnyFilter = debouncedSearch !== "" || selectedStatuses.length > 0;
     if (hasAnyFilter) setHasSearched(true);
     if (hasAnyFilter || hasSearched) {
-      fetchFromServer(1, debouncedSearch, selectedStatuses);
+      fetchFromServer(1, debouncedSearch, selectedStatuses, selectedScope === 'all' ? null : selectedScope);
       setCurrentPage(1);
     }
   }, [useClientSide, debouncedSearch, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch when scope changes
+  useEffect(() => {
+    if (selectedScope === 'all') {
+      if (!useClientSide) {
+        fetchFromServer(1, debouncedSearch, selectedStatuses, null);
+        setCurrentPage(1);
+      }
+    } else {
+      if (!useClientSide) {
+        fetchFromServer(1, debouncedSearch, selectedStatuses, selectedScope);
+        setCurrentPage(1);
+      }
+    }
+  }, [selectedScope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial guests fetch (when parent only provides the event object)
   useEffect(() => {
@@ -499,12 +537,12 @@ export default function EventPanelClient({
     if (useClientSide) {
       setCurrentPage(1);
     }
-  }, [useClientSide, searchQuery, selectedStatuses]);
+  }, [useClientSide, searchQuery, selectedStatuses, selectedScope]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
     if (!useClientSide) {
-      fetchFromServer(newPage, debouncedSearch, selectedStatuses);
+      fetchFromServer(newPage, debouncedSearch, selectedStatuses, selectedScope === 'all' ? null : selectedScope);
     }
   };
 
@@ -513,19 +551,19 @@ export default function EventPanelClient({
     searchQuery !== debouncedSearch || isLoading
   );
 
-  // Stats from server (not filtered by search)
   const stats = useMemo(() => {
+    const source = useClientSide && clientScopeStats ? clientScopeStats : serverStats;
     return {
-      invited: serverStats.total,
-      pending: serverStats.pending,
-      sent: serverStats.sent,
-      delivered: serverStats.delivered,
-      read: serverStats.read,
-      confirmed: serverStats.confirmed,
-      declined: serverStats.declined,
-      failed: serverStats.failed,
+      invited: source.total,
+      pending: source.pending,
+      sent: source.sent,
+      delivered: source.delivered,
+      read: source.read,
+      confirmed: source.confirmed,
+      declined: source.declined,
+      failed: source.failed,
     };
-  }, [serverStats]);
+  }, [useClientSide, clientScopeStats, serverStats]);
 
   const invitedCountDisplay = useMemo(() => {
     if (!event.guestsEnabled) return stats.invited;
@@ -687,6 +725,7 @@ export default function EventPanelClient({
             pageSize,
             search: debouncedSearch,
             statuses: selectedStatuses,
+            ...(selectedScope !== 'all' ? { side: selectedScope } : {}),
           });
           setServerGuests(result.guests);
           setServerPagination(result.pagination);
@@ -700,7 +739,7 @@ export default function EventPanelClient({
         }
       })();
     }
-  }, [useClientSide, fetchGuestsFromApi, pageSize, debouncedSearch, selectedStatuses]);
+  }, [useClientSide, fetchGuestsFromApi, pageSize, debouncedSearch, selectedStatuses, selectedScope]);
 
   // Handle when invites are sent - refresh data to get updated statuses
   const handleInvitesSent = useCallback(async () => {
@@ -712,12 +751,14 @@ export default function EventPanelClient({
               page: 1,
               pageSize: Math.max(serverStats.total || 0, pageSize),
               search: "",
+              ...(selectedScope !== 'all' ? { side: selectedScope } : {}),
             }
           : {
               page: currentPage,
               pageSize,
               search: debouncedSearch,
               statuses: selectedStatuses,
+              ...(selectedScope !== 'all' ? { side: selectedScope } : {}),
             }
       );
       if (useClientSide) {
@@ -733,7 +774,7 @@ export default function EventPanelClient({
     } finally {
       setIsLoading(false);
     }
-  }, [fetchGuestsFromApi, useClientSide, serverStats.total, pageSize, currentPage, debouncedSearch, selectedStatuses]);
+  }, [fetchGuestsFromApi, useClientSide, serverStats.total, pageSize, currentPage, debouncedSearch, selectedStatuses, selectedScope]);
 
   // CSV export functionality
   const [isExporting, setIsExporting] = useState(false);
@@ -744,7 +785,8 @@ export default function EventPanelClient({
       // Fetch all guests (without pagination)
       const result = await fetchGuestsFromApi({
         page: 1,
-        pageSize: 10000, // Fetch all guests
+        pageSize: 10000,
+        ...(selectedScope !== 'all' ? { side: selectedScope } : {}),
       });
 
       const guests = result.guests;
@@ -756,6 +798,7 @@ export default function EventPanelClient({
         t("col_phone"),
         t("col_invite_count"),
         t("col_status"),
+        t("col_invited_by"),
       ];
 
       // Status label mapping
@@ -772,12 +815,13 @@ export default function EventPanelClient({
 
       const csvRows = [
         headers.join(","),
-        ...guests.map((guest) => {
+        ...guests.map((guest: GuestRowData) => {
           const name = `"${(guest.name || "").replace(/"/g, '""')}"`;
           const phone = `"${(guest.phone || "").replace(/"/g, '""')}"`;
           const invites = guest.inviteCount ?? 1;
           const status = `"${statusLabels[guest.status] || guest.status}"`;
-          return [name, phone, invites, status].join(",");
+          const side = `"${guest.inviteSide === 'bride' ? t('side_bride') : guest.inviteSide === 'groom' ? t('side_groom') : t('side_unassigned')}"`;
+          return [name, phone, invites, status, side].join(",");
         }),
       ];
 
@@ -798,7 +842,7 @@ export default function EventPanelClient({
     } finally {
       setIsExporting(false);
     }
-  }, [fetchGuestsFromApi, event.title, t]);
+  }, [fetchGuestsFromApi, event.title, t, selectedScope]);
 
   const statusOptions = useMemo(
     () => [
@@ -813,7 +857,7 @@ export default function EventPanelClient({
     [t]
   );
 
-  const hasFilters = searchQuery.trim() !== "" || selectedStatuses.length > 0;
+  const hasFilters = searchQuery.trim() !== "" || selectedStatuses.length > 0 || selectedScope !== 'all';
 
   const normalizeStatuses = useCallback((arr: string[]) => {
     return Array.from(new Set(arr.map((s) => String(s || "").trim()).filter(Boolean))).sort();
@@ -1287,6 +1331,24 @@ export default function EventPanelClient({
           {isVendorAdmin && event.qrEnabled && (
             <AttendantManager eventId={event.id} initialEmails={event.attendantEmails ?? []} />
           )}
+
+          {/* Scope Filter */}
+          <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-lg w-fit">
+            {(['all', 'bride', 'groom'] as const).map((scope) => (
+              <button
+                key={scope}
+                type="button"
+                onClick={() => setSelectedScope(scope)}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  selectedScope === scope
+                    ? 'bg-white text-stone-900 shadow-sm'
+                    : 'text-stone-500 hover:text-stone-700'
+                }`}
+              >
+                {scope === 'all' ? t('side_all') : scope === 'bride' ? t('side_bride') : t('side_groom')}
+              </button>
+            ))}
+          </div>
 
           {/* Guest List Container */}
           <div className="bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden">

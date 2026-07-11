@@ -163,6 +163,7 @@ model Guest {
   checkedIn          Boolean  @default(false) @map("checked_in")
   checkedInAt        DateTime? @map("checked_in_at") @db.Timestamptz(6)
   qrCodeId           String?  @unique @map("qr_code_id")
+  inviteSide         String?  @map("invite_side")
 
   // Query hot-paths:
   // - listing guests by eventId ordered by createdAt
@@ -172,6 +173,7 @@ model Guest {
   @@index([eventId])
   @@index([eventId, status])
   @@index([eventId, createdAt])
+  @@index([eventId, inviteSide])
   @@map("guests")
 }
 

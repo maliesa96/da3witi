@@ -33,6 +33,7 @@ export type GuestRowData = {
   name: string;
   phone: string;
   inviteCount?: number;
+  inviteSide?: string | null;
   status: string;
   checkedIn: boolean;
   whatsappMessageId: string | null;
@@ -596,6 +597,7 @@ function EditButton({
   const [phone, setPhone] = useState(guest.phone);
   // Keep as text so users can clear and type (e.g. replace "1" with "2")
   const [inviteCountInput, setInviteCountInput] = useState<string>(String(guest.inviteCount || 1));
+  const [inviteSide, setInviteSide] = useState<string | null>(guest.inviteSide ?? null);
 
   useEffect(() => {
     setMounted(true);
@@ -606,6 +608,7 @@ function EditButton({
     setName(guest.name);
     setPhone(guest.phone);
     setInviteCountInput(String(guest.inviteCount || 1));
+    setInviteSide(guest.inviteSide ?? null);
     setOpen(true);
   };
 
@@ -634,6 +637,7 @@ function EditButton({
         name,
         phone,
         ...(guestsEnabled ? { inviteCount } : {}),
+        inviteSide,
       });
       if (res?.success && res.guest) {
         onUpdated(res.guest as GuestRowData);
@@ -731,6 +735,19 @@ function EditButton({
                       />
                     </div>
                   )}
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">{t("col_invited_by")}</label>
+                    <select
+                      value={inviteSide ?? ''}
+                      onChange={(e) => setInviteSide(e.target.value || null)}
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:border-stone-400"
+                      disabled={pending}
+                    >
+                      <option value="">{t("side_unassigned")}</option>
+                      <option value="bride">{t("side_bride")}</option>
+                      <option value="groom">{t("side_groom")}</option>
+                    </select>
+                  </div>
 
                   {error && (
                     <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
@@ -764,6 +781,20 @@ function EditButton({
           document.body
         )}
     </>
+  );
+}
+
+function SideBadge({ side, t }: { side: string | null | undefined; t: (key: string) => string }) {
+  if (!side) return null;
+  const isBride = side === 'bride';
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium ${
+      isBride 
+        ? 'bg-pink-50 text-pink-600 border border-pink-200' 
+        : 'bg-blue-50 text-blue-600 border border-blue-200'
+    }`}>
+      {isBride ? t('side_badge_bride') : t('side_badge_groom')}
+    </span>
   );
 }
 
@@ -845,7 +876,10 @@ export function GuestListClient({
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="font-medium text-stone-900">{guest.name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-stone-900">{guest.name}</div>
+                      <SideBadge side={guest.inviteSide} t={t} />
+                    </div>
                     <div className="text-xs text-stone-500 dir-ltr text-start rtl:text-end">
                       {guest.phone}
                     </div>
@@ -973,7 +1007,12 @@ export function GuestListClient({
                     transition={{ duration: 0.16, ease: "easeOut" }}
                     className="hover:bg-stone-50/50 transition-colors"
                   >
-                    <td className="px-6 py-4 font-medium text-stone-900">{guest.name}</td>
+                    <td className="px-6 py-4 font-medium text-stone-900">
+                      <div className="flex items-center gap-2">
+                        {guest.name}
+                        <SideBadge side={guest.inviteSide} t={t} />
+                      </div>
+                    </td>
                     <td className="px-6 py-4 dir-ltr ltr:text-start rtl:text-end text-stone-500 font-mono">
                       {guest.phone}
                     </td>

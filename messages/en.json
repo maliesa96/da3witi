@@ -183,7 +183,16 @@
       "select_both_warning": "Please select both Name and Phone columns to continue.",
       "select_all_warning": "Please select Name, Phone, and Invite Count columns to continue.",
       "select_invite_count_col": "Invite Count Column",
-      "invite_count": "Invite Count"
+      "invite_count": "Invite Count",
+      "side_label": "Invited By",
+      "side_bride": "Bride",
+      "side_groom": "Groom",
+      "side_all_bride": "All bride's side",
+      "side_all_groom": "All groom's side",
+      "side_unassigned": "Don't assign",
+      "side_use_column": "From spreadsheet column",
+      "side_col_label": "Side Column",
+      "optional": "optional"
     },
     "step2": {
       "title": "Event Details",
@@ -470,7 +479,15 @@
     "attendant_add_failed": "Failed to add",
     "attendant_already_added": "Already added",
     "attendant_remove": "Remove",
-    "attendant_none": "No attendants added yet"
+    "attendant_none": "No attendants added yet",
+    "side_bride": "Bride",
+    "side_groom": "Groom",
+    "side_unassigned": "Unassigned",
+    "side_all": "All",
+    "scope_filter": "Scope",
+    "col_invited_by": "Invited By",
+    "side_badge_bride": "B",
+    "side_badge_groom": "G"
   },
   "Auth": {
     "login": "Login",

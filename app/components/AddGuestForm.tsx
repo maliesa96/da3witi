@@ -10,6 +10,7 @@ import ContactImport from '@/app/components/ContactImport';
 import { addGuests } from '../[locale]/dashboard/actions';
 import { normalizePhoneToE164 } from '@/lib/phone';
 import { parseGuestError, guestErrorMessage } from '@/lib/utils/guestErrors';
+import { type InviteSide } from '@/lib/inviteSide';
 
 type Cell = string | number | null;
 
@@ -22,6 +23,7 @@ interface AddGuestFormProps {
     name: string;
     phone: string;
     inviteCount?: number;
+    inviteSide?: string | null;
     status: string;
     checkedIn: boolean;
     whatsappMessageId: string | null;
@@ -59,8 +61,8 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
   }, [isOpen]);
 
   // Manual guests (wizard-like)
-  const [manualInvites, setManualInvites] = useState<Array<{ name: string; phone: string; inviteCountInput?: string }>>([
-    { name: '', phone: '', inviteCountInput: '1' },
+  const [manualInvites, setManualInvites] = useState<Array<{ name: string; phone: string; inviteCountInput?: string; inviteSide?: InviteSide | null }>>([
+    { name: '', phone: '', inviteCountInput: '1', inviteSide: null },
   ]);
 
   // File import state (lifted for ContactImport)
@@ -70,7 +72,11 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
   const [importInviteCountCol, setImportInviteCountCol] = useState<number | null>(null);
   const [importStartRow, setImportStartRow] = useState(0);
   const [importFileName, setImportFileName] = useState<string | null>(null);
-  const [fileContacts, setFileContacts] = useState<Array<{ name: string; phone: string; inviteCount?: number }>>([]);
+  const [fileContacts, setFileContacts] = useState<Array<{ name: string; phone: string; inviteCount?: number; inviteSide?: string | null }>>([]);
+
+  // Side assignment for file import
+  const [sideAssignment, setSideAssignment] = useState<'unassigned' | 'bride' | 'groom' | 'column' | null>(null);
+  const [importSideCol, setImportSideCol] = useState<number | null>(null);
 
   const manualCount = useMemo(
     () => manualInvites.filter(i => i.name.trim().length >= 2 && i.phone.trim()).length,
@@ -84,7 +90,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
     setIsSubmitting(false);
     submitLockRef.current = false;
     setMode('manual');
-    setManualInvites([{ name: '', phone: '', inviteCountInput: '1' }]);
+    setManualInvites([{ name: '', phone: '', inviteCountInput: '1', inviteSide: null }]);
     setImportData([]);
     setImportNameCol(null);
     setImportPhoneCol(null);
@@ -92,9 +98,11 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
     setImportStartRow(0);
     setImportFileName(null);
     setFileContacts([]);
+    setSideAssignment(null);
+    setImportSideCol(null);
   };
 
-  const submitGuests = async (guests: Array<{ name: string; phone: string; inviteCount?: number }>) => {
+  const submitGuests = async (guests: Array<{ name: string; phone: string; inviteCount?: number; inviteSide?: string | null }>) => {
     if (!eventId) return;
     if (submitLockRef.current) {
       return;
@@ -104,6 +112,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
         name: String(g.name || '').trim(),
         phone: String(g.phone || '').trim(),
         inviteCount: typeof g.inviteCount === 'number' ? g.inviteCount : undefined,
+        inviteSide: g.inviteSide ?? null,
       }))
       .filter(g => g.name && g.phone);
 
@@ -122,7 +131,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
       }
     }
 
-    const normalized: Array<{ name: string; phone: string; inviteCount?: number }> = [];
+    const normalized: Array<{ name: string; phone: string; inviteCount?: number; inviteSide?: string | null }> = [];
     for (const g of cleaned) {
       const res = normalizePhoneToE164(g.phone);
       if (!res.ok) {
@@ -133,6 +142,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
         ...g,
         phone: res.phone,
         ...(guestsEnabled ? { inviteCount: g.inviteCount ?? 1 } : {}),
+        inviteSide: g.inviteSide,
       });
     }
 
@@ -250,55 +260,71 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                             setStartRow={setImportStartRow}
                             fileName={importFileName}
                             setFileName={setImportFileName}
+                            sideCol={importSideCol}
+                            setSideCol={setImportSideCol}
+                            sideAssignment={sideAssignment}
+                            setSideAssignment={setSideAssignment}
                           />
 
                           {/* Excel Sheet Mockup (matches wizard) */}
-                          <div className="mt-6 bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
-                            <div className="bg-stone-50 px-4 py-2 border-b border-stone-200 flex items-center gap-2" dir="ltr">
-                              <div className="flex gap-1.5">
-                                <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
-                                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
-                                <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                          {importData.length === 0 && (
+                            <div className="mt-6 bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
+                              <div className="bg-stone-50 px-4 py-2 border-b border-stone-200 flex items-center gap-2" dir="ltr">
+                                <div className="flex gap-1.5">
+                                  <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
+                                  <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                                </div>
+                                <div className="ml-4 text-[10px] font-medium text-stone-500 bg-white px-3 py-0.5 rounded border border-stone-200 flex items-center gap-1.5">
+                                  <FileSpreadsheet size={12} className="text-green-600" />
+                                  guests.xlsx
+                                </div>
                               </div>
-                              <div className="ml-4 text-[10px] font-medium text-stone-500 bg-white px-3 py-0.5 rounded border border-stone-200 flex items-center gap-1.5">
-                                <FileSpreadsheet size={12} className="text-green-600" />
-                                {importFileName ?? 'guests.xlsx'}
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="bg-stone-50 border-b border-stone-200">
+                                      <th className="px-4 py-2 w-12 text-center text-xs font-medium text-stone-400 border-x border-stone-200">#</th>
+                                      <th className="px-4 py-2 font-medium text-stone-600 border-x border-stone-200">A</th>
+                                      <th className="px-4 py-2 font-medium text-stone-600 border-x border-stone-200">B</th>
+                                      {guestsEnabled && <th className="px-4 py-2 font-medium text-stone-600 border-x border-stone-200">C</th>}
+                                      <th className="px-4 py-2 font-medium text-stone-400 border-x border-stone-200">{guestsEnabled ? 'D' : 'C'} <span className="text-[9px] font-normal italic">({tw('optional')})</span></th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-stone-100">
+                                    <tr className="bg-stone-50/50">
+                                      <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-x border-stone-200 bg-stone-50">1</td>
+                                      <td className="px-4 py-2 font-medium text-stone-900 border-x border-stone-200 bg-blue-50/30">{tw('manual_name')}</td>
+                                      <td className="px-4 py-2 font-medium text-stone-900 border-x border-stone-200 bg-green-50/30">{tw('manual_phone')}</td>
+                                      {guestsEnabled && <td className="px-4 py-2 font-medium text-stone-900 border-x border-stone-200 bg-orange-50/30">{tw('invite_count')}</td>}
+                                      <td className="px-4 py-2 font-medium text-stone-400 border-x border-stone-200 bg-pink-50/20">{tw('side_label')}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-x border-stone-200 bg-stone-50">2</td>
+                                      <td className="px-4 py-2 text-stone-600 border-x border-stone-200">{locale === 'ar' ? 'محمد السالم' : 'Mohammed Al-Salem'}</td>
+                                      <td className="px-4 py-2 text-stone-600 font-mono text-xs border-x border-stone-200"><span dir="ltr">+966512992124</span></td>
+                                      {guestsEnabled && <td className="px-4 py-2 text-stone-600 border-x border-stone-200">2</td>}
+                                      <td className="px-4 py-2 text-stone-400 border-x border-stone-200">{locale === 'ar' ? 'معرس' : 'Groom'}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-x border-stone-200 bg-stone-50">3</td>
+                                      <td className="px-4 py-2 text-stone-600 border-x border-stone-200">{locale === 'ar' ? 'عبدالله الدوسري' : 'Abdullah Al-Dosari'}</td>
+                                      <td className="px-4 py-2 text-stone-600 font-mono text-xs border-x border-stone-200"><span dir="ltr">+96599828842</span></td>
+                                      {guestsEnabled && <td className="px-4 py-2 text-stone-600 border-x border-stone-200">3</td>}
+                                      <td className="px-4 py-2 text-stone-400 border-x border-stone-200">{locale === 'ar' ? 'عروس' : 'Bride'}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-x border-stone-200 bg-stone-50">4</td>
+                                      <td className="px-4 py-2 text-stone-400 italic border-x border-stone-200">...</td>
+                                      <td className="px-4 py-2 text-stone-400 italic border-x border-stone-200">...</td>
+                                      {guestsEnabled && <td className="px-4 py-2 text-stone-400 italic border-x border-stone-200">...</td>}
+                                      <td className="px-4 py-2 text-stone-400 italic border-x border-stone-200">...</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
-                            <div className="overflow-x-auto" dir="ltr">
-                              <table className="w-full text-sm text-left">
-                                <thead>
-                                  <tr className="bg-stone-50 border-b border-stone-200">
-                                    <th className="px-4 py-2 w-12 text-center text-xs font-medium text-stone-400 border-r border-stone-200">#</th>
-                                    <th className="px-4 py-2 font-medium text-stone-600 border-r border-stone-200 w-1/2">A</th>
-                                    <th className="px-4 py-2 font-medium text-stone-600 w-1/2">B</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-stone-100">
-                                  <tr className="bg-stone-50/50">
-                                    <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">1</td>
-                                    <td className="px-4 py-2 font-medium text-stone-900 border-r border-stone-200 bg-blue-50/30 text-right">{tw('manual_name')}</td>
-                                    <td className="px-4 py-2 font-medium text-stone-900 bg-green-50/30 text-right">{tw('manual_phone')}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">2</td>
-                                    <td className="px-4 py-2 text-stone-600 border-r border-stone-200 text-right">{locale === 'ar' ? 'محمد السالم' : 'Mohammed Al-Salem'}</td>
-                                    <td className="px-4 py-2 text-stone-600 font-mono text-xs text-right" dir="ltr">+966512992124</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">3</td>
-                                    <td className="px-4 py-2 text-stone-600 border-r border-stone-200 text-right">{locale === 'ar' ? 'عبدالله الدوسري' : 'Abdullah Al-Dosari'}</td>
-                                    <td className="px-4 py-2 text-stone-600 font-mono text-xs text-right" dir="ltr">+96599828842</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">4</td>
-                                    <td className="px-4 py-2 text-stone-400 italic border-r border-stone-200 text-right">...</td>
-                                    <td className="px-4 py-2 text-stone-400 italic text-right">...</td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
+                          )}
                         </>
                       ) : (
                         <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
@@ -322,6 +348,8 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                                 setImportInviteCountCol(null);
                                 setImportStartRow(0);
                                 setImportFileName(null);
+                                setSideAssignment(null);
+                                setImportSideCol(null);
                               }}
                               className="text-xs font-medium text-stone-600 hover:text-stone-900 border border-stone-200 bg-white px-3 py-2 rounded-lg cursor-pointer"
                             >
@@ -336,6 +364,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                                   <th className="px-3 py-2 text-start">{tw('manual_name')}</th>
                                   <th className="px-3 py-2 text-start">{tw('manual_phone')}</th>
                                   {guestsEnabled && <th className="px-3 py-2 text-start">{tw('invite_count')}</th>}
+                                  <th className="px-3 py-2 text-start">{tw('side_label')}</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-stone-100">
@@ -344,6 +373,9 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                                     <td className="px-3 py-2 text-stone-900">{c.name}</td>
                                     <td className="px-3 py-2 text-stone-600 font-mono dir-ltr">{c.phone}</td>
                                     {guestsEnabled && <td className="px-3 py-2 text-stone-700">{c.inviteCount ?? 1}</td>}
+                                    <td className="px-3 py-2 text-stone-600 text-xs">
+                                      {c.inviteSide === 'bride' ? tw('side_bride') : c.inviteSide === 'groom' ? tw('side_groom') : '-'}
+                                    </td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -430,6 +462,24 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                               />
                             </div>
                           )}
+                          <div className="w-full sm:w-32">
+                            <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                              {tw('side_label')}
+                            </label>
+                            <select
+                              value={invite.inviteSide ?? ''}
+                              onChange={(e) => {
+                                const next = [...manualInvites];
+                                next[index] = { ...next[index], inviteSide: (e.target.value || null) as InviteSide | null };
+                                setManualInvites(next);
+                              }}
+                              className="w-full px-3 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm"
+                            >
+                              <option value="">{tw('side_unassigned')}</option>
+                              <option value="bride">{tw('side_bride')}</option>
+                              <option value="groom">{tw('side_groom')}</option>
+                            </select>
+                          </div>
                           {manualInvites.length > 1 && (
                             <button
                               type="button"
@@ -444,7 +494,7 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
 
                       <button
                         type="button"
-                        onClick={() => setManualInvites([...manualInvites, { name: '', phone: '', inviteCountInput: '1' }])}
+                        onClick={() => setManualInvites([...manualInvites, { name: '', phone: '', inviteCountInput: '1', inviteSide: null }])}
                         className="mt-2 w-full py-3 border-2 border-dashed border-stone-200 rounded-xl text-stone-500 hover:text-stone-700 hover:border-stone-300 hover:bg-stone-50 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer"
                       >
                         <Plus size={18} />
@@ -476,12 +526,17 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
                             : manualInvites
                                 .filter(i => i.name.trim().length >= 2 && i.phone.trim())
                                 .map(i => {
-                                  if (!guestsEnabled) return { name: i.name, phone: i.phone };
-                                  const trimmed = String(i.inviteCountInput ?? '').trim();
-                                  const n = trimmed === '' ? 1 : Number(trimmed);
-                                  const parsed =
-                                    Number.isFinite(n) && Number.isInteger(n) ? Math.max(1, Math.min(50, n)) : 1;
-                                  return { name: i.name, phone: i.phone, inviteCount: parsed };
+                                  const base: { name: string; phone: string; inviteCount?: number; inviteSide?: string | null } = { 
+                                    name: i.name, 
+                                    phone: i.phone,
+                                    inviteSide: i.inviteSide ?? null,
+                                  };
+                                  if (guestsEnabled) {
+                                    const trimmed = String(i.inviteCountInput ?? '').trim();
+                                    const n = trimmed === '' ? 1 : Number(trimmed);
+                                    base.inviteCount = Number.isFinite(n) && Number.isInteger(n) ? Math.max(1, Math.min(50, n)) : 1;
+                                  }
+                                  return base;
                                 });
                         submitGuests(guests);
                       }}

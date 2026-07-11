@@ -18,6 +18,7 @@ import { type MediaType } from "@/lib/supabase/storage";
 import { normalizePhoneToE164 } from "@/lib/phone";
 import { parseGuestError, guestErrorMessage } from "@/lib/utils/guestErrors";
 import { isVendorMode } from "@/lib/vendorClient";
+import { type InviteSide } from '@/lib/inviteSide';
 
 export default function Wizard() {
   const t = useTranslations('Wizard');
@@ -50,7 +51,7 @@ export default function Wizard() {
   const [canSendInvites, setCanSendInvites] = useState(false);
 
   const [inviteMode, setInviteMode] = useState<"file" | "manual">("file");
-  const [invites, setInvites] = useState([{ name: "", phone: "", inviteCount: 1 }]);
+  const [invites, setInvites] = useState([{ name: "", phone: "", inviteCount: 1, inviteSide: null as InviteSide | null }]);
 
   // State for ContactImport to persist across tab switches
   const [importData, setImportData] = useState<(string | number | null)[][]>([]);
@@ -60,14 +61,19 @@ export default function Wizard() {
   const [importStartRow, setImportStartRow] = useState(0);
   const [importFileName, setImportFileName] = useState<string | null>(null);
 
+  const [sideAssignment, setSideAssignment] = useState<'unassigned' | 'bride' | 'groom' | 'column' | null>(null);
+  const [importSideCol, setImportSideCol] = useState<number | null>(null);
+
   const addManualInvite = () => {
-    setInvites([...invites, { name: "", phone: "", inviteCount: 1 }]);
+    setInvites([...invites, { name: "", phone: "", inviteCount: 1, inviteSide: null }]);
   };
 
-  const updateManualInvite = (index: number, field: "name" | "phone" | "inviteCount", value: string | number) => {
+  const updateManualInvite = (index: number, field: "name" | "phone" | "inviteCount" | "inviteSide", value: string | number | null) => {
     const newInvites = [...invites];
     if (field === "inviteCount") {
       newInvites[index][field] = value as unknown as number;
+    } else if (field === "inviteSide") {
+      newInvites[index][field] = value as InviteSide | null;
     } else {
       newInvites[index][field] = value as string;
     }
@@ -107,8 +113,8 @@ export default function Wizard() {
     }
   };
 
-  const handleContactsLoaded = (loadedContacts: { name: string; phone: string; inviteCount?: number }[]) => {
-    setInvites(loadedContacts.map(c => ({ ...c, inviteCount: c.inviteCount || 1 })));
+  const handleContactsLoaded = (loadedContacts: { name: string; phone: string; inviteCount?: number; inviteSide?: string | null }[]) => {
+    setInvites(loadedContacts.map(c => ({ ...c, inviteCount: c.inviteCount || 1, inviteSide: (c.inviteSide as InviteSide | null) ?? null })));
     setInviteMode("manual");
   };
 
@@ -136,7 +142,9 @@ export default function Wizard() {
         imageUrl: details.imageUrl,
         mediaType: details.mediaType,
         mediaFilename: details.mediaFilename,
-        guests: normalized.invites.filter(i => i.name && i.phone),
+        guests: normalized.invites
+          .filter(i => i.name && i.phone)
+          .map(i => ({ name: i.name, phone: i.phone, inviteCount: i.inviteCount, inviteSide: i.inviteSide })),
         locale: details.messageLocale,
         ...(isVendorMode ? {
           customerEmail: customerEmail || undefined,
@@ -301,60 +309,77 @@ export default function Wizard() {
                     setStartRow={setImportStartRow}
                     fileName={importFileName}
                     setFileName={setImportFileName}
+                    sideCol={importSideCol}
+                    setSideCol={setImportSideCol}
+                    sideAssignment={sideAssignment}
+                    setSideAssignment={setSideAssignment}
                   />
 
-                  {/* Excel Sheet Mockup */}
-                  <div className="mt-8 bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
-                    <div className="bg-stone-50 px-4 py-2 border-b border-stone-200 flex items-center gap-2" dir="ltr">
-                      <div className="flex gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                  {/* Excel Sheet Mockup (only before file is loaded) */}
+                  {importData.length === 0 && (
+                    <div className="mt-8 bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
+                      <div className="bg-stone-50 px-4 py-2 border-b border-stone-200 flex items-center gap-2" dir="ltr">
+                        <div className="flex gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                          <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
+                          <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                        </div>
+                        <div className="ml-4 text-[10px] font-medium text-stone-500 bg-white px-3 py-0.5 rounded border border-stone-200 flex items-center gap-1.5">
+                          <FileSpreadsheet size={12} className="text-green-600" />
+                          guests.xlsx
+                        </div>
                       </div>
-                      <div className="ml-4 text-[10px] font-medium text-stone-500 bg-white px-3 py-0.5 rounded border border-stone-200 flex items-center gap-1.5">
-                        <FileSpreadsheet size={12} className="text-green-600" />
-                        guests.xlsx
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-stone-50 border-b border-stone-200">
+                              <th className="px-4 py-2 w-12 text-center text-xs font-medium text-stone-400 border-x border-stone-200">#</th>
+                              <th className="px-4 py-2 font-medium text-stone-600 border-x border-stone-200 w-1/4">A</th>
+                              <th className="px-4 py-2 font-medium text-stone-600 border-x border-stone-200 w-1/4">B</th>
+                              {details.guestsEnabled && <th className="px-4 py-2 font-medium text-stone-600 border-x border-stone-200 w-1/4">C</th>}
+                              <th className="px-4 py-2 font-medium text-stone-400 border-x border-stone-200 w-1/4">
+                                {details.guestsEnabled ? 'D' : 'C'} <span className="text-[9px] font-normal italic">({t('step1.optional')})</span>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-stone-100">
+                            <tr className="bg-stone-50/50">
+                              <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-x border-stone-200 bg-stone-50">1</td>
+                              <td className="px-4 py-2 font-medium text-stone-900 border-x border-stone-200 bg-blue-50/30">{t('step1.manual_name')}</td>
+                              <td className="px-4 py-2 font-medium text-stone-900 border-x border-stone-200 bg-green-50/30">{t('step1.manual_phone')}</td>
+                              {details.guestsEnabled && <td className="px-4 py-2 font-medium text-stone-900 border-x border-stone-200 bg-orange-50/30">{t('step1.invite_count')}</td>}
+                              <td className="px-4 py-2 font-medium text-stone-400 border-x border-stone-200 bg-pink-50/20">{t('step1.side_label')}</td>
+                            </tr>
+                            <tr>
+                              <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-x border-stone-200 bg-stone-50">2</td>
+                              <td className="px-4 py-2 text-stone-600 border-x border-stone-200">{locale === 'ar' ? 'محمد السالم' : 'Mohammed Al-Salem'}</td>
+                              <td className="px-4 py-2 text-stone-600 font-mono text-xs border-x border-stone-200"><span dir="ltr">+966512992124</span></td>
+                              {details.guestsEnabled && <td className="px-4 py-2 text-stone-600 border-x border-stone-200">2</td>}
+                              <td className="px-4 py-2 text-stone-400 border-x border-stone-200">
+                                {locale === 'ar' ? 'معرس' : 'Groom'}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-x border-stone-200 bg-stone-50">3</td>
+                              <td className="px-4 py-2 text-stone-600 border-x border-stone-200">{locale === 'ar' ? 'عبدالله الدوسري' : 'Abdullah Al-Dosari'}</td>
+                              <td className="px-4 py-2 text-stone-600 font-mono text-xs border-x border-stone-200"><span dir="ltr">+96599828842</span></td>
+                              {details.guestsEnabled && <td className="px-4 py-2 text-stone-600 border-x border-stone-200">3</td>}
+                              <td className="px-4 py-2 text-stone-400 border-x border-stone-200">
+                                {locale === 'ar' ? 'عروس' : 'Bride'}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-x border-stone-200 bg-stone-50">4</td>
+                              <td className="px-4 py-2 text-stone-400 italic border-x border-stone-200">...</td>
+                              <td className="px-4 py-2 text-stone-400 italic border-x border-stone-200">...</td>
+                              {details.guestsEnabled && <td className="px-4 py-2 text-stone-400 italic border-x border-stone-200">...</td>}
+                              <td className="px-4 py-2 text-stone-400 italic border-x border-stone-200">...</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
-                    <div className="overflow-x-auto" dir="ltr">
-                      <table className="w-full text-sm text-left">
-                        <thead>
-                          <tr className="bg-stone-50 border-b border-stone-200">
-                            <th className="px-4 py-2 w-12 text-center text-xs font-medium text-stone-400 border-r border-stone-200">#</th>
-                            <th className={`px-4 py-2 font-medium text-stone-600 border-r border-stone-200 ${details.guestsEnabled ? 'w-1/3' : 'w-1/2'}`}>A</th>
-                            <th className={`px-4 py-2 font-medium text-stone-600 ${details.guestsEnabled ? 'border-r border-stone-200 w-1/3' : 'w-1/2'}`}>B</th>
-                            {details.guestsEnabled && <th className="px-4 py-2 font-medium text-stone-600 w-1/3">C</th>}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-stone-100">
-                          <tr className="bg-stone-50/50">
-                            <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">1</td>
-                            <td className="px-4 py-2 font-medium text-stone-900 border-r border-stone-200 bg-blue-50/30 text-right">{t('step1.manual_name')}</td>
-                            <td className={`px-4 py-2 font-medium text-stone-900 bg-green-50/30 text-right ${details.guestsEnabled ? 'border-r border-stone-200' : ''}`}>{t('step1.manual_phone')}</td>
-                            {details.guestsEnabled && <td className="px-4 py-2 font-medium text-stone-900 bg-orange-50/30 text-right">{t('step1.invite_count')}</td>}
-                          </tr>
-                          <tr>
-                            <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">2</td>
-                            <td className="px-4 py-2 text-stone-600 border-r border-stone-200 text-right">{locale === 'ar' ? 'محمد السالم' : 'Mohammed Al-Salem'}</td>
-                            <td className={`px-4 py-2 text-stone-600 font-mono text-xs text-right ${details.guestsEnabled ? 'border-r border-stone-200' : ''}`} dir="ltr">+966512992124</td>
-                            {details.guestsEnabled && <td className="px-4 py-2 text-stone-600 text-right">2</td>}
-                          </tr>
-                          <tr>
-                            <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">3</td>
-                            <td className="px-4 py-2 text-stone-600 border-r border-stone-200 text-right">{locale === 'ar' ? 'عبدالله الدوسري' : 'Abdullah Al-Dosari'}</td>
-                            <td className={`px-4 py-2 text-stone-600 font-mono text-xs text-right ${details.guestsEnabled ? 'border-r border-stone-200' : ''}`} dir="ltr">+96599828842</td>
-                            {details.guestsEnabled && <td className="px-4 py-2 text-stone-600 text-right">3</td>}
-                          </tr>
-                          <tr>
-                            <td className="px-4 py-2 text-center text-xs font-medium text-stone-400 border-r border-stone-200 bg-stone-50">4</td>
-                            <td className="px-4 py-2 text-stone-400 italic border-r border-stone-200 text-right">...</td>
-                            <td className={`px-4 py-2 text-stone-400 italic text-right ${details.guestsEnabled ? 'border-r border-stone-200' : ''}`}>...</td>
-                            {details.guestsEnabled && <td className="px-4 py-2 text-stone-400 italic text-right">...</td>}
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                  )}
                 </>
               ) : (
                 <div className="animate-fade-in">
@@ -415,6 +440,20 @@ export default function Wizard() {
                             />
                           </div>
                         )}
+                        <div className="w-full sm:w-32">
+                          <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                            {t('step1.side_label')}
+                          </label>
+                          <select
+                            value={invite.inviteSide ?? ''}
+                            onChange={(e) => updateManualInvite(index, "inviteSide", e.target.value || null)}
+                            className="w-full px-3 py-2.5 rounded-lg bg-stone-50 border border-stone-200 focus:bg-white focus:border-stone-400 focus:outline-none transition-all text-sm"
+                          >
+                            <option value="">{t('step1.side_unassigned')}</option>
+                            <option value="bride">{t('step1.side_bride')}</option>
+                            <option value="groom">{t('step1.side_groom')}</option>
+                          </select>
+                        </div>
                         {invites.length > 1 && (
                           <button
                             onClick={() => removeManualInvite(index)}

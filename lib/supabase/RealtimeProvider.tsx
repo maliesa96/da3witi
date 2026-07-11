@@ -23,6 +23,7 @@ export type BroadcastGuestPayload = {
   phone: string;
   status: string;
   inviteCount: number;
+  inviteSide?: string | null;
   checkedIn?: boolean;
   whatsappMessageId?: string | null;
   oldStatus?: string;
@@ -220,6 +221,7 @@ export function toClientGuest(payload: BroadcastGuestPayload) {
     phone: string;
     status: string;
     inviteCount: number;
+    inviteSide: string | null;
     checkedIn: boolean;
     whatsappMessageId: string | null;
     noReplyReminderSentAt?: string;
@@ -232,6 +234,7 @@ export function toClientGuest(payload: BroadcastGuestPayload) {
     phone: payload.phone,
     status: payload.status,
     inviteCount: payload.inviteCount,
+    inviteSide: payload.inviteSide ?? null,
     checkedIn: payload.checkedIn ?? false,
     whatsappMessageId: payload.whatsappMessageId ?? null,
   };

@@ -6,6 +6,7 @@ import { type MediaType } from '@/lib/whatsapp';
 import { revalidatePath } from 'next/cache';
 import { normalizePhoneToE164 } from '@/lib/phone';
 import { MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage, validateWhatsAppText } from '@/lib/inviteMessage';
+import { normalizeInviteSide } from '@/lib/inviteSide';
 import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
 import { VENDOR_ID, isVendorMode, isVendorAdmin, SITE_NAME, type CustomerPermissions, DEFAULT_CUSTOMER_PERMISSIONS } from '@/lib/vendor';
 import { sendCustomerInvitationEmail, sendExistingCustomerInvitationEmail } from '@/lib/email';
@@ -27,7 +28,7 @@ export async function createEvent(formData: {
   imageUrl?: string;
   mediaType?: MediaType;
   mediaFilename?: string;
-  guests: { name: string; phone: string; inviteCount?: number }[]
+  guests: { name: string; phone: string; inviteCount?: number; inviteSide?: string | null }[]
   locale: 'en' | 'ar';
   customerEmail?: string;
   customerPermissions?: CustomerPermissions;
@@ -54,6 +55,7 @@ export async function createEvent(formData: {
       name,
       phone: res.phone,
       inviteCount: guest.inviteCount || 1,
+      inviteSide: normalizeInviteSide(guest.inviteSide),
     };
   });
 
@@ -137,6 +139,7 @@ export async function createEvent(formData: {
             name: guest.name,
             phone: guest.phone,
             inviteCount: guest.inviteCount,
+            inviteSide: guest.inviteSide,
             status: 'pending'
           }))
         }

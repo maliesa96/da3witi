@@ -9,6 +9,7 @@ import { shouldEnqueueWhatsAppInvite } from '@/lib/whatsappSendEligibility';
 import { broadcastGuestInsert } from '@/lib/supabase/broadcast';
 import { MAX_GUESTS_PER_EVENT } from '@/lib/limits';
 import { isAdmin } from '@/lib/admin';
+import { normalizeInviteSide } from '@/lib/inviteSide';
 import { parseCustomerPermissions, isVendorMode, isVendorAdmin, SITE_NAME } from '@/lib/vendor';
 import { sendCustomerInvitationEmail, sendExistingCustomerInvitationEmail } from '@/lib/email';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -54,7 +55,7 @@ async function canWriteEvent(
 
 export async function addGuests(
   eventId: string,
-  guests: { name: string; phone: string; inviteCount?: number | string }[]
+  guests: { name: string; phone: string; inviteCount?: number | string; inviteSide?: string | null }[]
 ) {
   const user = await getAuthedUser();
 
@@ -78,6 +79,7 @@ export async function addGuests(
       name: String(g.name || '').trim(),
       phone: String(g.phone || '').trim(),
       inviteCount: g.inviteCount,
+      inviteSide: g.inviteSide,
     }))
     .filter(g => g.name && g.phone);
 
@@ -116,7 +118,8 @@ export async function addGuests(
       inviteCount = n;
     }
 
-    return { ...g, phone: res.phone, inviteCount };
+    const inviteSide = normalizeInviteSide(g.inviteSide);
+    return { ...g, phone: res.phone, inviteCount, inviteSide };
   });
 
   // Check for duplicate phone numbers within the submitted batch
@@ -149,12 +152,14 @@ export async function addGuests(
       phone: g.phone,
       status: 'pending',
       ...(event.guestsEnabled ? { inviteCount: g.inviteCount ?? 1 } : {}),
+      inviteSide: g.inviteSide,
     })),
     select: {
       id: true,
       name: true,
       phone: true,
       inviteCount: true,
+      inviteSide: true,
       status: true,
       checkedIn: true,
       whatsappMessageId: true,
@@ -171,6 +176,7 @@ export async function addGuests(
         phone: guest.phone,
         status: guest.status,
         inviteCount: guest.inviteCount,
+        inviteSide: guest.inviteSide,
         checkedIn: guest.checkedIn,
         whatsappMessageId: guest.whatsappMessageId,
       })
@@ -311,6 +317,7 @@ export async function getGuestsPaginated(
         name: true,
         phone: true,
         inviteCount: true,
+        inviteSide: true,
         status: true,
         checkedIn: true,
         whatsappMessageId: true,
@@ -432,7 +439,7 @@ export async function deleteAllGuests(eventId: string) {
 
 export async function updateGuest(
   guestId: string,
-  guestData: { name: string; phone: string; inviteCount?: number | string }
+  guestData: { name: string; phone: string; inviteCount?: number | string; inviteSide?: string | null }
 ) {
   const user = await getAuthedUser();
 
@@ -484,18 +491,24 @@ export async function updateGuest(
     inviteCount = n;
   }
 
+  const inviteSide = typeof guestData.inviteSide !== 'undefined'
+    ? normalizeInviteSide(guestData.inviteSide)
+    : undefined;
+
   const updated = await prisma.guest.update({
     where: { id: guestId },
     data: {
       name,
       phone: phoneRes.phone,
       ...(typeof inviteCount === 'number' ? { inviteCount } : {}),
+      ...(typeof inviteSide !== 'undefined' ? { inviteSide } : {}),
     },
     select: {
       id: true,
       name: true,
       phone: true,
       inviteCount: true,
+      inviteSide: true,
       status: true,
       checkedIn: true,
       whatsappMessageId: true,

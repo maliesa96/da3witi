@@ -183,7 +183,16 @@
       "select_both_warning": "يرجى اختيار عمود الاسم وعمود الهاتف للمتابعة.",
       "select_all_warning": "يرجى اختيار عمود الاسم وعمود الهاتف وعمود عدد الدعوات للمتابعة.",
       "select_invite_count_col": "عمود عدد الدعوات",
-      "invite_count": "عدد الدعوات"
+      "invite_count": "عدد الدعوات",
+      "side_label": "الدعوة من طرف",
+      "side_bride": "العروس",
+      "side_groom": "المعرس",
+      "side_all_bride": "الكل من طرف العروس",
+      "side_all_groom": "الكل من طرف المعرس",
+      "side_unassigned": "بدون تحديد",
+      "side_use_column": "من عمود في الملف",
+      "side_col_label": "عمود الطرف",
+      "optional": "اختياري"
     },
     "step2": {
       "title": "تفاصيل المناسبة",
@@ -470,7 +479,15 @@
     "attendant_add_failed": "فشلت الإضافة",
     "attendant_already_added": "مضافة مسبقاً",
     "attendant_remove": "حذف",
-    "attendant_none": "لم يتم إضافة مسؤولات بعد"
+    "attendant_none": "لم يتم إضافة مسؤولات بعد",
+    "side_bride": "العروس",
+    "side_groom": "المعرس",
+    "side_unassigned": "غير محدد",
+    "side_all": "الكل",
+    "scope_filter": "الفئة",
+    "col_invited_by": "الدعوة من طرف",
+    "side_badge_bride": "ع",
+    "side_badge_groom": "ع"
   },
   "Auth": {
     "login": "تسجيل الدخول",

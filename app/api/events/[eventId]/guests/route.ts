@@ -8,6 +8,12 @@ function parseIntParam(value: string | null, fallback: number) {
   return Number.isFinite(n) && Number.isInteger(n) && n > 0 ? n : fallback;
 }
 
+function parseSide(url: URL): string | null {
+  const side = (url.searchParams.get("side") || "").trim().toLowerCase();
+  if (side === 'bride' || side === 'groom') return side;
+  return null;
+}
+
 function parseStatuses(url: URL) {
   // Supports:
   // - ?statuses=pending,failed
@@ -29,6 +35,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
     const pageSize = parseIntParam(url.searchParams.get("pageSize"), 50);
     const search = (url.searchParams.get("search") || "").trim();
     const statuses = parseStatuses(url);
+    const side = parseSide(url);
 
     const supabase = await createClient();
     const {
@@ -87,6 +94,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
     const whereClause = {
       eventId,
       ...(normalizedStatuses.length ? { status: { in: normalizedStatuses } } : {}),
+      ...(side ? { inviteSide: side } : {}),
       ...(search
         ? {
             OR: [
@@ -104,6 +112,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
         name: true,
         phone: true,
         inviteCount: true,
+        inviteSide: true,
         status: true,
         checkedIn: true,
         whatsappMessageId: true,
@@ -118,11 +127,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
       take: pageSize,
     });
 
-    // Pagination totalCount:
-    // - search: must count
-    // - statuses-only: count
-    // - no filters: use event.guestCountTotal
-    const totalCountPromise = hasSearch || hasStatusFilter
+    const totalCountPromise = hasSearch || hasStatusFilter || side
       ? prisma.guest.count({ where: whereClause })
       : Promise.resolve<number | null>(null);
 
@@ -142,8 +147,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
     ]);
 
     const stats = {
-      // Stat cards should reflect invite totals by status (invite_count sum),
-      // which equals guest counts when invite_count=1.
       total: event.inviteCountTotal,
       pending: event.inviteCountPending,
       sent: event.inviteCountSent,
@@ -153,6 +156,36 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
       declined: event.inviteCountDeclined,
       failed: event.inviteCountFailed,
     };
+
+    let sideStats: typeof stats | null = null;
+    if (side) {
+      const statusCountsBySide = await prisma.guest.groupBy({
+        by: ['status'],
+        where: { eventId, inviteSide: side },
+        _count: { status: true },
+        _sum: { inviteCount: true },
+      });
+
+      sideStats = {
+        total: 0,
+        pending: 0,
+        sent: 0,
+        delivered: 0,
+        read: 0,
+        confirmed: 0,
+        declined: 0,
+        failed: 0,
+      };
+
+      for (const sc of statusCountsBySide) {
+        const invites = sc._sum.inviteCount ?? sc._count.status;
+        sideStats.total += invites;
+        const key = sc.status;
+        if (key in sideStats && key !== 'total') {
+          sideStats[key as keyof Omit<typeof sideStats, 'total'>] += invites;
+        }
+      }
+    }
 
     const inviteCountMap: Record<string, number> = {
       pending: event.inviteCountPending,
@@ -171,12 +204,19 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
 
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    const inviteAll = event.guestsEnabled ? event.inviteCountTotal : 0;
+    const inviteAll = event.guestsEnabled
+      ? (sideStats ? sideStats.total : event.inviteCountTotal)
+      : 0;
     const inviteFiltered = event.guestsEnabled
       ? hasSearch
         ? filteredInviteAggOrNull?._sum.inviteCount ?? 0
         : hasStatusFilter
-          ? normalizedStatuses.reduce((acc, s) => acc + (inviteCountMap[s] ?? 0), 0)
+          ? sideStats
+            ? normalizedStatuses.reduce((acc, s) => {
+                const key = s as keyof typeof sideStats;
+                return acc + (key in sideStats && key !== 'total' ? sideStats[key] : 0);
+              }, 0)
+            : normalizedStatuses.reduce((acc, s) => acc + (inviteCountMap[s] ?? 0), 0)
           : inviteAll
       : 0;
 
@@ -184,6 +224,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
       guests: guests.map((g) => ({
         ...g,
         inviteCount: g.inviteCount ?? undefined,
+        inviteSide: g.inviteSide ?? null,
       })),
       pagination: {
         page,
@@ -193,7 +234,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
       },
-      stats,
+      stats: sideStats ?? stats,
       inviteTotals: {
         filtered: inviteFiltered,
         all: inviteAll,

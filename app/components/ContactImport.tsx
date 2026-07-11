@@ -3,14 +3,16 @@
 import React, { useState, useRef } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { UploadCloud, Check, Info, FileText, Hash, User } from "lucide-react";
+import { UploadCloud, Check, Info, FileText, Hash, User, Heart } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { normalizePhoneToE164 } from "@/lib/phone";
+import { normalizeInviteSide } from "@/lib/inviteSide";
 
 interface Contact {
   name: string;
   phone: string;
   inviteCount?: number;
+  inviteSide?: string | null;
 }
 
 type Cell = string | number | null;
@@ -27,6 +29,10 @@ interface ContactImportProps {
   setPhoneCol: (col: number | null) => void;
   inviteCountCol: number | null;
   setInviteCountCol: (col: number | null) => void;
+  sideCol: number | null;
+  setSideCol: (col: number | null) => void;
+  sideAssignment: 'unassigned' | 'bride' | 'groom' | 'column' | null;
+  setSideAssignment: (value: 'unassigned' | 'bride' | 'groom' | 'column' | null) => void;
   startRow: number;
   setStartRow: (row: number) => void;
   fileName: string | null;
@@ -40,6 +46,8 @@ export default function ContactImport({
   nameCol, setNameCol,
   phoneCol, setPhoneCol,
   inviteCountCol, setInviteCountCol,
+  sideCol, setSideCol,
+  sideAssignment, setSideAssignment,
   startRow, setStartRow,
   fileName, setFileName
 }: ContactImportProps) {
@@ -139,10 +147,12 @@ export default function ContactImport({
     const nameKeywords = ["name", "full name", "guest", "اسم", "الاسم", "المدعو", "الضيف"];
     const phoneKeywords = ["phone", "number", "mobile", "whatsapp", "رقم", "جوال", "هاتف", "واتساب", "تلفون"];
     const inviteCountKeywords = ["invite", "count", "invites", "guests", "عدد", "دعوات", "ضيوف"];
+    const sideKeywords = ["side", "invited by", "invitation side", "طرف", "جهة", "الدعوة"];
     
     let detectedNameCol: number | null = null;
     let detectedPhoneCol: number | null = null;
     let detectedInviteCountCol: number | null = null;
+    let detectedSideCol: number | null = null;
     let detectedStartRow = 0;
 
     // Check first few rows for header keywords
@@ -160,6 +170,10 @@ export default function ContactImport({
         }
         if (guestsEnabled && detectedInviteCountCol === null && inviteCountKeywords.some(k => cell.includes(k))) {
           detectedInviteCountCol = j;
+          detectedStartRow = i + 1;
+        }
+        if (detectedSideCol === null && sideKeywords.some(k => cell.includes(k))) {
+          detectedSideCol = j;
           detectedStartRow = i + 1;
         }
       }
@@ -210,6 +224,10 @@ export default function ContactImport({
     if (detectedNameCol !== null) setNameCol(detectedNameCol);
     if (detectedPhoneCol !== null) setPhoneCol(detectedPhoneCol);
     if (guestsEnabled && detectedInviteCountCol !== null) setInviteCountCol(detectedInviteCountCol);
+    if (detectedSideCol !== null) {
+      setSideCol(detectedSideCol);
+      setSideAssignment('column');
+    }
     setStartRow(detectedStartRow);
   };
 
@@ -228,6 +246,17 @@ export default function ContactImport({
         const countValue = row[inviteCountCol];
         const parsedCount = typeof countValue === 'number' ? countValue : parseInt(String(countValue || "1"), 10);
         contact.inviteCount = isNaN(parsedCount) ? 1 : Math.max(1, parsedCount);
+      }
+
+      if (sideAssignment === 'column' && sideCol !== null) {
+        const sideValue = row[sideCol];
+        contact.inviteSide = normalizeInviteSide(sideValue);
+      } else if (sideAssignment === 'bride') {
+        contact.inviteSide = 'bride';
+      } else if (sideAssignment === 'groom') {
+        contact.inviteSide = 'groom';
+      } else {
+        contact.inviteSide = null;
       }
 
       return { contact, rowNumber: startRow + idx + 1 };
@@ -251,6 +280,8 @@ export default function ContactImport({
     setNameCol(null);
     setPhoneCol(null);
     setInviteCountCol(null);
+    setSideCol(null);
+    setSideAssignment(null);
     setStartRow(0);
     setFileName(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -263,12 +294,16 @@ export default function ContactImport({
       setPhoneCol(null);
     } else if (guestsEnabled && inviteCountCol === index) {
       setInviteCountCol(null);
+    } else if (sideAssignment === 'column' && sideCol === index) {
+      setSideCol(null);
     } else if (nameCol === null) {
       setNameCol(index);
     } else if (phoneCol === null) {
       setPhoneCol(index);
     } else if (guestsEnabled && inviteCountCol === null) {
       setInviteCountCol(index);
+    } else if (sideAssignment === 'column' && sideCol === null) {
+      setSideCol(index);
     }
   };
 
@@ -387,6 +422,53 @@ export default function ContactImport({
                 </select>
              </div>
            )}
+           <div className="flex-1 min-w-[200px]">
+              <label className="flex items-center gap-2 text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">
+                <Heart size={12} className="text-pink-500" />
+                {t('side_label')}
+              </label>
+              <select
+                className={`w-full bg-white border rounded-lg px-3 py-2 text-sm focus:outline-none transition-all ${
+                  sideAssignment && sideAssignment !== 'unassigned' ? "border-pink-200 ring-2 ring-pink-500/5" : "border-stone-200"
+                }`}
+                value={sideAssignment ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === 'bride' || v === 'groom' || v === 'column' || v === 'unassigned') {
+                    setSideAssignment(v);
+                    if (v !== 'column') setSideCol(null);
+                  } else {
+                    setSideAssignment(null);
+                    setSideCol(null);
+                  }
+                }}
+              >
+                <option value="">{t('side_unassigned')}</option>
+                <option value="bride">{t('side_all_bride')}</option>
+                <option value="groom">{t('side_all_groom')}</option>
+                <option value="column">{t('side_use_column')}</option>
+              </select>
+           </div>
+           {sideAssignment === 'column' && (
+             <div className="flex-1 min-w-[200px]">
+                <label className="flex items-center gap-2 text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">
+                  <Heart size={12} className="text-pink-500" />
+                  {t('side_col_label')}
+                </label>
+                <select 
+                  className={`w-full bg-white border rounded-lg px-3 py-2 text-sm focus:outline-none transition-all ${
+                    sideCol !== null ? "border-pink-200 ring-2 ring-pink-500/5" : "border-stone-200"
+                  }`}
+                  value={sideCol ?? ""}
+                  onChange={(e) => setSideCol(e.target.value === "" ? null : Number(e.target.value))}
+                >
+                  <option value="">{t('column')} ...</option>
+                  {Array.from({ length: maxCols }).map((_, i) => (
+                    <option key={i} value={i}>{t('column')} {String.fromCharCode(65 + i)}</option>
+                  ))}
+                </select>
+             </div>
+           )}
            <div className="w-24">
               <label className="flex items-center gap-2 text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">
                 {t('start_row')}
@@ -415,6 +497,7 @@ export default function ContactImport({
                       nameCol === i ? "bg-blue-100/90 ring-inset ring-2 ring-blue-500 z-10" : 
                       phoneCol === i ? "bg-green-100/90 ring-inset ring-2 ring-green-500 z-10" : 
                       guestsEnabled && inviteCountCol === i ? "bg-orange-100/90 ring-inset ring-2 ring-orange-500 z-10" :
+                      sideAssignment === 'column' && sideCol === i ? "bg-pink-100/90 ring-inset ring-2 ring-pink-500 z-10" :
                       "text-stone-500"
                     }`}
                   >
@@ -436,6 +519,10 @@ export default function ContactImport({
                         ) : guestsEnabled && inviteCountCol === i ? (
                           <span className="bg-orange-600 text-white text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
                             <Hash size={10} /> {t('select_invite_count_col')}
+                          </span>
+                        ) : sideAssignment === 'column' && sideCol === i ? (
+                          <span className="bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                            <Heart size={10} /> {t('side_col_label')}
                           </span>
                         ) : (
                           <span className="truncate text-xs text-stone-500">
@@ -469,7 +556,8 @@ export default function ContactImport({
                       className={`p-3 border-r border-stone-200 truncate cursor-pointer transition-all ${
                         nameCol === colIndex ? "bg-blue-50/40 font-medium text-blue-900 border-x-blue-200" : 
                         phoneCol === colIndex ? "bg-green-50/40 font-medium text-green-900 border-x-green-200" : 
-                        guestsEnabled && inviteCountCol === colIndex ? "bg-orange-50/40 font-medium text-orange-900 border-x-orange-200" : ""
+                        guestsEnabled && inviteCountCol === colIndex ? "bg-orange-50/40 font-medium text-orange-900 border-x-orange-200" :
+                        sideAssignment === 'column' && sideCol === colIndex ? "bg-pink-50/40 font-medium text-pink-900 border-x-pink-200" : ""
                       } ${rowIndex < startRow ? "bg-stone-50/50" : ""}`}
                     >
                       {String(row[colIndex] || "")}
