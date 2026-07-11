@@ -81,6 +81,8 @@ export type EventDetailsFormProps = {
   onDirtyChange?: (dirty: boolean) => void;
   /** Content to render in the footer area next to the submit button */
   footerExtra?: React.ReactNode;
+  /** When true, the reminder has already been sent and timing cannot be changed */
+  reminderSent?: boolean;
 };
 
 function formatDateFromPicker(value: string, msgLocale: "en" | "ar") {
@@ -123,6 +125,7 @@ export default function EventDetailsForm({
   submitDisabled = false,
   onDirtyChange,
   footerExtra,
+  reminderSent = false,
 }: EventDetailsFormProps) {
   const t = useTranslations("Wizard");
   const tPreview = useTranslations("InvitePreview");
@@ -178,6 +181,7 @@ export default function EventDetailsForm({
     qrEnabled: details.qrEnabled,
     guestsEnabled: details.guestsEnabled,
     reminderEnabled: details.reminderEnabled,
+    reminderDaysBefore: details.reminderDaysBefore,
     imageUrl: details.imageUrl,
     mediaType: details.mediaType,
     customerEmail: initialCustomerEmail,
@@ -197,6 +201,7 @@ export default function EventDetailsForm({
       details.qrEnabled !== snap.qrEnabled ||
       details.guestsEnabled !== snap.guestsEnabled ||
       details.reminderEnabled !== snap.reminderEnabled ||
+      details.reminderDaysBefore !== snap.reminderDaysBefore ||
       details.imageUrl !== snap.imageUrl ||
       details.mediaType !== snap.mediaType ||
       customerEmail !== snap.customerEmail ||
@@ -1159,26 +1164,41 @@ export default function EventDetailsForm({
                   <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-900 rtl:peer-checked:after:-translate-x-full"></div>
                 </label>
               </div>
-              {details.reminderEnabled && (
-                <div className="flex items-center gap-2">
-                  <label className="text-[11px] text-stone-500 whitespace-nowrap">
-                    {t("step2.reminder_days_label")}
-                  </label>
-                  <select
-                    value={details.reminderDaysBefore}
-                    onChange={(e) =>
-                      setDetails({ ...details, reminderDaysBefore: Number(e.target.value) })
-                    }
-                    className="px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-200 text-sm text-stone-700 outline-none"
-                  >
-                    {[1, 2, 3, 5, 7].map((d) => (
-                      <option key={d} value={d}>
-                        {t("step2.reminder_days_option", { count: d })}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              {details.reminderEnabled && (() => {
+                const daysUntilEvent = details.eventDate
+                  ? Math.ceil((new Date(details.eventDate + "T00:00:00").getTime() - new Date(new Date().toLocaleDateString("en-CA") + "T00:00:00").getTime()) / 86400000)
+                  : Infinity;
+                return (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <label className="text-[11px] text-stone-500 whitespace-nowrap">
+                        {t("step2.reminder_days_label")}
+                      </label>
+                      <select
+                        value={details.reminderDaysBefore}
+                        disabled={reminderSent}
+                        onChange={(e) =>
+                          setDetails({ ...details, reminderDaysBefore: Number(e.target.value) })
+                        }
+                        className={`px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-200 text-sm text-stone-700 outline-none ${
+                          reminderSent ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        {[1, 2, 3, 5, 7].map((d) => (
+                          <option key={d} value={d} disabled={d >= daysUntilEvent}>
+                            {t("step2.reminder_days_option", { count: d })}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {reminderSent && (
+                      <p className="text-[10px] text-amber-600">
+                        {t("step2.reminder_already_sent")}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

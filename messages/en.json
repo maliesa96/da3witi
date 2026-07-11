@@ -235,6 +235,7 @@
       "reminder_desc": "WhatsApp reminder before the event",
       "reminder_days_label": "Send reminder",
       "reminder_days_option": "{count, plural, one {1 day before} other {# days before}}",
+      "reminder_already_sent": "Reminder has already been sent — timing cannot be changed",
       "reminder_requires_calendar": "Use the calendar picker for date to enable auto reminders",
       "coming_soon": "Coming soon",
       "preview_send": "Preview & Send",

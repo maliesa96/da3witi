@@ -19,6 +19,8 @@ type EditableEvent = {
   qrEnabled: boolean;
   guestsEnabled: boolean;
   reminderEnabled: boolean;
+  reminderDaysBefore: number;
+  reminderSentAt: string | null;
   imageUrl: string | null;
   mediaType: string | null;
   mediaFilename: string | null;
@@ -78,6 +80,7 @@ export default function EditEventDialog({
     qrEnabled: event.qrEnabled,
     guestsEnabled: event.guestsEnabled,
     reminderEnabled: event.reminderEnabled,
+    reminderDaysBefore: event.reminderDaysBefore,
     imageUrl: event.imageUrl || "",
     mediaType: (event.mediaType as MediaType) || undefined,
     mediaFilename: event.mediaFilename || "",
@@ -107,6 +110,7 @@ export default function EditEventDialog({
           qrEnabled: data.details.qrEnabled,
           guestsEnabled: data.details.guestsEnabled,
           reminderEnabled: data.details.reminderEnabled,
+          reminderDaysBefore: data.details.reminderDaysBefore,
           imageUrl: data.details.imageUrl,
           mediaType: data.details.mediaType,
           mediaFilename: data.details.mediaFilename,
@@ -184,6 +188,7 @@ export default function EditEventDialog({
                   event.customerPermissions?.canSendInvites ?? false
                 }
                 showVendorSettings={isVendorAdmin}
+                reminderSent={!!event.reminderSentAt}
                 submitLabel={
                   isSaving
                     ? t("edit_event_saving")

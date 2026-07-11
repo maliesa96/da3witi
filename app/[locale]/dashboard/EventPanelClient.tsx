@@ -41,6 +41,8 @@ type EventForClient = {
   qrEnabled: boolean;
   guestsEnabled: boolean;
   reminderEnabled: boolean;
+  reminderDaysBefore: number;
+  reminderSentAt: string | null;
   imageUrl: string | null;
   mediaType: string | null;
   mediaFilename: string | null;

@@ -235,6 +235,7 @@
       "reminder_desc": "تذكير عبر واتساب قبل المناسبة",
       "reminder_days_label": "إرسال التذكير",
       "reminder_days_option": "{count, plural, one {قبل يوم واحد} two {قبل يومين} few {قبل # أيام} other {قبل # يوم}}",
+      "reminder_already_sent": "تم إرسال التذكير بالفعل — لا يمكن تغيير التوقيت",
       "reminder_requires_calendar": "استخدم التقويم لتحديد التاريخ لتفعيل التذكير التلقائي",
       "coming_soon": "قريباً",
       "preview_send": "معاينة وإرسال",

@@ -43,6 +43,8 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
         qrEnabled: true,
         guestsEnabled: true,
         reminderEnabled: true,
+        reminderDaysBefore: true,
+        reminderSentAt: true,
         imageUrl: true,
         locale: true,
         paidAt: true,
@@ -76,6 +78,8 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ev
       qrEnabled: event.qrEnabled,
       guestsEnabled: event.guestsEnabled,
       reminderEnabled: event.reminderEnabled,
+      reminderDaysBefore: event.reminderDaysBefore,
+      reminderSentAt: event.reminderSentAt ? event.reminderSentAt.toISOString() : null,
       imageUrl: event.imageUrl ?? null,
       locale: event.locale ?? null,
       paidAt: event.paidAt ? event.paidAt.toISOString() : null,
@@ -108,7 +112,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ e
         customerEmail: true, customerUserId: true,
         inviteCountSent: true, inviteCountDelivered: true, inviteCountRead: true,
         inviteCountConfirmed: true, inviteCountDeclined: true, inviteCountNoReply: true,
-        editingUnlocked: true,
+        editingUnlocked: true, reminderSentAt: true,
       },
     });
 
@@ -154,6 +158,9 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ e
     if (typeof body.guestsEnabled === "boolean") updateData.guestsEnabled = body.guestsEnabled;
     if (typeof body.reminderEnabled === "boolean") updateData.reminderEnabled = body.reminderEnabled;
     if (typeof body.reminderDaysBefore === "number" && body.reminderDaysBefore >= 1) {
+      if (event.reminderSentAt) {
+        return NextResponse.json({ error: "Cannot change reminder timing after reminder has been sent" }, { status: 400 });
+      }
       updateData.reminderDaysBefore = body.reminderDaysBefore;
     }
     if (body.eventDate !== undefined) {
