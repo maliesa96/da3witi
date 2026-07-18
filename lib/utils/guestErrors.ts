@@ -12,10 +12,15 @@ export type GuestError =
   | { code: 'UNKNOWN'; message: string };
 
 /**
- * Parse a server-thrown guest error into a structured object.
+ * Parse a guest error (thrown Error, returned action error string, or unknown) into a structured object.
  */
 export function parseGuestError(error: unknown): GuestError {
-  const msg = error instanceof Error ? error.message : String(error);
+  const msg =
+    typeof error === 'string'
+      ? error
+      : error instanceof Error
+        ? error.message
+        : String(error);
 
   if (msg.includes('DUPLICATE_PHONE')) {
     const phone = msg.split(':').slice(1).join(':') || '';

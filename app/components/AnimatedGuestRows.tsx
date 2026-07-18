@@ -639,7 +639,11 @@ function EditButton({
         ...(guestsEnabled ? { inviteCount } : {}),
         inviteSide,
       });
-      if (res?.success && res.guest) {
+      if (!res?.success) {
+        setError(guestErrorMessage(parseGuestError(res?.error), tErr));
+        return;
+      }
+      if (res.guest) {
         onUpdated(res.guest as GuestRowData);
         setOpen(false);
       } else {

@@ -101,26 +101,41 @@ export async function addGuests(
 
   if (currentGuestCount + cleaned.length > MAX_GUESTS_PER_EVENT) {
     const remaining = MAX_GUESTS_PER_EVENT - currentGuestCount;
-    throw new Error(`GUEST_LIMIT_EXCEEDED:${remaining}`);
+    return { success: false as const, error: `GUEST_LIMIT_EXCEEDED:${remaining}` };
   }
 
-  const validated = cleaned.map((g) => {
-    if (g.name.length < 2) throw new Error('NAME_TOO_SHORT');
+  const validated: Array<{
+    name: string;
+    phone: string;
+    inviteCount?: number;
+    inviteSide: ReturnType<typeof normalizeInviteSide>;
+  }> = [];
+
+  for (const g of cleaned) {
+    if (g.name.length < 2) {
+      return { success: false as const, error: 'NAME_TOO_SHORT' };
+    }
     const res = normalizePhoneToE164(g.phone);
-    if (!res.ok) throw new Error('INVALID_PHONE');
+    if (!res.ok) {
+      return { success: false as const, error: 'INVALID_PHONE' };
+    }
 
     let inviteCount: number | undefined = undefined;
     if (event.guestsEnabled && typeof g.inviteCount !== 'undefined') {
       const n = typeof g.inviteCount === 'string' ? Number(g.inviteCount) : g.inviteCount;
       if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 50) {
-        throw new Error('INVALID_INVITE_COUNT');
+        return { success: false as const, error: 'INVALID_INVITE_COUNT' };
       }
       inviteCount = n;
     }
 
-    const inviteSide = normalizeInviteSide(g.inviteSide);
-    return { ...g, phone: res.phone, inviteCount, inviteSide };
-  });
+    validated.push({
+      ...g,
+      phone: res.phone,
+      inviteCount,
+      inviteSide: normalizeInviteSide(g.inviteSide),
+    });
+  }
 
   // Check for duplicate phone numbers within the submitted batch
   const phonesInBatch = validated.map(g => g.phone);
@@ -132,7 +147,7 @@ export async function addGuests(
       seen.add(p);
       return false;
     })!;
-    throw new Error(`DUPLICATE_PHONE:${dupPhone}`);
+    return { success: false as const, error: `DUPLICATE_PHONE:${dupPhone}` };
   }
 
   // Check for duplicate phone numbers against existing guests in the event
@@ -141,30 +156,51 @@ export async function addGuests(
     select: { phone: true },
   });
   if (existingGuests.length > 0) {
-    throw new Error(`DUPLICATE_PHONE:${existingGuests[0].phone}`);
+    return { success: false as const, error: `DUPLICATE_PHONE:${existingGuests[0].phone}` };
   }
 
   // Bulk create guests and return the created records
-  const createdGuests = await prisma.guest.createManyAndReturn({
-    data: validated.map((g) => ({
-      eventId,
-      name: g.name,
-      phone: g.phone,
-      status: 'pending',
-      ...(event.guestsEnabled ? { inviteCount: g.inviteCount ?? 1 } : {}),
-      inviteSide: g.inviteSide,
-    })),
-    select: {
-      id: true,
-      name: true,
-      phone: true,
-      inviteCount: true,
-      inviteSide: true,
-      status: true,
-      checkedIn: true,
-      whatsappMessageId: true,
-    },
-  });
+  let createdGuests;
+  try {
+    createdGuests = await prisma.guest.createManyAndReturn({
+      data: validated.map((g) => ({
+        eventId,
+        name: g.name,
+        phone: g.phone,
+        status: 'pending',
+        ...(event.guestsEnabled ? { inviteCount: g.inviteCount ?? 1 } : {}),
+        inviteSide: g.inviteSide,
+      })),
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        inviteCount: true,
+        inviteSide: true,
+        status: true,
+        checkedIn: true,
+        whatsappMessageId: true,
+      },
+    });
+  } catch (err) {
+    // Race: unique (eventId, phone) may trip after our pre-check
+    if (
+      err &&
+      typeof err === 'object' &&
+      'code' in err &&
+      (err as { code?: string }).code === 'P2002'
+    ) {
+      const existing = await prisma.guest.findFirst({
+        where: { eventId, phone: { in: [...uniquePhones] } },
+        select: { phone: true },
+      });
+      return {
+        success: false as const,
+        error: `DUPLICATE_PHONE:${existing?.phone ?? validated[0]?.phone ?? ''}`,
+      };
+    }
+    throw err;
+  }
 
   // Broadcast guest insert events for realtime updates
   await Promise.all(
@@ -464,11 +500,11 @@ export async function updateGuest(
   const name = String(guestData.name || '').trim();
   const phoneRaw = String(guestData.phone || '').trim();
   if (name.length > 0 && name.length < 2) {
-    throw new Error('NAME_TOO_SHORT');
+    return { success: false as const, error: 'NAME_TOO_SHORT' };
   }
   const phoneRes = normalizePhoneToE164(phoneRaw);
   if (!name || !phoneRaw || !phoneRes.ok) {
-    throw new Error('INVALID_PHONE');
+    return { success: false as const, error: 'INVALID_PHONE' };
   }
 
   // Check for duplicate phone number against other guests in the same event
@@ -478,7 +514,7 @@ export async function updateGuest(
       select: { id: true },
     });
     if (existingWithPhone) {
-      throw new Error(`DUPLICATE_PHONE:${phoneRes.phone}`);
+      return { success: false as const, error: `DUPLICATE_PHONE:${phoneRes.phone}` };
     }
   }
 
@@ -486,7 +522,7 @@ export async function updateGuest(
   if (typeof guestData.inviteCount !== 'undefined') {
     const n = typeof guestData.inviteCount === 'string' ? Number(guestData.inviteCount) : guestData.inviteCount;
     if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 50) {
-      throw new Error('INVALID_INVITE_COUNT');
+      return { success: false as const, error: 'INVALID_INVITE_COUNT' };
     }
     inviteCount = n;
   }

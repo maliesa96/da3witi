@@ -150,9 +150,11 @@ export default function AddGuestForm({ eventId, guestsEnabled = false, buttonCla
     setIsSubmitting(true);
     try {
       const res = await addGuests(eventId, normalized);
-      if (res?.success) {
-        onGuestsAdded?.(res.guests);
+      if (!res?.success) {
+        alert(guestErrorMessage(parseGuestError(res?.error), tErr));
+        return;
       }
+      onGuestsAdded?.(res.guests);
       closeAndReset();
     } catch (error) {
       console.error('Failed to add guests:', error);

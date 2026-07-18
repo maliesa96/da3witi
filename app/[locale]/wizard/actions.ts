@@ -45,23 +45,34 @@ export async function createEvent(formData: {
     throw new Error('Forbidden');
   }
 
-  const guestsValidated = (formData.guests || []).map((guest) => {
+  const guestsValidated: Array<{
+    name: string;
+    phone: string;
+    inviteCount: number;
+    inviteSide: ReturnType<typeof normalizeInviteSide>;
+  }> = [];
+
+  for (const guest of formData.guests || []) {
     const name = String(guest.name || '').trim();
     const phoneRaw = String(guest.phone || '').trim();
-    if (name.length > 0 && name.length < 2) throw new Error('NAME_TOO_SHORT');
+    if (name.length > 0 && name.length < 2) {
+      return { success: false as const, error: 'NAME_TOO_SHORT' };
+    }
     const res = normalizePhoneToE164(phoneRaw);
-    if (!name || !phoneRaw || !res.ok) throw new Error('INVALID_PHONE');
-    return {
+    if (!name || !phoneRaw || !res.ok) {
+      return { success: false as const, error: 'INVALID_PHONE' };
+    }
+    guestsValidated.push({
       name,
       phone: res.phone,
       inviteCount: guest.inviteCount || 1,
       inviteSide: normalizeInviteSide(guest.inviteSide),
-    };
-  });
+    });
+  }
 
   // Enforce max guest limit (guest rows, not invitees)
   if (guestsValidated.length > MAX_GUESTS_PER_EVENT) {
-    throw new Error(`GUEST_LIMIT_EXCEEDED:${MAX_GUESTS_PER_EVENT}`);
+    return { success: false as const, error: `GUEST_LIMIT_EXCEEDED:${MAX_GUESTS_PER_EVENT}` };
   }
 
   // Check for duplicate phone numbers within the batch
@@ -74,13 +85,13 @@ export async function createEvent(formData: {
       seen.add(p);
       return false;
     })!;
-    throw new Error(`DUPLICATE_PHONE:${dupPhone}`);
+    return { success: false as const, error: `DUPLICATE_PHONE:${dupPhone}` };
   }
 
   // Validate WhatsApp text restrictions (no newlines, tabs, or 5+ consecutive spaces)
   const messageViolation = validateWhatsAppText(formData.message ?? '');
   if (messageViolation) {
-    throw new Error(`MESSAGE_INVALID_TEXT:${messageViolation}`);
+    return { success: false as const, error: `MESSAGE_INVALID_TEXT:${messageViolation}` };
   }
 
   // Validate rendered invite message length (includes template wrapper + parameters)
@@ -105,7 +116,7 @@ export async function createEvent(formData: {
     });
 
     if (countMessageChars(rendered) > MAX_INVITE_MESSAGE_CHARS) {
-      throw new Error('MESSAGE_TOO_LONG');
+      return { success: false as const, error: 'MESSAGE_TOO_LONG' };
     }
   }
 

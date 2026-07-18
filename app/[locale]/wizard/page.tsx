@@ -152,11 +152,12 @@ export default function Wizard() {
         } : {}),
       });
 
-      if (result.success) {
-        window.location.href = `/${details.messageLocale}/dashboard?eventId=${result.eventId}`;
-      } else {
-        throw new Error('Failed to create event');
+      if (!result.success) {
+        alert(guestErrorMessage(parseGuestError(result.error), tErr));
+        setIsSubmitting(false);
+        return;
       }
+      window.location.href = `/${details.messageLocale}/dashboard?eventId=${result.eventId}`;
     } catch (error) {
       console.error('Event creation failed:', error);
       alert(guestErrorMessage(parseGuestError(error), tErr));
