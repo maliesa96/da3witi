@@ -17,6 +17,10 @@ import { uploadEventMedia, validateFileType, type MediaType } from "@/lib/supaba
 import { formatGoogleMapsLink } from "@/lib/maps";
 import { type InviteMediaType, type WhatsAppTextViolation, MAX_INVITE_MESSAGE_CHARS, countMessageChars, renderInviteMessage, validateWhatsAppText } from "@/lib/inviteMessage";
 import { isVendorMode } from "@/lib/vendorClient";
+import {
+  formatEventDate as formatDateFromPicker,
+  formatEventTime as formatTimeFromPicker,
+} from "@/lib/utils/formatEventDateTime";
 
 const violationKeys: Record<WhatsAppTextViolation, string> = {
   newline: "errors.message_invalid_newline",
@@ -84,34 +88,6 @@ export type EventDetailsFormProps = {
   /** When true, the reminder has already been sent and timing cannot be changed */
   reminderSent?: boolean;
 };
-
-function formatDateFromPicker(value: string, msgLocale: "en" | "ar") {
-  const [y, m, d] = value.split("-").map(Number);
-  if (!y || !m || !d) return value;
-  const date = new Date(Date.UTC(y, m - 1, d));
-  const intlLocale = msgLocale === "ar" ? "ar-SA" : "en-US";
-  return new Intl.DateTimeFormat(intlLocale, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
-}
-
-function formatTimeFromPicker(value: string, msgLocale: "en" | "ar") {
-  const [hh, mm] = value.split(":").map(Number);
-  if (Number.isNaN(hh) || Number.isNaN(mm)) return value;
-  const date = new Date(Date.UTC(1970, 0, 1, hh, mm, 0));
-  const intlLocale = msgLocale === "ar" ? "ar-SA" : "en-US";
-  const base: Intl.DateTimeFormatOptions = {
-    hour: "numeric",
-    hour12: true,
-    timeZone: "UTC",
-  };
-  const opts: Intl.DateTimeFormatOptions =
-    mm === 0 ? base : { ...base, minute: "2-digit" };
-  return new Intl.DateTimeFormat(intlLocale, opts).format(date);
-}
 
 export default function EventDetailsForm({
   initialDetails,
