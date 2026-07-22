@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
+import { isVendorMode, isVendorAdmin } from "@/lib/vendor";
 
 export type ActivityItem = {
   id: string;
@@ -43,8 +44,9 @@ export async function GET(
       event.vendorId &&
       ((event.customerEmail && user.email && event.customerEmail === user.email) ||
        (event.customerUserId && event.customerUserId === user.id));
+    const isVAdmin = isVendorMode && event.vendorId && (await isVendorAdmin(user.email));
 
-    if (!isOwner && !isAdmin(user.email) && !isCustomer) {
+    if (!isOwner && !isAdmin(user.email) && !isCustomer && !isVAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

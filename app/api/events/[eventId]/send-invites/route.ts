@@ -5,7 +5,7 @@ import { buildInviteTemplatePayload, type MediaType } from "@/lib/whatsapp";
 import { enqueueWhatsAppOutboxBatch, RedisConfigError } from "@/lib/queue/whatsappOutbox";
 import { shouldEnqueueWhatsAppInvite } from "@/lib/whatsappSendEligibility";
 import { isAdmin } from "@/lib/admin";
-import { parseCustomerPermissions } from "@/lib/vendor";
+import { parseCustomerPermissions, isVendorMode, isVendorAdmin } from "@/lib/vendor";
 
 export async function POST(_request: NextRequest, context: { params: Promise<{ eventId: string }> }) {
   try {
@@ -33,13 +33,14 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ e
       event.vendorId &&
       ((event.customerEmail && user.email && event.customerEmail === user.email) ||
        (event.customerUserId && event.customerUserId === user.id));
+    const isVAdmin = isVendorMode && event.vendorId && (await isVendorAdmin(user.email));
 
-    if (!isOwner && !isAdmin(user.email) && !isCustomer) {
+    if (!isOwner && !isAdmin(user.email) && !isCustomer && !isVAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Check customer permissions for sending invites
-    if (!isOwner && !isAdmin(user.email) && event.vendorId) {
+    if (!isOwner && !isAdmin(user.email) && !isVAdmin && event.vendorId) {
       const perms = parseCustomerPermissions(event.customerPermissions);
       if (!perms.canSendInvites) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });

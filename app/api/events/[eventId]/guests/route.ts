@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
+import { isVendorMode, isVendorAdmin } from "@/lib/vendor";
 
 function parseIntParam(value: string | null, fallback: number) {
   const n = value ? Number(value) : NaN;
@@ -80,8 +81,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
        (event.customerUserId && event.customerUserId === user.id));
     const isAttendant =
       event.vendorId && user.email && event.attendantEmails.includes(user.email);
+    const isVAdmin = isVendorMode && event.vendorId && (await isVendorAdmin(user.email));
 
-    if (!isOwner && !isAdmin(user.email) && !isCustomer && !isAttendant) {
+    if (!isOwner && !isAdmin(user.email) && !isCustomer && !isAttendant && !isVAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

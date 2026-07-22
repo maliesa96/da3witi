@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
-import { isVendorMode, isVendorAdmin } from "@/lib/vendor";
+import { isVendorMode, isVendorAdmin, VENDOR_ID } from "@/lib/vendor";
 import type { Prisma } from "@prisma/client";
 
 export async function GET() {
@@ -15,12 +15,18 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const vendorAdmin = isVendorMode && await isVendorAdmin(user.email);
+
     // Build query: owner events OR customer events OR attendant events
+    // Vendor admins (and platform super-admins on vendor sites) see all vendor events
     const orConditions: Prisma.EventWhereInput[] = [{ userId: user.id }];
     if (isVendorMode && user.email) {
       orConditions.push({ customerEmail: user.email, vendorId: { not: null } });
       orConditions.push({ customerUserId: user.id, vendorId: { not: null } });
       orConditions.push({ attendantEmails: { has: user.email }, vendorId: { not: null } });
+    }
+    if (vendorAdmin && VENDOR_ID) {
+      orConditions.push({ vendorId: VENDOR_ID });
     }
 
     const events = await prisma.event.findMany({
@@ -77,8 +83,6 @@ export async function GET() {
         data: { customerUserId: user.id },
       });
     }
-
-    const vendorAdmin = isVendorMode && await isVendorAdmin(user.email);
 
     return NextResponse.json({
       isVendorAdmin: vendorAdmin,

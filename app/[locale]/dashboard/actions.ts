@@ -28,12 +28,13 @@ async function getAuthedUser() {
   return user;
 }
 
-function canAccessEvent(
+async function canAccessEvent(
   event: { userId: string | null; customerEmail: string | null; customerUserId: string | null; vendorId: string | null; attendantEmails?: string[] },
   user: { id: string; email?: string | undefined }
-): boolean {
+): Promise<boolean> {
   if (event.userId === user.id) return true;
   if (isAdmin(user.email)) return true;
+  if (isVendorMode && event.vendorId && (await isVendorAdmin(user.email))) return true;
   if (event.vendorId && event.customerEmail && user.email && event.customerEmail === user.email) return true;
   if (event.vendorId && event.customerUserId && event.customerUserId === user.id) return true;
   if (event.vendorId && user.email && event.attendantEmails?.includes(user.email)) return true;
@@ -44,7 +45,7 @@ async function canWriteEvent(
   event: { userId: string | null; customerEmail: string | null; customerUserId: string | null; vendorId: string | null },
   user: { id: string; email?: string | undefined }
 ): Promise<boolean> {
-  if (!canAccessEvent(event, user)) return false;
+  if (!(await canAccessEvent(event, user))) return false;
   if (isVendorMode && event.vendorId) {
     if (event.userId === user.id) return true;
     if (isAdmin(user.email)) return true;
@@ -234,13 +235,13 @@ export async function sendInvitesForEvent(eventId: string, locale: 'en' | 'ar') 
     throw new Error('Event not found');
   }
 
-  if (!canAccessEvent(event, user)) {
+  if (!(await canAccessEvent(event, user))) {
     throw new Error('Forbidden');
   }
 
   // For vendor customers, check if they have permission to send invites
   const isOwner = event.userId === user.id;
-  if (!isOwner && event.vendorId) {
+  if (!isOwner && event.vendorId && !isAdmin(user.email) && !(await isVendorAdmin(user.email))) {
     const perms = parseCustomerPermissions(event.customerPermissions);
     if (!perms.canSendInvites) {
       throw new Error('Forbidden');
@@ -324,7 +325,7 @@ export async function getGuestsPaginated(
     throw new Error('Event not found');
   }
 
-  if (!canAccessEvent(event, user)) {
+  if (!(await canAccessEvent(event, user))) {
     throw new Error('Forbidden');
   }
 
@@ -780,7 +781,7 @@ export async function sendNoReplyReminder(guestId: string, locale: 'en' | 'ar') 
     throw new Error('Guest not found');
   }
 
-  if (!canAccessEvent(guest.event, user)) {
+  if (!(await canAccessEvent(guest.event, user))) {
     throw new Error('Forbidden');
   }
 

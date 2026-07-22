@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { cache } from "react";
+import { ADMIN_EMAILS } from "@/lib/admin-emails";
 
 export const VENDOR_ID = process.env.VENDOR_ID || null;
 export const isVendorMode = !!VENDOR_ID;
@@ -33,9 +34,12 @@ export const getVendor = cache(async () => {
 
 /**
  * Check if an email belongs to a vendor admin for the current deployment.
+ * Platform super-admins also count as vendor admins on vendor sites
+ * (aligned with hasAdminAccess in lib/admin.ts).
  */
 export async function isVendorAdmin(email: string | null | undefined): Promise<boolean> {
   if (!email || !isVendorMode) return false;
+  if (ADMIN_EMAILS.includes(email)) return true;
   const vendor = await getVendor();
   if (!vendor) return false;
   return vendor.adminEmails.includes(email);
